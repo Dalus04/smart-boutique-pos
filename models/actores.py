@@ -1,5 +1,5 @@
 from sqlalchemy import Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from models.base import Base
 
 class Cliente(Base):
@@ -18,3 +18,6 @@ class Proveedor(Base):
     telefono: Mapped[str | None] = mapped_column(String(20), nullable=True)
     direccion: Mapped[str | None] = mapped_column(String(200), nullable=True)
     correoElectronico: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    # Relación bidireccional uno-a-muchos (sin cascada)
+    compras: Mapped[list["Compra"]] = relationship("Compra", back_populates="proveedor")
