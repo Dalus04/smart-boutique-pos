@@ -105,18 +105,41 @@ class MainWindow(customtkinter.CTk):
     def change_appearance_mode_event(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
 
-    # Funciones de navegación dummy para desarrollo posterior
+    def clear_content_frame(self):
+        """
+        Elimina todos los widgets dentro de content_frame para evitar fugas de memoria.
+        """
+        for child in self.content_frame.winfo_children():
+            child.destroy()
+
+    # Funciones de navegación para las diferentes vistas
     def nav_dashboard(self):
         print("Navegando a Dashboard")
+        self.clear_content_frame()
+        lbl = customtkinter.CTkLabel(self.content_frame, text="Vista Dashboard (En desarrollo)", font=customtkinter.CTkFont(size=16))
+        lbl.grid(row=0, column=0, padx=20, pady=20)
 
     def nav_nueva_venta(self):
         print("Navegando a Nueva Venta")
+        self.clear_content_frame()
+        from ui.views.pos_view import POSView
+        self.pos_view = POSView(self.content_frame)
+        self.pos_view.grid(row=0, column=0, sticky="nsew")
 
     def nav_catalogo(self):
         print("Navegando a Catálogo")
+        self.clear_content_frame()
+        lbl = customtkinter.CTkLabel(self.content_frame, text="Vista Catálogo (En desarrollo)", font=customtkinter.CTkFont(size=16))
+        lbl.grid(row=0, column=0, padx=20, pady=20)
 
     def nav_inventario(self):
         print("Navegando a Inventario")
+        self.clear_content_frame()
+        lbl = customtkinter.CTkLabel(self.content_frame, text="Vista Inventario (En desarrollo)", font=customtkinter.CTkFont(size=16))
+        lbl.grid(row=0, column=0, padx=20, pady=20)
 
     def nav_clientes(self):
         print("Navegando a Clientes")
+        self.clear_content_frame()
+        lbl = customtkinter.CTkLabel(self.content_frame, text="Vista Clientes (En desarrollo)", font=customtkinter.CTkFont(size=16))
+        lbl.grid(row=0, column=0, padx=20, pady=20)

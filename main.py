@@ -6,6 +6,8 @@ from config.db import engine
 import customtkinter
 customtkinter.set_appearance_mode("Dark")
 customtkinter.set_default_color_theme("blue")
+customtkinter.set_widget_scaling(1.0)
+customtkinter.set_window_scaling(1.0)
 
 def main():
     print("Iniciando BoutiqueIQ...")
