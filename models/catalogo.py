@@ -34,6 +34,7 @@ class Producto(Base):
     # Relación bidireccional uno-a-muchos (sin cascada)
     inventarios: Mapped[list["Inventario"]] = relationship("Inventario", back_populates="producto")
     detalles_compra: Mapped[list["DetalleCompra"]] = relationship("DetalleCompra", back_populates="producto")
+    detalles_venta: Mapped[list["DetalleVenta"]] = relationship("DetalleVenta", back_populates="producto")
 
     @property
     def margen_rentabilidad(self) -> float:

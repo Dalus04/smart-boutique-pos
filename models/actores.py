@@ -10,6 +10,9 @@ class Cliente(Base):
     telefono: Mapped[str | None] = mapped_column(String(20), nullable=True)
     correoElectronico: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
+    # Relación bidireccional uno-a-muchos (sin cascada)
+    ventas: Mapped[list["Venta"]] = relationship("Venta", back_populates="cliente")
+
 class Proveedor(Base):
     __tablename__ = "proveedor"
 

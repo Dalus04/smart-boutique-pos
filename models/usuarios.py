@@ -28,3 +28,4 @@ class Usuario(Base):
     # Relaciones bidireccionales (sin cascadas de eliminación para preservar historial)
     administrador: Mapped["Administrador | None"] = relationship("Administrador", back_populates="usuarios")
     compras: Mapped[list["Compra"]] = relationship("Compra", back_populates="usuario")
+    ventas: Mapped[list["Venta"]] = relationship("Venta", back_populates="usuario")
