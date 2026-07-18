@@ -35,6 +35,14 @@ class POSController(QObject):
         self.view.btn_limpiar_cliente.clicked.connect(self.limpiar_cliente)
         self.view.btn_procesar.clicked.connect(self.procesar_venta)
 
+        # Atajos de Teclado (Enter)
+        from PySide6.QtWidgets import QLineEdit
+        self.view.txt_codigo.returnPressed.connect(self.on_buscador_enter_pressed)
+        self.view.combo_productos.lineEdit().returnPressed.connect(self.on_buscador_enter_pressed)
+        qty_line_edit = self.view.spin_cantidad.findChild(QLineEdit)
+        if qty_line_edit:
+            qty_line_edit.returnPressed.connect(self.agregar_seleccionado)
+
     def _cargar_datos_maestros(self):
         db = SessionLocal()
         try:
@@ -199,6 +207,21 @@ class POSController(QObject):
         finally:
             db.close()
 
+    def on_buscador_enter_pressed(self):
+        idx = self.view.combo_productos.currentIndex()
+        if idx >= 0:
+            self.view.spin_cantidad.setFocus()
+            self.view.spin_cantidad.selectAll()
+        else:
+            NotificationToast(self.view.window(), "⚠ Producto no encontrado.")
+            sender = self.sender()
+            if sender == self.view.txt_codigo:
+                self.view.txt_codigo.setFocus()
+                self.view.txt_codigo.selectAll()
+            elif sender == self.view.combo_productos.lineEdit():
+                self.view.combo_productos.setFocus()
+                self.view.combo_productos.lineEdit().selectAll()
+
     def agregar_seleccionado(self):
         idx = self.view.combo_productos.currentIndex()
         if idx < 0:
@@ -206,12 +229,15 @@ class POSController(QObject):
         prod_id = self.view.combo_productos.itemData(idx)
         cantidad = self.view.spin_cantidad.value()
         
-        self.agregar_al_carrito(prod_id, cantidad)
-        self.view.spin_cantidad.setValue(1)
+        if self.agregar_al_carrito(prod_id, cantidad):
+            self.view.spin_cantidad.setValue(1)
+            self.view.combo_productos.setFocus()
+            if self.view.combo_productos.lineEdit():
+                self.view.combo_productos.lineEdit().selectAll()
 
-    def agregar_al_carrito(self, prod_id: int, cantidad_adicional: int = 1):
+    def agregar_al_carrito(self, prod_id: int, cantidad_adicional: int = 1) -> bool:
         if prod_id not in self.productos_db:
-            return
+            return False
             
         stock_disponible = self.stock_db.get(prod_id, 0)
         
@@ -226,7 +252,7 @@ class POSController(QObject):
         
         if nueva_cantidad_total > stock_disponible:
             QMessageBox.warning(self.view, "Stock Insuficiente", f"No hay stock suficiente. Disponible: {stock_disponible}")
-            return
+            return False
         
         if cantidad_actual_en_carrito > 0:
             for item in self.carrito:
@@ -240,6 +266,7 @@ class POSController(QObject):
         self.mostrar_feedback_agregado(self.productos_db[prod_id].nombre)
         # Indicar highlight
         self.actualizar_interfaz(highlight_prod_id=prod_id)
+        return True
 
     def cambiar_cantidad_carrito(self, prod_id: int, delta: int):
         # Buscar el item en carrito
@@ -380,8 +407,10 @@ class POSController(QObject):
             widget = item.widget()
             if widget:
                 widget.setParent(None)
-                if widget != self.view.lbl_no_suggestions:
+                if widget not in (self.view.lbl_no_suggestions, self.view.lbl_sug_subtitle):
                     widget.deleteLater()
+
+        self.view.suggestions_layout.addWidget(self.view.lbl_sug_subtitle)
 
         if not carrito_ids:
             self.view.suggestions_layout.addWidget(self.view.lbl_no_suggestions)
@@ -413,23 +442,66 @@ class POSController(QObject):
                 text_lbl = QLabel(f"<b>{prod.nombre}</b><br><font color='#2a82da'>${prod.precioLista:.2f}</font>")
                 text_lbl.setStyleSheet("color: #ffffff; font-size: 14px; border: none; background: transparent;")
                 
-                # Indicador de porcentaje cálido sutil en cursiva de 10px
+                # Indicador de porcentaje cálido sutil en cursiva de 14px
                 pct_conf = int(confianza * 100)
-                lbl_conf = QLabel(f"🔥 {pct_conf}% de clientes también llevó esto")
+                lbl_conf = QLabel(f"🔥 Confianza: {pct_conf}%")
                 lbl_conf.setStyleSheet("color: #d1b894; font-size: 14px; font-style: italic; border: none; background: transparent;")
+                lbl_conf.setToolTip(f"El {pct_conf}% de los clientes que compraron este producto también llevaron este artículo.")
                 
                 text_layout.addWidget(text_lbl)
                 text_layout.addWidget(lbl_conf)
                 
                 btn_add_rec = QPushButton(" + ")
                 btn_add_rec.setStyleSheet("QPushButton { background-color: #2a82da; color: white; border: none; border-radius: 4px; font-weight: bold; padding: 4px 8px; } QPushButton:hover { background-color: #3b93eb; }")
-                btn_add_rec.clicked.connect(lambda checked=False, pid=prod_id: self.agregar_al_carrito(pid, 1))
+                btn_add_rec.clicked.connect(lambda checked=False, pid=prod_id: self.seleccionar_sugerencia(pid))
+                
+                # Hacer la tarjeta clickeable para seleccionar sugerencia
+                rec_card.mousePressEvent = lambda event, pid=prod_id: self.seleccionar_sugerencia(pid)
                 
                 layout.addWidget(text_widget, stretch=1)
                 layout.addWidget(btn_add_rec)
                 self.view.suggestions_layout.addWidget(rec_card)
 
         self.view.suggestions_layout.addStretch()
+
+    def seleccionar_sugerencia(self, prod_id):
+        prod = self.productos_db.get(prod_id)
+        if not prod:
+            return
+            
+        # Encontrar index de la categoría
+        cat_index = 0
+        for i in range(self.view.combo_categorias.count()):
+            if self.view.combo_categorias.itemData(i) == prod.idCategoria:
+                cat_index = i
+                break
+                
+        # Cambiar categoría bloqueando señales
+        self.view.combo_categorias.blockSignals(True)
+        self.view.combo_categorias.setCurrentIndex(cat_index)
+        self.view.combo_categorias.blockSignals(False)
+        
+        # Filtrar manualmente
+        self._filtrar_productos_por_categoria()
+        
+        # Encontrar index del producto
+        prod_index = -1
+        for i in range(self.view.combo_productos.count()):
+            if self.view.combo_productos.itemData(i) == prod_id:
+                prod_index = i
+                break
+                
+        if prod_index >= 0:
+            self.view.combo_productos.blockSignals(True)
+            self.view.combo_productos.setCurrentIndex(prod_index)
+            self.view.combo_productos.blockSignals(False)
+            
+            # Sincronizar campos
+            self._on_producto_combo_changed(prod_index)
+            
+        # Dar foco al spin_cantidad y seleccionar su contenido
+        self.view.spin_cantidad.setFocus()
+        self.view.spin_cantidad.selectAll()
 
     def limpiar_carrito(self):
         # Solicitar confirmación antes de vaciar el carrito

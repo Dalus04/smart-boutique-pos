@@ -399,7 +399,7 @@ class POSView(QWidget):
         right_layout.addWidget(summary_group)
         
         # Grupo: Sugerencias Inteligentes (Venta Cruzada con Acento Visual Azul/Dorado)
-        self.suggestions_group = QGroupBox("Frecuentemente Comprados Juntos")
+        self.suggestions_group = QGroupBox("Recomendación Inteligente")
         self.suggestions_group.setStyleSheet("""
             QGroupBox {
                 background-color: #1e1e1e;
@@ -413,6 +413,10 @@ class POSView(QWidget):
         """)
         self.suggestions_layout = QVBoxLayout(self.suggestions_group)
         self.suggestions_layout.setSpacing(10)
+        
+        self.lbl_sug_subtitle = QLabel("Basada en patrones de compra")
+        self.lbl_sug_subtitle.setStyleSheet("color: #a0a0a0; font-size: 12px; font-weight: normal; margin-bottom: 5px;")
+        self.suggestions_layout.addWidget(self.lbl_sug_subtitle)
         
         self.lbl_no_suggestions = QLabel("Agrega productos al carrito para ver recomendaciones de IA.")
         self.lbl_no_suggestions.setStyleSheet("color: #a0a0a0; font-style: italic; font-size: 12px;")
