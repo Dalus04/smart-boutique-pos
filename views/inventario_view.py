@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                QPushButton, QLineEdit)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QBrush, QFont
-from utils.ui_helpers import crear_tabla_estandar, crear_tarjeta_kpi, crear_input_estandar, crear_combo_estandar, crear_boton
+from utils.ui_helpers import crear_tabla_estandar, crear_tarjeta_kpi, crear_input_estandar, crear_combo_estandar, crear_boton, aplicar_estilo_panel, get_palette
 
 class RiesgoDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
@@ -45,14 +45,14 @@ class RiesgoDelegate(QStyledItemDelegate):
 class InventarioView(QWidget):
     def __init__(self):
         super().__init__()
-        self.setStyleSheet("background-color: #121212; color: #ffffff;")
+        # Dejar heredar estilos de la ventana principal
         
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(15)
         
         title = QLabel("Inventario Inteligente")
-        title.setStyleSheet("font-size: 24px; font-weight: bold; color: #ffffff;")
+        title.setStyleSheet("font-size: 24px; font-weight: bold;")
         main_layout.addWidget(title)
         
         # Panel de KPIs
@@ -70,29 +70,8 @@ class InventarioView(QWidget):
         
         # Panel de Filtros
         filters_frame = QFrame()
-        filters_frame.setStyleSheet("""
-            QFrame {
-                background-color: #1e1e1e;
-                border-radius: 8px;
-                padding: 10px;
-            }
-            QLabel {
-                font-size: 14px;
-                font-weight: bold;
-            }
-            QSpinBox {
-                background-color: #2d2d2d;
-                border: 1px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 5px;
-                font-size: 14px;
-                min-width: 150px;
-                color: #ffffff;
-            }
-            QSpinBox::up-button, QSpinBox::down-button {
-                border: none;
-            }
-        """)
+        filters_frame.setProperty("factory_type", "panel")
+        aplicar_estilo_panel(filters_frame, get_palette())
         filters_layout = QHBoxLayout(filters_frame)
         
         # Buscador Polimórfico

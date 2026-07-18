@@ -3,50 +3,25 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                QHeaderView, QFrame, QTabWidget)
 from PySide6.QtCore import Qt, QRegularExpression
 from PySide6.QtGui import QRegularExpressionValidator
-from utils.ui_helpers import crear_tabla_estandar, crear_input_estandar, crear_boton
+from utils.ui_helpers import crear_tabla_estandar, crear_input_estandar, crear_boton, aplicar_estilo_panel, aplicar_estilo_tabwidget, get_palette
 
 class ActoresView(QWidget):
     def __init__(self):
         super().__init__()
-        self.setStyleSheet("background-color: #121212; color: #ffffff;")
+        # Dejar heredar estilos de la ventana principal
         
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(15)
         
         title = QLabel("Clientes y Proveedores")
-        title.setStyleSheet("font-size: 24px; font-weight: bold; color: #ffffff;")
+        title.setStyleSheet("font-size: 24px; font-weight: bold;")
         main_layout.addWidget(title)
         
         # Tabs
         self.tabs = QTabWidget()
-        self.tabs.setStyleSheet("""
-            QTabWidget::panel {
-                border: 1px solid #2d2d2d;
-                background-color: #121212;
-                border-radius: 8px;
-            }
-            QTabBar::tab {
-                background-color: #1e1e1e;
-                color: #b0b0b0;
-                border: 1px solid #2d2d2d;
-                border-bottom: none;
-                border-top-left-radius: 6px;
-                border-top-right-radius: 6px;
-                padding: 10px 20px;
-                font-size: 14px;
-                font-weight: bold;
-            }
-            QTabBar::tab:selected {
-                background-color: #2a82da;
-                color: #ffffff;
-                border: 1px solid #2a82da;
-            }
-            QTabBar::tab:hover:!selected {
-                background-color: #2d2d2d;
-                color: #ffffff;
-            }
-        """)
+        self.tabs.setProperty("factory_type", "tabwidget")
+        aplicar_estilo_tabwidget(self.tabs, get_palette())
         
         # Tab Clientes
         self.tab_clientes = QWidget()
@@ -68,18 +43,8 @@ class ActoresView(QWidget):
         # Form Panel (Left)
         form_frame = QFrame()
         form_frame.setFixedWidth(300)
-        form_frame.setStyleSheet("""
-            QFrame {
-                background-color: #1e1e1e;
-                border-radius: 8px;
-                padding: 15px;
-            }
-            QLabel {
-                font-size: 14px;
-                font-weight: bold;
-                color: #ffffff;
-            }
-        """)
+        form_frame.setProperty("factory_type", "panel")
+        aplicar_estilo_panel(form_frame, get_palette())
         
         form_layout = QVBoxLayout(form_frame)
         form_layout.setSpacing(12)
@@ -162,18 +127,8 @@ class ActoresView(QWidget):
         # Form Panel (Left)
         form_frame = QFrame()
         form_frame.setFixedWidth(300)
-        form_frame.setStyleSheet("""
-            QFrame {
-                background-color: #1e1e1e;
-                border-radius: 8px;
-                padding: 15px;
-            }
-            QLabel {
-                font-size: 14px;
-                font-weight: bold;
-                color: #ffffff;
-            }
-        """)
+        form_frame.setProperty("factory_type", "panel")
+        aplicar_estilo_panel(form_frame, get_palette())
         
         form_layout = QVBoxLayout(form_frame)
         form_layout.setSpacing(12)

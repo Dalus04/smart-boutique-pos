@@ -11,7 +11,7 @@ class DashboardView(QWidget):
         
         # Título
         self.title_label = QLabel("Dashboard Analítico")
-        self.title_label.setStyleSheet("font-size: 28px; font-weight: bold; color: #ffffff;")
+        self.title_label.setStyleSheet("font-size: 28px; font-weight: bold;")
         self.main_layout.addWidget(self.title_label)
         
         # Contenedor de KPIs
@@ -36,7 +36,8 @@ class DashboardView(QWidget):
         self.chart_layout.setContentsMargins(0, 0, 0, 0)
         
         self.chart_placeholder = QLabel("Cargando métricas y gráficos...")
-        self.chart_placeholder.setStyleSheet("color: #a0a0a0; font-size: 16px; font-style: italic;")
+        self.chart_placeholder.setStyleSheet("font-size: 16px; font-style: italic;")
+        self.chart_placeholder.setProperty("theme_color", "secondary")
         self.chart_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.chart_layout.addWidget(self.chart_placeholder)
         

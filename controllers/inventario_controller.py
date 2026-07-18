@@ -5,6 +5,7 @@ from views.inventario_view import InventarioView
 from config.db import SessionLocal
 from models.catalogo import Producto, Categoria
 from services.prediccion import PrediccionService
+from utils.ui_helpers import aplicar_estilo_tarjeta_kpi, get_palette
 
 class NumericItem(QTableWidgetItem):
     """Subclase de QTableWidgetItem para ordenar correctamente valores numéricos."""
@@ -230,23 +231,13 @@ class InventarioController(QObject):
         self.view.lbl_kpi_urgente.setText(str(urgentes))
         
         if urgentes > 0:
-            self.view.kpi_frame_urgente.setStyleSheet("""
-                QFrame {
-                    background-color: #c62828;
-                    border-radius: 8px;
-                    border-left: 4px solid #ff5252;
-                    padding: 10px;
-                }
-            """)
+            self.view.kpi_frame_urgente.setProperty("kpi_color_borde", "#ff5252")
+            self.view.kpi_frame_urgente.setProperty("kpi_danger", True)
         else:
-            self.view.kpi_frame_urgente.setStyleSheet("""
-                QFrame {
-                    background-color: #1e1e1e;
-                    border-radius: 8px;
-                    border-left: 4px solid #3d3d3d;
-                    padding: 10px;
-                }
-            """)
+            self.view.kpi_frame_urgente.setProperty("kpi_color_borde", "#3d3d3d")
+            self.view.kpi_frame_urgente.setProperty("kpi_danger", False)
+            
+        aplicar_estilo_tarjeta_kpi(self.view.kpi_frame_urgente, get_palette())
 
     def limpiar_filtros(self):
         self.view.txt_buscar.clear()

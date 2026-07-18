@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTableWidget, QTableWidgetItem, QHeaderView, QPushButton, QComboBox, QLabel, QGroupBox, QFrame, QSpinBox, QCompleter, QLineEdit
 from PySide6.QtCore import Qt
-from utils.ui_helpers import crear_tabla_estandar, crear_boton, crear_combo_estandar, crear_input_estandar
+from utils.ui_helpers import crear_tabla_estandar, crear_boton, crear_combo_estandar, crear_input_estandar, aplicar_estilo_groupbox, aplicar_estilo_qty_btn, get_palette
 
 class QuantityWidget(QWidget):
     def __init__(self, quantity, on_increment, on_decrement, parent=None):
@@ -14,39 +14,19 @@ class QuantityWidget(QWidget):
         
         self.btn_minus = QPushButton("-")
         self.btn_minus.setFixedWidth(24)
-        self.btn_minus.setStyleSheet("""
-            QPushButton {
-                background-color: #2d2d2d;
-                color: white;
-                font-weight: bold;
-                border-radius: 4px;
-                border: none;
-            }
-            QPushButton:hover {
-                background-color: #3d3d3d;
-            }
-        """)
+        self.btn_minus.setProperty("factory_type", "qty_btn")
+        aplicar_estilo_qty_btn(self.btn_minus, get_palette())
         self.btn_minus.clicked.connect(on_decrement)
         
         self.lbl_qty = QLabel(str(quantity))
         self.lbl_qty.setFixedWidth(30)
         self.lbl_qty.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lbl_qty.setStyleSheet("color: white; font-weight: bold; font-size: 13px;")
+        self.lbl_qty.setStyleSheet("font-weight: bold; font-size: 13px;")
         
         self.btn_plus = QPushButton("+")
         self.btn_plus.setFixedWidth(24)
-        self.btn_plus.setStyleSheet("""
-            QPushButton {
-                background-color: #2d2d2d;
-                color: white;
-                font-weight: bold;
-                border-radius: 4px;
-                border: none;
-            }
-            QPushButton:hover {
-                background-color: #3d3d3d;
-            }
-        """)
+        self.btn_plus.setProperty("factory_type", "qty_btn")
+        aplicar_estilo_qty_btn(self.btn_plus, get_palette())
         self.btn_plus.clicked.connect(on_increment)
         
         layout.addWidget(self.btn_minus)
@@ -77,18 +57,18 @@ class POSView(QWidget):
         
         # Combo Categoría
         cat_label = QLabel("Categoría:")
-        cat_label.setStyleSheet("font-size: 15px; color: #ffffff;")
+        cat_label.setStyleSheet("font-size: 15px;")
         self.combo_categorias = crear_combo_estandar(["Todas"])
         self.combo_categorias.setMinimumWidth(120)
         
         # Entrada de Código (con Placeholder largo e interactividad de Foco)
         cod_label = QLabel("Código:")
-        cod_label.setStyleSheet("font-size: 15px; color: #ffffff;")
+        cod_label.setStyleSheet("font-size: 15px;")
         self.txt_codigo = crear_input_estandar("Ingrese un código...")
         self.txt_codigo.setFixedWidth(130) # Un poco más ancho para albergar el placeholder
         
         search_label = QLabel("Producto:")
-        search_label.setStyleSheet("font-size: 15px; color: #ffffff;")
+        search_label.setStyleSheet("font-size: 15px;")
         
         self.combo_productos = crear_combo_estandar()
         self.combo_productos.setMinimumWidth(200)
@@ -100,61 +80,36 @@ class POSView(QWidget):
         self.completer = QCompleter(self.combo_productos.model(), self)
         self.completer.setFilterMode(Qt.MatchFlag.MatchContains)
         self.completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-        
-        # Estilo del pop-up del QCompleter
-        popup = self.completer.popup()
-        popup.setStyleSheet("""
-            QListView {
-                background-color: #1e1e1e;
-                color: #ffffff;
-                border: 1px solid #333333;
-                selection-background-color: #2a82da;
-                selection-color: #ffffff;
-            }
-            QListView::item {
-                background-color: #1e1e1e;
-                color: #ffffff;
-            }
-            QListView::item:selected {
-                background-color: #2a82da;
-                color: #ffffff;
-            }
-        """)
         self.combo_productos.setCompleter(self.completer)
 
         # Etiqueta de Stock Dinámica
         self.lbl_stock = QLabel("Stock: --")
-        self.lbl_stock.setStyleSheet("font-size: 16px; color: #a0a0a0; font-weight: bold; margin-left: 5px;")
-
+        self.lbl_stock.setStyleSheet("font-size: 16px; font-weight: bold; margin-left: 5px;")
+        self.lbl_stock.setProperty("theme_color", "secondary")
+        
         # Label y selector de cantidad (QSpinBox con botones + y - manuales a los lados)
         qty_label = QLabel("Cant:")
-        qty_label.setStyleSheet("font-size: 14px; color: #ffffff; margin-left: 5px;")
+        qty_label.setStyleSheet("font-size: 14px; margin-left: 5px;")
         
-        self.btn_minus_qty = crear_boton("-", tipo="secundario")
+        self.btn_minus_qty = QPushButton("-")
         self.btn_minus_qty.setFixedWidth(30)
+        self.btn_minus_qty.setProperty("factory_type", "qty_btn")
+        aplicar_estilo_qty_btn(self.btn_minus_qty, get_palette())
         
         self.spin_cantidad = QSpinBox()
         self.spin_cantidad.setRange(1, 999)
         self.spin_cantidad.setValue(1)
         self.spin_cantidad.setFixedWidth(50)
         self.spin_cantidad.setStyleSheet("""
-            QSpinBox {
-                background-color: #1e1e1e;
-                color: #ffffff;
-                border: 1px solid #333333;
-                border-radius: 4px;
-                padding: 5px;
-            }
-            QSpinBox:focus {
-                border: 1px solid #2a82da;
-            }
             QSpinBox::up-button, QSpinBox::down-button {
                 width: 0px; /* Ocultar flechas nativas para priorizar botones +/- laterales */
             }
         """)
         
-        self.btn_plus_qty = crear_boton("+", tipo="secundario")
+        self.btn_plus_qty = QPushButton("+")
         self.btn_plus_qty.setFixedWidth(30)
+        self.btn_plus_qty.setProperty("factory_type", "qty_btn")
+        aplicar_estilo_qty_btn(self.btn_plus_qty, get_palette())
         
         # Conexión básica de incremento/decremento rápido
         self.btn_minus_qty.clicked.connect(lambda: self.spin_cantidad.setValue(max(1, self.spin_cantidad.value() - 1)))
@@ -215,23 +170,15 @@ class POSView(QWidget):
         
         # Grupo: Resumen de Venta
         summary_group = QGroupBox("Resumen de Venta")
-        summary_group.setStyleSheet("""
-            QGroupBox {
-                background-color: #1e1e1e;
-                border: 1px solid #333333;
-                border-radius: 8px;
-                font-weight: bold;
-                color: #ffffff;
-                margin-top: 10px;
-                padding-top: 15px;
-            }
-        """)
+        summary_group.setProperty("factory_type", "groupbox")
+        aplicar_estilo_groupbox(summary_group, get_palette())
         summary_layout = QVBoxLayout(summary_group)
         
         total_label = QLabel("Total:")
-        total_label.setStyleSheet("color: #b0b0b0; font-size: 18px;")
+        total_label.setStyleSheet("font-size: 18px;")
+        total_label.setProperty("theme_color", "secondary")
         self.lbl_total = QLabel("$ 0.00")
-        self.lbl_total.setStyleSheet("color: #ffffff; font-size: 48px; font-weight: bold;") # Mayor tamaño/protagonismo del total
+        self.lbl_total.setStyleSheet("font-size: 48px; font-weight: bold;") # Mayor tamaño/protagonismo del total
         
         summary_layout.addWidget(total_label)
         summary_layout.addWidget(self.lbl_total)
@@ -240,26 +187,20 @@ class POSView(QWidget):
         
         # Grupo: Sugerencias Inteligentes (Venta Cruzada con Acento Visual Azul/Dorado)
         self.suggestions_group = QGroupBox("Recomendación Inteligente")
-        self.suggestions_group.setStyleSheet("""
-            QGroupBox {
-                background-color: #1e1e1e;
-                border: 2px solid #2a82da;
-                border-radius: 8px;
-                font-weight: bold;
-                color: #2a82da;
-                margin-top: 10px;
-                padding-top: 15px;
-            }
-        """)
+        self.suggestions_group.setProperty("factory_type", "groupbox")
+        self.suggestions_group.setProperty("group_type", "highlight")
+        aplicar_estilo_groupbox(self.suggestions_group, get_palette())
         self.suggestions_layout = QVBoxLayout(self.suggestions_group)
         self.suggestions_layout.setSpacing(10)
         
         self.lbl_sug_subtitle = QLabel("Basada en patrones de compra")
-        self.lbl_sug_subtitle.setStyleSheet("color: #a0a0a0; font-size: 12px; font-weight: normal; margin-bottom: 5px;")
+        self.lbl_sug_subtitle.setStyleSheet("font-size: 12px; font-weight: normal; margin-bottom: 5px;")
+        self.lbl_sug_subtitle.setProperty("theme_color", "secondary")
         self.suggestions_layout.addWidget(self.lbl_sug_subtitle)
         
         self.lbl_no_suggestions = QLabel("Agrega productos al carrito para ver recomendaciones de IA.")
-        self.lbl_no_suggestions.setStyleSheet("color: #a0a0a0; font-style: italic; font-size: 12px;")
+        self.lbl_no_suggestions.setStyleSheet("font-style: italic; font-size: 12px;")
+        self.lbl_no_suggestions.setProperty("theme_color", "secondary")
         self.lbl_no_suggestions.setWordWrap(True)
         self.suggestions_layout.addWidget(self.lbl_no_suggestions)
         
@@ -267,22 +208,14 @@ class POSView(QWidget):
         
         # Grupo: Checkout (Con mayor espaciado vertical)
         checkout_group = QGroupBox("Checkout")
-        checkout_group.setStyleSheet("""
-            QGroupBox {
-                background-color: #1e1e1e;
-                border: 1px solid #333333;
-                border-radius: 8px;
-                font-weight: bold;
-                color: #ffffff;
-                margin-top: 10px;
-                padding-top: 15px;
-            }
-        """)
+        checkout_group.setProperty("factory_type", "groupbox")
+        aplicar_estilo_groupbox(checkout_group, get_palette())
         checkout_layout = QVBoxLayout(checkout_group)
         checkout_layout.setSpacing(20) # Mayor espaciado vertical entre controles de Cliente y Medio de Pago
         
         lbl_cliente = QLabel("Cliente:")
-        lbl_cliente.setStyleSheet("color: #a0a0a0; font-size: 14px;")
+        lbl_cliente.setStyleSheet("font-size: 14px;")
+        lbl_cliente.setProperty("theme_color", "secondary")
         
         # Combo Cliente (editable y autocompletable con Placeholder e interactividad de Foco)
         self.combo_cliente = crear_combo_estandar(["Consumidor Final"])
@@ -293,25 +226,6 @@ class POSView(QWidget):
         self.cliente_completer = QCompleter(self.combo_cliente.model(), self)
         self.cliente_completer.setFilterMode(Qt.MatchFlag.MatchContains)
         self.cliente_completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-        
-        popup_cli = self.cliente_completer.popup()
-        popup_cli.setStyleSheet("""
-            QListView {
-                background-color: #1e1e1e;
-                color: #ffffff;
-                border: 1px solid #333333;
-                selection-background-color: #2a82da;
-                selection-color: #ffffff;
-            }
-            QListView::item {
-                background-color: #1e1e1e;
-                color: #ffffff;
-            }
-            QListView::item:selected {
-                background-color: #2a82da;
-                color: #ffffff;
-            }
-        """)
         self.combo_cliente.setCompleter(self.cliente_completer)
 
         # Botón para limpiar cliente
@@ -324,7 +238,8 @@ class POSView(QWidget):
         cliente_layout.addWidget(self.btn_limpiar_cliente)
         
         lbl_pago = QLabel("Medio de Pago:")
-        lbl_pago.setStyleSheet("color: #a0a0a0; font-size: 14px;")
+        lbl_pago.setStyleSheet("font-size: 14px;")
+        lbl_pago.setProperty("theme_color", "secondary")
         self.combo_pago = crear_combo_estandar()
         
         self.btn_procesar = crear_boton("Procesar Venta", tipo="exito")

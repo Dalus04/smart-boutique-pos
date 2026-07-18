@@ -1,9 +1,8 @@
 from PySide6.QtCore import QObject, QThread, Signal
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-import datetime
-
 from views.dashboard_view import DashboardView
+from utils.ui_helpers import register_theme_observer, get_palette
 from config.db import SessionLocal
 from services.analitica import AnaliticaService
 
@@ -33,6 +32,8 @@ class DashboardController(QObject):
         super().__init__()
         self.view = DashboardView()
         self.worker = None
+        self.tendencia_ventas_cache = None
+        register_theme_observer(self.on_theme_changed)
 
     def start(self):
         """ Inicia el worker para cargar datos de forma asíncrona sin bloquear la UI """
@@ -57,6 +58,7 @@ class DashboardController(QObject):
         self.view.lbl_total_ventas.setText(str(total_trx))
 
         # Dibujar gráfico de barras en el canvas
+        self.tendencia_ventas_cache = tendencia_ventas
         self._render_chart(tendencia_ventas)
 
     def _on_error(self, error_msg):
@@ -81,25 +83,27 @@ class DashboardController(QObject):
             meses = [t["mes"] for t in tendencia_ventas]
             totales = [t["total_vendido"] for t in tendencia_ventas]
 
+        paleta = get_palette()
+        
         # Crear figura
         fig = Figure(figsize=(6, 4), dpi=100)
-        fig.patch.set_facecolor('#121212') # Color de fondo oscuro (Dark Theme)
+        fig.patch.set_facecolor(paleta["bg_app"]) # Color de fondo dinámico
 
         ax = fig.add_subplot(111)
-        ax.set_facecolor('#1e1e1e')
-        ax.tick_params(colors='white')
+        ax.set_facecolor(paleta["bg_element"])
+        ax.tick_params(colors=paleta["text_primary"])
         
         # Darle color sutil a los bordes
         for spine in ax.spines.values():
-            spine.set_color('#333333')
+            spine.set_color(paleta["border"])
             
-        ax.grid(color='#2d2d2d', linestyle='-', linewidth=0.5, axis='y', alpha=0.5)
+        ax.grid(color=paleta["border"], linestyle='-', linewidth=0.5, axis='y', alpha=0.5)
         
-        ax.set_title('Tendencia de Recaudación por Mes', color='white', pad=15)
+        ax.set_title('Tendencia de Recaudación por Mes', color=paleta["text_primary"], pad=15)
 
         # Plotear barras
-        bars = ax.bar(meses, totales, color='#2a82da')
-        ax.set_ylabel('Total Vendido ($)', color='white')
+        bars = ax.bar(meses, totales, color=paleta["border_focus"])
+        ax.set_ylabel('Total Vendido ($)', color=paleta["text_primary"])
 
         # Ajustar rotación y tamaño para legibilidad
         ax.tick_params(axis='x', labelrotation=45, labelsize=8)
@@ -121,6 +125,11 @@ class DashboardController(QObject):
         self.bars = list(bars)
         self.meses_data = meses
         canvas.mpl_connect("motion_notify_event", self._on_hover)
+
+    def on_theme_changed(self):
+        if self.tendencia_ventas_cache:
+            # Dibujar en el hilo principal
+            self._render_chart(self.tendencia_ventas_cache)
 
     def _on_hover(self, event):
         if event.inaxes is None or not hasattr(self, 'bars'):

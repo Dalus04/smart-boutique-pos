@@ -11,6 +11,7 @@ from models.suministro import Inventario
 from services.mineria import MineriaService
 from services.pos import POSService
 from sqlalchemy import func
+from utils.ui_helpers import get_palette, aplicar_estilo_tarjeta_rec
 
 class POSController(QObject):
     def __init__(self):
@@ -309,7 +310,8 @@ class POSController(QObject):
 
             # Verificar si se debe resaltar esta fila (sutil fondo azul)
             es_resaltado = (prod.idProducto == self.highlighted_prod_id)
-            bg_color = "#1a3e5c" if es_resaltado else "#121212"
+            paleta = get_palette()
+            bg_color = paleta["bg_highlight"] if es_resaltado else paleta["bg_element"]
             brush = QBrush(QColor(bg_color))
 
             # Código (ID) centrado
@@ -317,6 +319,8 @@ class POSController(QObject):
             id_item.setFlags(id_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             id_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             id_item.setBackground(brush)
+            if es_resaltado:
+                id_item.setData(Qt.ItemDataRole.UserRole, True)
             self.view.cart_table.setItem(row, 0, id_item)
 
             # Nombre Producto
@@ -331,7 +335,7 @@ class POSController(QObject):
                 on_increment=lambda checked=False, pid=prod.idProducto: self.cambiar_cantidad_carrito(pid, 1),
                 on_decrement=lambda checked=False, pid=prod.idProducto: self.cambiar_cantidad_carrito(pid, -1)
             )
-            qty_widget.setStyleSheet(f"background-color: {bg_color};")
+            qty_widget.setStyleSheet("background-color: transparent;")
             self.view.cart_table.setCellWidget(row, 2, qty_widget)
 
             # Precio (alineado a la derecha)
@@ -424,11 +428,12 @@ class POSController(QObject):
             self.view.suggestions_layout.addWidget(lbl)
             return
 
+        paleta = get_palette()
         for prod_id, confianza in recomendados:
             if prod_id in self.productos_db:
                 prod = self.productos_db[prod_id]
                 rec_card = QWidget()
-                rec_card.setStyleSheet("QWidget { background-color: #252525; border: 1px solid #3a3a3a; border-radius: 6px; }")
+                rec_card.setProperty("factory_type", "rec_card")
                 layout = QHBoxLayout(rec_card)
                 layout.setContentsMargins(10, 8, 10, 8)
                 
@@ -440,12 +445,12 @@ class POSController(QObject):
                 text_layout.setSpacing(2)
                 
                 text_lbl = QLabel(f"<b>{prod.nombre}</b><br><font color='#2a82da'>${prod.precioLista:.2f}</font>")
-                text_lbl.setStyleSheet("color: #ffffff; font-size: 14px; border: none; background: transparent;")
+                text_lbl.setProperty("rec_lbl_type", "text")
                 
                 # Indicador de porcentaje cálido sutil en cursiva de 14px
                 pct_conf = int(confianza * 100)
                 lbl_conf = QLabel(f"🔥 Confianza: {pct_conf}%")
-                lbl_conf.setStyleSheet("color: #d1b894; font-size: 14px; font-style: italic; border: none; background: transparent;")
+                lbl_conf.setProperty("rec_lbl_type", "confianza")
                 lbl_conf.setToolTip(f"El {pct_conf}% de los clientes que compraron este producto también llevaron este artículo.")
                 
                 text_layout.addWidget(text_lbl)
@@ -460,6 +465,8 @@ class POSController(QObject):
                 
                 layout.addWidget(text_widget, stretch=1)
                 layout.addWidget(btn_add_rec)
+                
+                aplicar_estilo_tarjeta_rec(rec_card, paleta)
                 self.view.suggestions_layout.addWidget(rec_card)
 
         self.view.suggestions_layout.addStretch()

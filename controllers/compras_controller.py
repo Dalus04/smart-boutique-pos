@@ -9,6 +9,7 @@ from models.catalogo import Producto
 from models.suministro import Compra, DetalleCompra, Inventario
 from views.compras_view import ComprasView
 from views.notification_toast import NotificationToast
+from utils.ui_helpers import aplicar_estilo_qty_btn, get_palette
 
 class ComprasController(QObject):
     def __init__(self):
@@ -147,6 +148,8 @@ class ComprasController(QObject):
 
         # 6: Acciones
         btn_del = QPushButton("❌")
+        btn_del.setProperty("factory_type", "qty_btn")
+        aplicar_estilo_qty_btn(btn_del, get_palette())
         btn_del.clicked.connect(self.eliminar_fila_dinamica)
         self.view.tabla_detalle.setCellWidget(row, 6, btn_del)
 

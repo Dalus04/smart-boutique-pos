@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QSpinBox, QDoubleSpinBox, QCompleter, QFrame)
 from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QFont
-from utils.ui_helpers import crear_tabla_estandar, crear_input_estandar, crear_combo_estandar, crear_boton
+from utils.ui_helpers import crear_tabla_estandar, crear_input_estandar, crear_combo_estandar, crear_boton, aplicar_estilo_panel, get_palette
 
 class ComprasView(QWidget):
     def __init__(self):
@@ -18,24 +18,16 @@ class ComprasView(QWidget):
 
         # --- PANEL SUPERIOR: Tarjetas de Resumen (Metadatos) ---
         panel_superior = QFrame()
-        panel_superior.setStyleSheet("""
-            QFrame {
-                background-color: rgba(255, 255, 255, 0.03);
-                border-radius: 8px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-            QLabel {
-                border: none;
-                background: transparent;
-            }
-        """)
+        panel_superior.setProperty("factory_type", "panel")
+        aplicar_estilo_panel(panel_superior, get_palette())
         panel_layout = QHBoxLayout(panel_superior)
         panel_layout.setContentsMargins(15, 15, 15, 15)
         
         # Tarjeta Proveedor
         prov_layout = QVBoxLayout()
         lbl_prov_titulo = QLabel("Proveedor:")
-        lbl_prov_titulo.setStyleSheet("font-size: 12px; font-weight: bold; color: #BDBDBD;")
+        lbl_prov_titulo.setStyleSheet("font-size: 12px; font-weight: bold;")
+        lbl_prov_titulo.setProperty("theme_color", "secondary")
         self.combo_proveedor = crear_combo_estandar()
         self.combo_proveedor.setEditable(True)
         self.combo_proveedor.setPlaceholderText("Seleccione un Proveedor...")
@@ -47,7 +39,8 @@ class ComprasView(QWidget):
         # Tarjeta Fecha
         fecha_layout = QVBoxLayout()
         lbl_fecha_titulo = QLabel("Fecha:")
-        lbl_fecha_titulo.setStyleSheet("font-size: 12px; font-weight: bold; color: #BDBDBD;")
+        lbl_fecha_titulo.setStyleSheet("font-size: 12px; font-weight: bold;")
+        lbl_fecha_titulo.setProperty("theme_color", "secondary")
         self.date_fecha = QDateEdit()
         self.date_fecha.setDate(QDate.currentDate())
         self.date_fecha.setCalendarPopup(True)
@@ -58,7 +51,8 @@ class ComprasView(QWidget):
         # Tarjeta Documento / Factura
         doc_layout = QVBoxLayout()
         lbl_doc_titulo = QLabel("Factura/Serie:")
-        lbl_doc_titulo.setStyleSheet("font-size: 12px; font-weight: bold; color: #BDBDBD;")
+        lbl_doc_titulo.setStyleSheet("font-size: 12px; font-weight: bold;")
+        lbl_doc_titulo.setProperty("theme_color", "secondary")
         self.line_factura = crear_input_estandar("Ej. F001-0001 (Opcional)")
         doc_layout.addWidget(lbl_doc_titulo)
         doc_layout.addWidget(self.line_factura)
@@ -86,13 +80,9 @@ class ComprasView(QWidget):
 
         # --- PANEL INFERIOR: Checkout (Jerarquía Visual) ---
         checkout_frame = QFrame()
-        checkout_frame.setStyleSheet("""
-            QFrame {
-                background-color: rgba(76, 175, 80, 0.05);
-                border-radius: 8px;
-                border: 1px solid rgba(76, 175, 80, 0.2);
-            }
-        """)
+        checkout_frame.setProperty("factory_type", "panel")
+        checkout_frame.setProperty("panel_tipo", "green")
+        aplicar_estilo_panel(checkout_frame, get_palette())
         checkout_layout = QHBoxLayout(checkout_frame)
         checkout_layout.setContentsMargins(15, 10, 15, 10)
         
