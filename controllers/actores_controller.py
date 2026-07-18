@@ -209,7 +209,7 @@ class ActoresController(QObject):
         if not text:
             self.view.txt_proveedor_id.setStyleSheet("")
             return True
-        if re.match(r"^\d{11}$", text):
+        if re.match(r"^\d{1,8}$", text):
             self.view.txt_proveedor_id.setStyleSheet("")
             return True
         else:
@@ -268,7 +268,7 @@ class ActoresController(QObject):
             return
             
         id_text = self.view.txt_proveedor_id.text().strip()
-        if not id_text or len(id_text) < 11:
+        if not id_text or len(id_text) < 1:
             return
             
         try:
@@ -356,11 +356,18 @@ class ActoresController(QObject):
         db = SessionLocal()
         try:
             if self.editando_cliente_id is None:
-                # MODO CREACIÓN
-                # Validación preventiva de duplicados
+                # MODO CREACIÓN: Poka-yoke preventivo
                 existente = db.query(Cliente).filter(Cliente.idCliente == cliente_id).first()
                 if existente:
-                    QMessageBox.warning(self.view, "Código Duplicado", f"El cliente con DNI/Código '{cliente_id}' ya está registrado.")
+                    reply = QMessageBox.warning(
+                        self.view,
+                        "Código Duplicado",
+                        f"El cliente con DNI/Código '{cliente_id}' ya está registrado.\n¿Desea limpiar el formulario?",
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+                        QMessageBox.StandardButton.Cancel
+                    )
+                    if reply == QMessageBox.StandardButton.Yes:
+                        self.limpiar_formulario_cliente()
                     return
                     
                 nuevo_cliente = Cliente(
@@ -373,25 +380,22 @@ class ActoresController(QObject):
                 db.commit()
                 NotificationToast(self.view.window(), "✓ Cliente guardado exitosamente.")
             else:
-                # MODO EDICIÓN
-                cli = db.query(Cliente).filter(Cliente.idCliente == self.editando_cliente_id).first()
-                if cli:
-                    cli.nombresCompletos = nombre
-                    cli.telefono = telefono
-                    cli.correoElectronico = correo
-                    db.commit()
-                    NotificationToast(self.view.window(), "✓ Cliente actualizado exitosamente.")
-                else:
-                    QMessageBox.warning(self.view, "Error", "El cliente a editar ya no existe en la base de datos.")
+                # MODO EDICIÓN: db.merge() para resiliencia concurrente
+                cliente_a_actualizar = Cliente(
+                    idCliente=self.editando_cliente_id,
+                    nombresCompletos=nombre,
+                    telefono=telefono,
+                    correoElectronico=correo
+                )
+                db.merge(cliente_a_actualizar)
+                db.commit()
+                NotificationToast(self.view.window(), "✓ Cliente actualizado exitosamente.")
                     
             self.limpiar_formulario_cliente()
             self.cargar_clientes()
-        except IntegrityError as ie:
-            db.rollback()
-            QMessageBox.critical(self.view, "Error de Integridad", f"Fallo de integridad en base de datos. Posible código duplicado:\n{ie}")
         except Exception as e:
             db.rollback()
-            QMessageBox.critical(self.view, "Error", f"Ocurrió un error inesperado al guardar:\n{e}")
+            QMessageBox.critical(self.view, "Error al guardar", f"Ocurrió un error al procesar la operación:\n{str(e)}")
         finally:
             db.close()
             
@@ -500,7 +504,7 @@ class ActoresController(QObject):
             
         # Validar formatos
         if not self.validar_live_proveedor_id(id_text) and self.editando_proveedor_id is None:
-            QMessageBox.warning(self.view, "Código inválido", "El Código/RUC debe tener exactamente 11 dígitos.")
+            QMessageBox.warning(self.view, "Código inválido", "El Código/RUC debe tener de 1 a 8 dígitos.")
             return
         if correo and not self.validar_live_proveedor_correo(correo):
             QMessageBox.warning(self.view, "Correo inválido", "El formato del correo electrónico es incorrecto.")
@@ -509,11 +513,18 @@ class ActoresController(QObject):
         db = SessionLocal()
         try:
             if self.editando_proveedor_id is None:
-                # MODO CREACIÓN
-                # Validación preventiva de duplicados
+                # MODO CREACIÓN: Poka-yoke preventivo
                 existente = db.query(Proveedor).filter(Proveedor.idProveedor == proveedor_id).first()
                 if existente:
-                    QMessageBox.warning(self.view, "Código Duplicado", f"El proveedor con RUC/Código '{proveedor_id}' ya está registrado.")
+                    reply = QMessageBox.warning(
+                        self.view,
+                        "Código Duplicado",
+                        f"El proveedor con RUC/Código '{proveedor_id}' ya está registrado.\n¿Desea limpiar el formulario?",
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+                        QMessageBox.StandardButton.Cancel
+                    )
+                    if reply == QMessageBox.StandardButton.Yes:
+                        self.limpiar_formulario_proveedor()
                     return
                     
                 nuevo_prov = Proveedor(
@@ -527,26 +538,23 @@ class ActoresController(QObject):
                 db.commit()
                 NotificationToast(self.view.window(), "✓ Proveedor guardado exitosamente.")
             else:
-                # MODO EDICIÓN
-                prov = db.query(Proveedor).filter(Proveedor.idProveedor == self.editando_proveedor_id).first()
-                if prov:
-                    prov.nombreRazonSocial = nombre
-                    prov.telefono = telefono
-                    prov.direccion = direccion
-                    prov.correoElectronico = correo
-                    db.commit()
-                    NotificationToast(self.view.window(), "✓ Proveedor actualizado exitosamente.")
-                else:
-                    QMessageBox.warning(self.view, "Error", "El proveedor a editar ya no existe en la base de datos.")
+                # MODO EDICIÓN: db.merge() para resiliencia concurrente
+                proveedor_a_actualizar = Proveedor(
+                    idProveedor=self.editando_proveedor_id,
+                    nombreRazonSocial=nombre,
+                    telefono=telefono,
+                    direccion=direccion,
+                    correoElectronico=correo
+                )
+                db.merge(proveedor_a_actualizar)
+                db.commit()
+                NotificationToast(self.view.window(), "✓ Proveedor actualizado exitosamente.")
                     
             self.limpiar_formulario_proveedor()
             self.cargar_proveedores()
-        except IntegrityError as ie:
-            db.rollback()
-            QMessageBox.critical(self.view, "Error de Integridad", f"Fallo de integridad en base de datos. Posible código duplicado:\n{ie}")
         except Exception as e:
             db.rollback()
-            QMessageBox.critical(self.view, "Error", f"Ocurrió un error inesperado al guardar:\n{e}")
+            QMessageBox.critical(self.view, "Error al guardar", f"Ocurrió un error al procesar la operación:\n{str(e)}")
         finally:
             db.close()
             

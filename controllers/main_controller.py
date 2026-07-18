@@ -5,6 +5,7 @@ from controllers.dashboard_controller import DashboardController
 from controllers.pos_controller import POSController
 from controllers.inventario_controller import InventarioController
 from controllers.actores_controller import ActoresController
+from controllers.compras_controller import ComprasController
 
 class MainController:
     def __init__(self):
@@ -15,18 +16,21 @@ class MainController:
         self.pos_controller = POSController()
         self.inventario_controller = InventarioController()
         self.actores_controller = ActoresController()
+        self.compras_controller = ComprasController()
 
         # Agregar las vistas al QStackedWidget de MainWindow
         self.window.stack.addWidget(self.dashboard_controller.view)
         self.window.stack.addWidget(self.pos_controller.view)
         self.window.stack.addWidget(self.inventario_controller.view)
         self.window.stack.addWidget(self.actores_controller.view)
+        self.window.stack.addWidget(self.compras_controller.view)
 
         # Conectar las señales de los botones a la lógica de navegación
         self.window.btn_dashboard.clicked.connect(self.show_dashboard)
         self.window.btn_pos.clicked.connect(self.show_pos)
         self.window.btn_inventario.clicked.connect(self.show_inventario)
         self.window.btn_actores.clicked.connect(self.show_actores)
+        self.window.btn_compras.clicked.connect(self.show_compras)
 
     def show_dashboard(self):
         self.window.stack.setCurrentWidget(self.dashboard_controller.view)
@@ -47,6 +51,11 @@ class MainController:
         self.window.stack.setCurrentWidget(self.actores_controller.view)
         self.window.set_active_button(self.window.btn_actores)
         self.actores_controller.start()
+
+    def show_compras(self):
+        self.window.stack.setCurrentWidget(self.compras_controller.view)
+        self.window.set_active_button(self.window.btn_compras)
+        self.compras_controller.cargar_datos_iniciales()
 
     def start(self):
         # Al arrancar, mostrar el dashboard y comenzar a cargar datos

@@ -284,7 +284,7 @@ class ActoresView(QWidget):
         form_layout.addWidget(QLabel("RUC / Código (Requerido):"))
         self.txt_proveedor_id = QLineEdit()
         self.txt_proveedor_id.setPlaceholderText("Ej. 20123456789")
-        self.txt_proveedor_id.setValidator(QRegularExpressionValidator(QRegularExpression("^\\d{1,15}$")))
+        self.txt_proveedor_id.setValidator(QRegularExpressionValidator(QRegularExpression("^\\d{1,8}$")))
         form_layout.addWidget(self.txt_proveedor_id)
         
         form_layout.addWidget(QLabel("Nombre o Razón Social (Requerido):"))
