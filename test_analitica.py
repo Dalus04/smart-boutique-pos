@@ -3,12 +3,11 @@ import datetime
 from decimal import Decimal
 from sqlalchemy import select
 from config.db import get_db
-from models.usuarios import Administrador, Usuario
+from models.usuarios import Usuario
 from models.catalogo import Categoria, Producto
 from models.actores import Cliente
 from models.suministro import Inventario
 from models.pos import Venta, DetalleVenta, MedioPago, Pago
-# Asegurar el registro de todo en SQLAlchemy
 import models.suministro 
 from services.analitica import AnaliticaService
 
@@ -17,17 +16,8 @@ def run_analytics_tests():
     
     with get_db() as db:
         try:
-            # 1. Crear Administrador, Usuario y Cliente con nombres únicos para aislar la prueba
-            admin = Administrador(
-                nombres="Administrador Analítica Test",
-                usuario="admin_analitica_test",
-                contrasena="admin_pass_analitica"
-            )
-            db.add(admin)
-            db.flush()
-            
+            # 1. Crear Usuario y Cliente con nombres únicos para aislar la prueba
             usuario = Usuario(
-                administrador=admin,
                 nombres="Analista Comercial Test",
                 apellidos="Díaz",
                 nombreUsuario="analista_comercial_test",
@@ -39,8 +29,10 @@ def run_analytics_tests():
             db.flush()
             
             cliente = Cliente(
-                idCliente=88776655,
-                nombresCompletos="Andrés Manuel Rivera Test",
+                tipoDocumento="DNI",
+                numeroDocumento="88776655",
+                nombres="Andrés Manuel",
+                apellidos="Rivera Test",
                 telefono="+51966554433",
                 correoElectronico="andres.rivera.test@example.com"
             )
@@ -55,7 +47,6 @@ def run_analytics_tests():
             db.flush()
             
             # 3. Crear Productos
-            # Calzado
             prod_zap = Producto(
                 categoria=cat_calzado,
                 nombre="Zapatos Formales Test",
@@ -76,7 +67,6 @@ def run_analytics_tests():
                 costoProducto=Decimal("40.00"),
                 precioLista=Decimal("50.00")
             )
-            # Ropa de Invierno
             prod_abrigo = Producto(
                 categoria=cat_ropa,
                 nombre="Abrigo de Lana Premium Test",
@@ -93,12 +83,9 @@ def run_analytics_tests():
             db.flush()
             
             # 4. Crear Inventarios para probar "Salud de Inventario"
-            # prod_zap -> 3 unidades (Crítico <= 5)
-            # prod_tenis -> 12 unidades (Bajo <= 15)
-            # prod_abrigo -> 25 unidades (Óptimo > 15)
-            inv1 = Inventario(producto=prod_zap, fechaActualizacion=datetime.date.today(), cantidadDisponible=3)
-            inv2 = Inventario(producto=prod_tenis, fechaActualizacion=datetime.date.today(), cantidadDisponible=12)
-            inv3 = Inventario(producto=prod_abrigo, fechaActualizacion=datetime.date.today(), cantidadDisponible=25)
+            inv1 = Inventario(producto=prod_zap, fechaActualizacion=datetime.datetime.utcnow(), cantidadDisponible=3)
+            inv2 = Inventario(producto=prod_tenis, fechaActualizacion=datetime.datetime.utcnow(), cantidadDisponible=12)
+            inv3 = Inventario(producto=prod_abrigo, fechaActualizacion=datetime.datetime.utcnow(), cantidadDisponible=25)
             db.add(inv1)
             db.add(inv2)
             db.add(inv3)
@@ -111,56 +98,46 @@ def run_analytics_tests():
             
             # 6. Registrar Ventas en distintas fechas para probar "Tendencia de Ventas" y "Ranking de Productos"
             # Venta 1: Mayo 2026 -> 5 Zapatos Formales ($100 c/u) = $500 total
-            v1 = Venta(cliente=cliente, usuario=usuario, fechaVenta=datetime.date(2026, 5, 15), montoTotal=Decimal("500.00"))
+            v1 = Venta(cliente=cliente, usuario=usuario, fechaVenta=datetime.datetime(2026, 5, 15, 12, 0, 0), montoTotal=Decimal("500.00"))
             db.add(v1)
             db.flush()
             det1 = DetalleVenta(venta=v1, producto=prod_zap, cantidad=5, costoUnitario=Decimal("60.00"), precioUnitario=Decimal("100.00"), subtotal=Decimal("500.00"))
             db.add(det1)
-            p1 = Pago(venta=v1, medio_pago=medio_pago, fechaPago=datetime.date(2026, 5, 15), montoPagado=Decimal("500.00"))
+            p1 = Pago(venta=v1, medio_pago=medio_pago, fechaPago=datetime.datetime(2026, 5, 15, 12, 0, 0), montoPagado=Decimal("500.00"))
             db.add(p1)
             
             # Venta 2: Junio 2026 -> 10 Zapatillas Urbanas ($50 c/u) = $500 total
-            v2 = Venta(cliente=cliente, usuario=usuario, fechaVenta=datetime.date(2026, 6, 20), montoTotal=Decimal("500.00"))
+            v2 = Venta(cliente=cliente, usuario=usuario, fechaVenta=datetime.datetime(2026, 6, 20, 12, 0, 0), montoTotal=Decimal("500.00"))
             db.add(v2)
             db.flush()
             det2 = DetalleVenta(venta=v2, producto=prod_tenis, cantidad=10, costoUnitario=Decimal("40.00"), precioUnitario=Decimal("50.00"), subtotal=Decimal("500.00"))
             db.add(det2)
-            p2 = Pago(venta=v2, medio_pago=medio_pago, fechaPago=datetime.date(2026, 6, 20), montoPagado=Decimal("500.00"))
+            p2 = Pago(venta=v2, medio_pago=medio_pago, fechaPago=datetime.datetime(2026, 6, 20, 12, 0, 0), montoPagado=Decimal("500.00"))
             db.add(p2)
             
             # Venta 3: Julio 2026 -> 2 Abrigos de Lana ($200 c/u) = $400 total
-            v3 = Venta(cliente=cliente, usuario=usuario, fechaVenta=datetime.date(2026, 7, 10), montoTotal=Decimal("400.00"))
+            v3 = Venta(cliente=cliente, usuario=usuario, fechaVenta=datetime.datetime(2026, 7, 10, 12, 0, 0), montoTotal=Decimal("400.00"))
             db.add(v3)
             db.flush()
             det3 = DetalleVenta(venta=v3, producto=prod_abrigo, cantidad=2, costoUnitario=Decimal("80.00"), precioUnitario=Decimal("200.00"), subtotal=Decimal("400.00"))
             db.add(det3)
-            p3 = Pago(venta=v3, medio_pago=medio_pago, fechaPago=datetime.date(2026, 7, 10), montoPagado=Decimal("400.00"))
+            p3 = Pago(venta=v3, medio_pago=medio_pago, fechaPago=datetime.datetime(2026, 7, 10, 12, 0, 0), montoPagado=Decimal("400.00"))
             db.add(p3)
             
             db.flush()
             print("✅ Datos transaccionales y de inventario simulados creados correctamente.")
             
-            # ----------------------------------------------------
             # PRUEBA KPI 1: Salud de Inventario
-            # ----------------------------------------------------
             print("\n--- KPI 1: Salud de Inventario ---")
             salud = AnaliticaService.obtener_salud_inventario(db)
             print(f"Salud del Inventario: {salud}")
             
-            # Dado que el inventario global puede contener otros datos persistidos en la BD local,
-            # validamos que al menos existan o se sumen los registros de nuestra prueba.
             assert salud["Crítico"]["items"] >= 1 and salud["Crítico"]["unidades"] >= 3, "Error en salud Crítico"
             assert salud["Bajo"]["items"] >= 1 and salud["Bajo"]["unidades"] >= 12, "Error en salud Bajo"
             assert salud["Óptimo"]["items"] >= 1 and salud["Óptimo"]["unidades"] >= 25, "Error en salud Óptimo"
             print("✅ KPI 1: Salud de Inventario computado correctamente.")
             
-            # ----------------------------------------------------
             # PRUEBA KPI 2: Rentabilidad por Categoría
-            # ----------------------------------------------------
-            # Calzado de Prueba Analitica: costo_total = 60 + 40 = 100, precio_total = 100 + 50 = 150
-            # margen_ponderado = ((150 - 100) / 150) * 100 = 33.33%
-            # Ropa de Prueba Analitica: costo_total = 80, precio_total = 200
-            # margen_ponderado = ((200 - 80) / 200) * 100 = 60.00%
             print("\n--- KPI 2: Rentabilidad por Categoría ---")
             rentabilidades = AnaliticaService.obtener_rentabilidad_por_categoria(db)
             calzado_checked = False
@@ -178,24 +155,20 @@ def run_analytics_tests():
             assert calzado_checked and ropa_checked, "No se encontraron las categorías de prueba en la rentabilidad"
             print("✅ KPI 2: Rentabilidad por Categoría computada correctamente.")
             
-            # ----------------------------------------------------
             # PRUEBA KPI 3: Tendencia de Ventas
-            # ----------------------------------------------------
             print("\n--- KPI 3: Tendencia de Ventas (Mensual) ---")
             tendencia = AnaliticaService.obtener_tendencia_ventas(db)
             for t in tendencia:
                 print(f"Mes: {t['mes']} | Total Vendido: ${t['total_vendido']} | Transacciones: {t['transacciones']}")
             
-            # Buscamos los meses específicos y comprobamos montos (pueden ser mayores si ya había ventas en esos meses, por lo que usamos >=)
             meses_map = {t["mes"]: t["total_vendido"] for t in tendencia}
             assert meses_map["2026-05"] >= 500.0, "Error tendencia mayo"
             assert meses_map["2026-06"] >= 500.0, "Error tendencia junio"
             assert meses_map["2026-07"] >= 400.0, "Error tendencia julio"
             print("✅ KPI 3: Tendencia de Ventas computada correctamente.")
             
-            # ----------------------------------------------------
             # PRUEBA KPI 4: Ranking de Productos
-            # ----------------------------------------------------
+            print("\n--- Ranking de Productos ---")
             ranking = AnaliticaService.obtener_ranking_productos(
                 db, 
                 limit=5, 
@@ -205,14 +178,13 @@ def run_analytics_tests():
             for index, p in enumerate(ranking, 1):
                 print(f"Puesto {index}: '{p['nombre']}' | Cantidad vendida: {p['cantidad_vendida']} | Recaudado: ${p['total_recaudado']}")
             
-            # Los productos del test deben aparecer con sus respectivas cantidades mínimas vendidas
             productos_vendidos = {p["nombre"]: p["cantidad_vendida"] for p in ranking}
             assert productos_vendidos["Zapatillas Urbanas Test"] >= 10
             assert productos_vendidos["Zapatos Formales Test"] >= 5
             assert productos_vendidos["Abrigo de Lana Premium Test"] >= 2
             print("✅ KPI 4: Ranking de Productos computado correctamente.")
             
-            # 7. Rollback explícito obligatorio para no alterar la base de datos local
+            # Rollback explícito obligatorio para no alterar la base de datos local
             print("\nRealizando rollback() para mantener la integridad histórica...")
             db.rollback()
             print("✅ Rollback completado de forma segura. La base de datos no fue modificada.")

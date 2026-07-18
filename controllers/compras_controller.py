@@ -7,6 +7,7 @@ from config.db import SessionLocal
 from models.actores import Proveedor
 from models.catalogo import Producto
 from models.suministro import Compra, DetalleCompra, Inventario
+from utils.signals import global_signals
 from views.compras_view import ComprasView
 from views.notification_toast import NotificationToast
 from utils.ui_helpers import aplicar_estilo_qty_btn, get_palette
@@ -44,7 +45,7 @@ class ComprasController(QObject):
             proveedores = db.query(Proveedor).all()
             lista_proveedores = []
             for p in proveedores:
-                texto = f"{p.idProveedor} - {p.nombreRazonSocial}"
+                texto = f"[{p.tipoDocumento or ''} {p.numeroDocumento or ''}] {p.nombreRazonSocial}".strip()
                 self.proveedores_data[texto] = p.idProveedor
                 lista_proveedores.append(texto)
             
@@ -217,7 +218,7 @@ class ComprasController(QObject):
             now = datetime.datetime.now()
             factura = f"REQ-{now.strftime('%Y%m%d-%H%M')}"
             
-        fecha_compra = self.view.date_fecha.date().toPython()
+        fecha_compra = datetime.datetime.combine(self.view.date_fecha.date().toPython(), now.time())
         total_str = self.view.lbl_total.text().replace("Total: $", "")
         monto_total = Decimal(total_str)
 
@@ -253,11 +254,11 @@ class ComprasController(QObject):
                     inv = db.query(Inventario).filter(Inventario.idProducto == id_producto).first()
                     if inv:
                         inv.cantidadDisponible += cant
-                        inv.fechaActualizacion = datetime.date.today()
+                        inv.fechaActualizacion = now
                     else:
                         nuevo_inv = Inventario(
                             idProducto=id_producto,
-                            fechaActualizacion=datetime.date.today(),
+                            fechaActualizacion=now,
                             cantidadDisponible=cant
                         )
                         db.add(nuevo_inv)
@@ -266,6 +267,7 @@ class ComprasController(QObject):
                 NotificationToast(self.view.window(), f"✓ Compra {factura} emitida correctamente.")
                 self.limpiar_formulario()
                 self.cargar_datos_iniciales()
+                global_signals.inventario_actualizado.emit()
 
             except Exception as e:
                 db.rollback()
@@ -274,6 +276,7 @@ class ComprasController(QObject):
     def limpiar_formulario(self):
         self.view.combo_proveedor.setCurrentIndex(0)
         self.view.line_factura.clear()
-        self.view.date_fecha.setDate(datetime.date.today())
+        self.view.date_fecha.setDate(datetime.datetime.now().date())
         self.view.tabla_detalle.setRowCount(0)
+        self.view.lbl_total.setText("Total: $0.00")
         self.recalcular_totales()

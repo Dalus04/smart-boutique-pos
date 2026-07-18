@@ -1,19 +1,18 @@
 from decimal import Decimal
 import datetime
-from sqlalchemy import Integer, Numeric, Date, ForeignKey
+from sqlalchemy import Integer, Numeric, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from models.base import Base
 
 class Inventario(Base):
     __tablename__ = "inventario"
 
-    idInventario: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    idProducto: Mapped[int] = mapped_column(Integer, ForeignKey("producto.idProducto"), nullable=False)
-    fechaActualizacion: Mapped[datetime.date] = mapped_column(Date, nullable=False)
-    cantidadDisponible: Mapped[int] = mapped_column(Integer, nullable=False)
+    idProducto: Mapped[int] = mapped_column(Integer, ForeignKey("producto.idProducto"), primary_key=True)
+    fechaActualizacion: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    cantidadDisponible: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    # Relación bidireccional muchos-a-uno (sin cascada de eliminación)
-    producto: Mapped["Producto"] = relationship("Producto", back_populates="inventarios")
+    # Relación bidireccional uno-a-uno (sin cascada de eliminación)
+    producto: Mapped["Producto"] = relationship("Producto", back_populates="inventario")
 
     @property
     def estado_stock(self) -> str:
@@ -35,8 +34,9 @@ class Compra(Base):
     idCompra: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     idProveedor: Mapped[int] = mapped_column(Integer, ForeignKey("proveedor.idProveedor"), nullable=False)
     idUsuario: Mapped[int] = mapped_column(Integer, ForeignKey("usuario.idUsuario"), nullable=False)
-    fechaCompra: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    fechaCompra: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, default=datetime.datetime.utcnow)
     montoTotal: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    estado: Mapped[str | None] = mapped_column(String(20), nullable=True, default="COMPLETADA")
 
     # Relaciones bidireccionales (sin cascada de eliminación)
     proveedor: Mapped["Proveedor"] = relationship("Proveedor", back_populates="compras")

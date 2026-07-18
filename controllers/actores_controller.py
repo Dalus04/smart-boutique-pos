@@ -3,6 +3,7 @@ from PySide6.QtCore import QObject, Qt
 from PySide6.QtWidgets import QTableWidgetItem, QMessageBox
 from views.actores_view import ActoresView
 from views.notification_toast import NotificationToast
+from utils.signals import global_signals
 from config.db import SessionLocal
 from models.actores import Cliente, Proveedor
 from sqlalchemy.exc import IntegrityError
@@ -22,9 +23,9 @@ class ActoresController(QObject):
         self.view.btn_editar_cliente.clicked.connect(self.preparar_edicion_cliente)
         self.view.btn_eliminar_cliente.clicked.connect(self.eliminar_cliente)
         self.view.txt_buscar_cliente.textChanged.connect(self.filtrar_clientes)
-        self.view.txt_cliente_id.textChanged.connect(self.validar_live_cliente_id)
+        self.view.txt_num_doc_cliente.textChanged.connect(self.validar_live_cliente_doc)
+        self.view.cmb_tipo_doc_cliente.currentIndexChanged.connect(lambda: self.validar_live_cliente_doc(self.view.txt_num_doc_cliente.text()))
         self.view.txt_cliente_correo.textChanged.connect(self.validar_live_cliente_correo)
-        self.view.txt_cliente_id.editingFinished.connect(self.detectar_cliente_existente)
         self.view.tabla_clientes.doubleClicked.connect(lambda index: self.preparar_edicion_cliente())
         
         # Conectar eventos de proveedores
@@ -33,9 +34,9 @@ class ActoresController(QObject):
         self.view.btn_editar_proveedor.clicked.connect(self.preparar_edicion_proveedor)
         self.view.btn_eliminar_proveedor.clicked.connect(self.eliminar_proveedor)
         self.view.txt_buscar_proveedor.textChanged.connect(self.filtrar_proveedores)
-        self.view.txt_proveedor_id.textChanged.connect(self.validar_live_proveedor_id)
+        self.view.txt_num_doc_proveedor.textChanged.connect(self.validar_live_proveedor_doc)
+        self.view.cmb_tipo_doc_proveedor.currentIndexChanged.connect(lambda: self.validar_live_proveedor_doc(self.view.txt_num_doc_proveedor.text()))
         self.view.txt_proveedor_correo.textChanged.connect(self.validar_live_proveedor_correo)
-        self.view.txt_proveedor_id.editingFinished.connect(self.detectar_proveedor_existente)
         self.view.tabla_proveedores.doubleClicked.connect(lambda index: self.preparar_edicion_proveedor())
         
     def start(self):
@@ -58,9 +59,12 @@ class ActoresController(QObject):
                 item_id.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.view.tabla_clientes.setItem(row, 0, item_id)
                 
-                self.view.tabla_clientes.setItem(row, 1, QTableWidgetItem(cli.nombresCompletos))
-                self.view.tabla_clientes.setItem(row, 2, QTableWidgetItem(cli.telefono or ""))
-                self.view.tabla_clientes.setItem(row, 3, QTableWidgetItem(cli.correoElectronico or ""))
+                self.view.tabla_clientes.setItem(row, 1, QTableWidgetItem(cli.tipoDocumento or ""))
+                self.view.tabla_clientes.setItem(row, 2, QTableWidgetItem(cli.numeroDocumento or ""))
+                self.view.tabla_clientes.setItem(row, 3, QTableWidgetItem(cli.nombres or ""))
+                self.view.tabla_clientes.setItem(row, 4, QTableWidgetItem(cli.apellidos or ""))
+                self.view.tabla_clientes.setItem(row, 5, QTableWidgetItem(cli.telefono or ""))
+                self.view.tabla_clientes.setItem(row, 6, QTableWidgetItem(cli.correoElectronico or ""))
         except Exception as e:
             print(f"Error al cargar clientes: {e}")
         finally:
@@ -84,10 +88,12 @@ class ActoresController(QObject):
                 item_id.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.view.tabla_proveedores.setItem(row, 0, item_id)
                 
-                self.view.tabla_proveedores.setItem(row, 1, QTableWidgetItem(prov.nombreRazonSocial))
-                self.view.tabla_proveedores.setItem(row, 2, QTableWidgetItem(prov.telefono or ""))
-                self.view.tabla_proveedores.setItem(row, 3, QTableWidgetItem(prov.direccion or ""))
-                self.view.tabla_proveedores.setItem(row, 4, QTableWidgetItem(prov.correoElectronico or ""))
+                self.view.tabla_proveedores.setItem(row, 1, QTableWidgetItem(prov.tipoDocumento or ""))
+                self.view.tabla_proveedores.setItem(row, 2, QTableWidgetItem(prov.numeroDocumento or ""))
+                self.view.tabla_proveedores.setItem(row, 3, QTableWidgetItem(prov.nombreRazonSocial))
+                self.view.tabla_proveedores.setItem(row, 4, QTableWidgetItem(prov.telefono or ""))
+                self.view.tabla_proveedores.setItem(row, 5, QTableWidgetItem(prov.direccion or ""))
+                self.view.tabla_proveedores.setItem(row, 6, QTableWidgetItem(prov.correoElectronico or ""))
         except Exception as e:
             print(f"Error al cargar proveedores: {e}")
         finally:
@@ -101,10 +107,13 @@ class ActoresController(QObject):
     def set_form_state_cliente(self, state, cli=None):
         if state == "CREATE":
             self.editando_cliente_id = None
-            self.view.txt_cliente_id.clear()
-            self.view.txt_cliente_id.setEnabled(True)
-            self.view.txt_cliente_id.setStyleSheet("")
-            self.view.txt_cliente_nombre.clear()
+            self.view.txt_num_doc_cliente.clear()
+            self.view.txt_num_doc_cliente.setEnabled(True)
+            self.view.txt_num_doc_cliente.setStyleSheet("")
+            self.view.cmb_tipo_doc_cliente.setCurrentIndex(0)
+            self.view.cmb_tipo_doc_cliente.setEnabled(True)
+            self.view.txt_cliente_nombres.clear()
+            self.view.txt_cliente_apellidos.clear()
             self.view.txt_cliente_telefono.clear()
             self.view.txt_cliente_correo.clear()
             self.view.txt_cliente_correo.setStyleSheet("")
@@ -112,10 +121,15 @@ class ActoresController(QObject):
             self.view.btn_guardar_cliente.setText("Guardar")
         elif state == "EDIT" and cli:
             self.editando_cliente_id = cli.idCliente
-            self.view.txt_cliente_id.setText(str(cli.idCliente))
-            self.view.txt_cliente_id.setEnabled(False)
-            self.view.txt_cliente_id.setStyleSheet("")
-            self.view.txt_cliente_nombre.setText(cli.nombresCompletos)
+            self.view.txt_num_doc_cliente.setText(cli.numeroDocumento or "")
+            self.view.txt_num_doc_cliente.setEnabled(False)
+            self.view.txt_num_doc_cliente.setStyleSheet("")
+            idx = self.view.cmb_tipo_doc_cliente.findText(cli.tipoDocumento or "DNI")
+            if idx >= 0:
+                self.view.cmb_tipo_doc_cliente.setCurrentIndex(idx)
+            self.view.cmb_tipo_doc_cliente.setEnabled(False)
+            self.view.txt_cliente_nombres.setText(cli.nombres or "")
+            self.view.txt_cliente_apellidos.setText(cli.apellidos or "")
             self.view.txt_cliente_telefono.setText(cli.telefono or "")
             self.view.txt_cliente_correo.setText(cli.correoElectronico or "")
             self.view.txt_cliente_correo.setStyleSheet("")
@@ -125,9 +139,11 @@ class ActoresController(QObject):
     def set_form_state_proveedor(self, state, prov=None):
         if state == "CREATE":
             self.editando_proveedor_id = None
-            self.view.txt_proveedor_id.clear()
-            self.view.txt_proveedor_id.setEnabled(True)
-            self.view.txt_proveedor_id.setStyleSheet("")
+            self.view.txt_num_doc_proveedor.clear()
+            self.view.txt_num_doc_proveedor.setEnabled(True)
+            self.view.txt_num_doc_proveedor.setStyleSheet("")
+            self.view.cmb_tipo_doc_proveedor.setCurrentIndex(0)
+            self.view.cmb_tipo_doc_proveedor.setEnabled(True)
             self.view.txt_proveedor_nombre.clear()
             self.view.txt_proveedor_telefono.clear()
             self.view.txt_proveedor_direccion.clear()
@@ -137,10 +153,14 @@ class ActoresController(QObject):
             self.view.btn_guardar_proveedor.setText("Guardar")
         elif state == "EDIT" and prov:
             self.editando_proveedor_id = prov.idProveedor
-            self.view.txt_proveedor_id.setText(str(prov.idProveedor))
-            self.view.txt_proveedor_id.setEnabled(False)
-            self.view.txt_proveedor_id.setStyleSheet("")
-            self.view.txt_proveedor_nombre.setText(prov.nombreRazonSocial)
+            self.view.txt_num_doc_proveedor.setText(prov.numeroDocumento or "")
+            self.view.txt_num_doc_proveedor.setEnabled(False)
+            self.view.txt_num_doc_proveedor.setStyleSheet("")
+            idx = self.view.cmb_tipo_doc_proveedor.findText(prov.tipoDocumento or "RUC")
+            if idx >= 0:
+                self.view.cmb_tipo_doc_proveedor.setCurrentIndex(idx)
+            self.view.cmb_tipo_doc_proveedor.setEnabled(False)
+            self.view.txt_proveedor_nombre.setText(prov.nombreRazonSocial or "")
             self.view.txt_proveedor_telefono.setText(prov.telefono or "")
             self.view.txt_proveedor_direccion.setText(prov.direccion or "")
             self.view.txt_proveedor_correo.setText(prov.correoElectronico or "")
@@ -180,16 +200,28 @@ class ActoresController(QObject):
 
     # --- LIVE VALIDATION ---
     
-    def validar_live_cliente_id(self, text):
+    def validar_live_cliente_doc(self, text):
         text = text.strip()
+        tipo_doc = self.view.cmb_tipo_doc_cliente.currentText()
         if not text:
-            self.view.txt_cliente_id.setStyleSheet("")
+            self.view.txt_num_doc_cliente.setStyleSheet("")
             return True
-        if re.match(r"^\d{8}$", text):
-            self.view.txt_cliente_id.setStyleSheet("")
+        
+        valid = False
+        if tipo_doc == "DNI":
+            valid = bool(re.match(r"^\d{8}$", text))
+        elif tipo_doc == "CE":
+            valid = bool(re.match(r"^\d{9}$", text))
+        elif tipo_doc == "RUC":
+            valid = bool(re.match(r"^\d{11}$", text))
+        else:
+            valid = bool(len(text) >= 5)
+            
+        if valid:
+            self.view.txt_num_doc_cliente.setStyleSheet("")
             return True
         else:
-            self.view.txt_cliente_id.setStyleSheet("border: 1px solid #c62828; background-color: #2d2d2d; color: #ffffff;")
+            self.view.txt_num_doc_cliente.setStyleSheet("border: 1px solid #c62828; background-color: #2d2d2d; color: #ffffff;")
             return False
 
     def validar_live_cliente_correo(self, text):
@@ -204,16 +236,24 @@ class ActoresController(QObject):
             self.view.txt_cliente_correo.setStyleSheet("border: 1px solid #c62828; background-color: #2d2d2d; color: #ffffff;")
             return False
 
-    def validar_live_proveedor_id(self, text):
+    def validar_live_proveedor_doc(self, text):
         text = text.strip()
+        tipo_doc = self.view.cmb_tipo_doc_proveedor.currentText()
         if not text:
-            self.view.txt_proveedor_id.setStyleSheet("")
+            self.view.txt_num_doc_proveedor.setStyleSheet("")
             return True
-        if re.match(r"^\d{1,8}$", text):
-            self.view.txt_proveedor_id.setStyleSheet("")
+        
+        valid = False
+        if tipo_doc == "RUC":
+            valid = bool(re.match(r"^\d{11}$", text))
+        else:
+            valid = bool(re.match(r"^\d{11}$", text))
+            
+        if valid:
+            self.view.txt_num_doc_proveedor.setStyleSheet("")
             return True
         else:
-            self.view.txt_proveedor_id.setStyleSheet("border: 1px solid #c62828; background-color: #2d2d2d; color: #ffffff;")
+            self.view.txt_num_doc_proveedor.setStyleSheet("border: 1px solid #c62828; background-color: #2d2d2d; color: #ffffff;")
             return False
 
     def validar_live_proveedor_correo(self, text):
@@ -228,71 +268,7 @@ class ActoresController(QObject):
             self.view.txt_proveedor_correo.setStyleSheet("border: 1px solid #c62828; background-color: #2d2d2d; color: #ffffff;")
             return False
 
-    # --- DETECCION ASISTIDA DE ID EXISTENTE ---
-    
-    def detectar_cliente_existente(self):
-        # No actuar si ya estamos editando o si la longitud no es válida para DNI (8 dígitos)
-        if self.editando_cliente_id is not None:
-            return
-        
-        id_text = self.view.txt_cliente_id.text().strip()
-        if not id_text or len(id_text) < 8:
-            return
-            
-        try:
-            cliente_id = int(id_text)
-        except ValueError:
-            return
-            
-        db = SessionLocal()
-        try:
-            cli = db.query(Cliente).filter(Cliente.idCliente == cliente_id).first()
-            if cli:
-                reply = QMessageBox.question(
-                    self.view,
-                    "Cliente registrado",
-                    f"El cliente con DNI/Código '{cliente_id}' ya se encuentra registrado.\n¿Desea cargar sus datos para editarlos?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                    QMessageBox.StandardButton.Yes
-                )
-                if reply == QMessageBox.StandardButton.Yes:
-                    self.set_form_state_cliente("EDIT", cli)
-        except Exception as e:
-            print(f"Error al verificar cliente existente: {e}")
-        finally:
-            db.close()
 
-    def detectar_proveedor_existente(self):
-        # No actuar si ya estamos editando o si la longitud no es válida para RUC (11 dígitos)
-        if self.editando_proveedor_id is not None:
-            return
-            
-        id_text = self.view.txt_proveedor_id.text().strip()
-        if not id_text or len(id_text) < 1:
-            return
-            
-        try:
-            proveedor_id = int(id_text)
-        except ValueError:
-            return
-            
-        db = SessionLocal()
-        try:
-            prov = db.query(Proveedor).filter(Proveedor.idProveedor == proveedor_id).first()
-            if prov:
-                reply = QMessageBox.question(
-                    self.view,
-                    "Proveedor registrado",
-                    f"El proveedor con RUC/Código '{proveedor_id}' ya se encuentra registrado.\n¿Desea cargar sus datos para editarlos?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                    QMessageBox.StandardButton.Yes
-                )
-                if reply == QMessageBox.StandardButton.Yes:
-                    self.set_form_state_proveedor("EDIT", prov)
-        except Exception as e:
-            print(f"Error al verificar proveedor existente: {e}")
-        finally:
-            db.close()
 
     # --- LÓGICA CLIENTES ---
     
@@ -327,27 +303,23 @@ class ActoresController(QObject):
 
     def guardar_cliente(self):
         # Validaciones de entrada
-        id_text = self.view.txt_cliente_id.text().strip()
-        nombre = self.view.txt_cliente_nombre.text().strip()
+        tipo_doc = self.view.cmb_tipo_doc_cliente.currentText()
+        num_doc = self.view.txt_num_doc_cliente.text().strip()
+        nombres = self.view.txt_cliente_nombres.text().strip()
+        apellidos = self.view.txt_cliente_apellidos.text().strip()
         telefono = self.view.txt_cliente_telefono.text().strip() or None
         correo = self.view.txt_cliente_correo.text().strip() or None
         
-        if not id_text:
-            QMessageBox.warning(self.view, "Campo requerido", "El campo DNI/Código es obligatorio.")
+        if not num_doc:
+            QMessageBox.warning(self.view, "Campo requerido", "El campo Número de Documento es obligatorio.")
             return
-        if not nombre:
-            QMessageBox.warning(self.view, "Campo requerido", "El campo Nombres Completos es obligatorio.")
-            return
-            
-        try:
-            cliente_id = int(id_text)
-        except ValueError:
-            QMessageBox.warning(self.view, "Código inválido", "El Código/DNI debe ser un número entero válido.")
+        if not nombres or not apellidos:
+            QMessageBox.warning(self.view, "Campo requerido", "Los campos Nombres y Apellidos son obligatorios.")
             return
             
         # Validación de formato de campos
-        if not self.validar_live_cliente_id(id_text) and self.editando_cliente_id is None:
-            QMessageBox.warning(self.view, "Código inválido", "El Código/DNI debe tener exactamente 8 dígitos.")
+        if not self.validar_live_cliente_doc(num_doc):
+            QMessageBox.warning(self.view, "Documento inválido", "El formato del documento no es válido para el tipo seleccionado.")
             return
         if correo and not self.validar_live_cliente_correo(correo):
             QMessageBox.warning(self.view, "Correo inválido", "El formato del correo electrónico es incorrecto.")
@@ -357,12 +329,12 @@ class ActoresController(QObject):
         try:
             if self.editando_cliente_id is None:
                 # MODO CREACIÓN: Poka-yoke preventivo
-                existente = db.query(Cliente).filter(Cliente.idCliente == cliente_id).first()
+                existente = db.query(Cliente).filter(Cliente.numeroDocumento == num_doc).first()
                 if existente:
                     reply = QMessageBox.warning(
                         self.view,
-                        "Código Duplicado",
-                        f"El cliente con DNI/Código '{cliente_id}' ya está registrado.\n¿Desea limpiar el formulario?",
+                        "Documento Duplicado",
+                        f"El cliente con Documento '{num_doc}' ya está registrado.\n¿Desea limpiar el formulario?",
                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
                         QMessageBox.StandardButton.Cancel
                     )
@@ -371,8 +343,10 @@ class ActoresController(QObject):
                     return
                     
                 nuevo_cliente = Cliente(
-                    idCliente=cliente_id,
-                    nombresCompletos=nombre,
+                    tipoDocumento=tipo_doc,
+                    numeroDocumento=num_doc,
+                    nombres=nombres,
+                    apellidos=apellidos,
                     telefono=telefono,
                     correoElectronico=correo
                 )
@@ -383,7 +357,10 @@ class ActoresController(QObject):
                 # MODO EDICIÓN: db.merge() para resiliencia concurrente
                 cliente_a_actualizar = Cliente(
                     idCliente=self.editando_cliente_id,
-                    nombresCompletos=nombre,
+                    tipoDocumento=tipo_doc,
+                    numeroDocumento=num_doc,
+                    nombres=nombres,
+                    apellidos=apellidos,
                     telefono=telefono,
                     correoElectronico=correo
                 )
@@ -393,6 +370,7 @@ class ActoresController(QObject):
                     
             self.limpiar_formulario_cliente()
             self.cargar_clientes()
+            global_signals.cliente_actualizado.emit()
         except Exception as e:
             db.rollback()
             QMessageBox.critical(self.view, "Error al guardar", f"Ocurrió un error al procesar la operación:\n{str(e)}")
@@ -483,28 +461,23 @@ class ActoresController(QObject):
 
     def guardar_proveedor(self):
         # Validaciones de entrada
-        id_text = self.view.txt_proveedor_id.text().strip()
+        tipo_doc = self.view.cmb_tipo_doc_proveedor.currentText()
+        num_doc = self.view.txt_num_doc_proveedor.text().strip()
         nombre = self.view.txt_proveedor_nombre.text().strip()
         telefono = self.view.txt_proveedor_telefono.text().strip() or None
         direccion = self.view.txt_proveedor_direccion.text().strip() or None
         correo = self.view.txt_proveedor_correo.text().strip() or None
         
-        if not id_text:
-            QMessageBox.warning(self.view, "Campo requerido", "El campo RUC/Código es obligatorio.")
+        if not num_doc:
+            QMessageBox.warning(self.view, "Campo requerido", "El campo Número de Documento es obligatorio.")
             return
         if not nombre:
             QMessageBox.warning(self.view, "Campo requerido", "El campo Razón Social es obligatorio.")
             return
             
-        try:
-            proveedor_id = int(id_text)
-        except ValueError:
-            QMessageBox.warning(self.view, "Código inválido", "El Código/RUC debe ser un número entero válido.")
-            return
-            
         # Validar formatos
-        if not self.validar_live_proveedor_id(id_text) and self.editando_proveedor_id is None:
-            QMessageBox.warning(self.view, "Código inválido", "El Código/RUC debe tener de 1 a 8 dígitos.")
+        if not self.validar_live_proveedor_doc(num_doc):
+            QMessageBox.warning(self.view, "Documento inválido", "El formato del documento no es válido.")
             return
         if correo and not self.validar_live_proveedor_correo(correo):
             QMessageBox.warning(self.view, "Correo inválido", "El formato del correo electrónico es incorrecto.")
@@ -514,12 +487,12 @@ class ActoresController(QObject):
         try:
             if self.editando_proveedor_id is None:
                 # MODO CREACIÓN: Poka-yoke preventivo
-                existente = db.query(Proveedor).filter(Proveedor.idProveedor == proveedor_id).first()
+                existente = db.query(Proveedor).filter(Proveedor.numeroDocumento == num_doc).first()
                 if existente:
                     reply = QMessageBox.warning(
                         self.view,
-                        "Código Duplicado",
-                        f"El proveedor con RUC/Código '{proveedor_id}' ya está registrado.\n¿Desea limpiar el formulario?",
+                        "Documento Duplicado",
+                        f"El proveedor con Documento '{num_doc}' ya está registrado.\n¿Desea limpiar el formulario?",
                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
                         QMessageBox.StandardButton.Cancel
                     )
@@ -528,7 +501,8 @@ class ActoresController(QObject):
                     return
                     
                 nuevo_prov = Proveedor(
-                    idProveedor=proveedor_id,
+                    tipoDocumento=tipo_doc,
+                    numeroDocumento=num_doc,
                     nombreRazonSocial=nombre,
                     telefono=telefono,
                     direccion=direccion,
@@ -541,6 +515,8 @@ class ActoresController(QObject):
                 # MODO EDICIÓN: db.merge() para resiliencia concurrente
                 proveedor_a_actualizar = Proveedor(
                     idProveedor=self.editando_proveedor_id,
+                    tipoDocumento=tipo_doc,
+                    numeroDocumento=num_doc,
                     nombreRazonSocial=nombre,
                     telefono=telefono,
                     direccion=direccion,
@@ -552,6 +528,7 @@ class ActoresController(QObject):
                     
             self.limpiar_formulario_proveedor()
             self.cargar_proveedores()
+            global_signals.proveedor_actualizado.emit()
         except Exception as e:
             db.rollback()
             QMessageBox.critical(self.view, "Error al guardar", f"Ocurrió un error al procesar la operación:\n{str(e)}")

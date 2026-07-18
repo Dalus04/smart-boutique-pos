@@ -1,9 +1,9 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                                QLineEdit, QPushButton, QTableWidget, QTableWidgetItem,
-                               QHeaderView, QFrame, QTabWidget)
+                               QHeaderView, QFrame, QTabWidget, QComboBox)
 from PySide6.QtCore import Qt, QRegularExpression
 from PySide6.QtGui import QRegularExpressionValidator
-from utils.ui_helpers import crear_tabla_estandar, crear_input_estandar, crear_boton, aplicar_estilo_panel, aplicar_estilo_tabwidget, get_palette
+from utils.ui_helpers import crear_tabla_estandar, crear_input_estandar, crear_boton, aplicar_estilo_panel, aplicar_estilo_tabwidget, get_palette, crear_combo_estandar
 
 class ActoresView(QWidget):
     def __init__(self):
@@ -53,14 +53,21 @@ class ActoresView(QWidget):
         self.lbl_titulo_form_cliente.setStyleSheet("font-size: 18px; font-weight: bold; color: #2a82da; padding-bottom: 5px;")
         form_layout.addWidget(self.lbl_titulo_form_cliente)
         
-        form_layout.addWidget(QLabel("DNI / Código (Requerido):"))
-        self.txt_cliente_id = crear_input_estandar("Ej. 12345678")
-        self.txt_cliente_id.setValidator(QRegularExpressionValidator(QRegularExpression("^\\d{1,12}$")))
-        form_layout.addWidget(self.txt_cliente_id)
+        doc_layout = QHBoxLayout()
+        self.cmb_tipo_doc_cliente = crear_combo_estandar(["DNI", "CE", "Pasaporte", "RUC"])
+        self.txt_num_doc_cliente = crear_input_estandar("Ej. 12345678")
+        doc_layout.addWidget(self.cmb_tipo_doc_cliente, 1)
+        doc_layout.addWidget(self.txt_num_doc_cliente, 3)
+        form_layout.addWidget(QLabel("Documento (Requerido):"))
+        form_layout.addLayout(doc_layout)
         
-        form_layout.addWidget(QLabel("Nombres Completos (Requerido):"))
-        self.txt_cliente_nombre = crear_input_estandar("Ej. Daniel Alfonzo")
-        form_layout.addWidget(self.txt_cliente_nombre)
+        form_layout.addWidget(QLabel("Nombres (Requerido):"))
+        self.txt_cliente_nombres = crear_input_estandar("Ej. Daniel")
+        form_layout.addWidget(self.txt_cliente_nombres)
+        
+        form_layout.addWidget(QLabel("Apellidos (Requerido):"))
+        self.txt_cliente_apellidos = crear_input_estandar("Ej. Alfonzo")
+        form_layout.addWidget(self.txt_cliente_apellidos)
         
         form_layout.addWidget(QLabel("Teléfono:"))
         self.txt_cliente_telefono = crear_input_estandar("Ej. +51999888777")
@@ -98,7 +105,7 @@ class ActoresView(QWidget):
         search_layout.addWidget(self.txt_buscar_cliente)
         table_layout.addLayout(search_layout)
         
-        columnas_clientes = ["Código (DNI)", "Nombres Completos", "Teléfono", "Correo Electrónico"]
+        columnas_clientes = ["ID", "Tipo Doc.", "Número Doc.", "Nombres", "Apellidos", "Teléfono", "Correo"]
         self.tabla_clientes = crear_tabla_estandar(columnas_clientes, editable=False, alt_row_colors=True, row_height=35)
         self.tabla_clientes.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.tabla_clientes.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
@@ -137,10 +144,13 @@ class ActoresView(QWidget):
         self.lbl_titulo_form_proveedor.setStyleSheet("font-size: 18px; font-weight: bold; color: #2a82da; padding-bottom: 5px;")
         form_layout.addWidget(self.lbl_titulo_form_proveedor)
         
-        form_layout.addWidget(QLabel("RUC / Código (Requerido):"))
-        self.txt_proveedor_id = crear_input_estandar("Ej. 20123456789")
-        self.txt_proveedor_id.setValidator(QRegularExpressionValidator(QRegularExpression("^\\d{1,8}$")))
-        form_layout.addWidget(self.txt_proveedor_id)
+        doc_layout_prov = QHBoxLayout()
+        self.cmb_tipo_doc_proveedor = crear_combo_estandar(["RUC", "RUS"])
+        self.txt_num_doc_proveedor = crear_input_estandar("Ej. 20123456789")
+        doc_layout_prov.addWidget(self.cmb_tipo_doc_proveedor, 1)
+        doc_layout_prov.addWidget(self.txt_num_doc_proveedor, 3)
+        form_layout.addWidget(QLabel("Documento (Requerido):"))
+        form_layout.addLayout(doc_layout_prov)
         
         form_layout.addWidget(QLabel("Nombre o Razón Social (Requerido):"))
         self.txt_proveedor_nombre = crear_input_estandar("Ej. Textiles Del Sur S.A.C.")
@@ -186,7 +196,7 @@ class ActoresView(QWidget):
         search_layout.addWidget(self.txt_buscar_proveedor)
         table_layout.addLayout(search_layout)
         
-        columnas_proveedores = ["Código (RUC)", "Nombre / Razón Social", "Teléfono", "Dirección", "Correo Electrónico"]
+        columnas_proveedores = ["ID", "Tipo Doc.", "Número Doc.", "Razón Social", "Teléfono", "Dirección", "Correo"]
         self.tabla_proveedores = crear_tabla_estandar(columnas_proveedores, editable=False, alt_row_colors=True, row_height=35)
         self.tabla_proveedores.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.tabla_proveedores.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)

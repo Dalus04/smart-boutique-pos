@@ -1,6 +1,6 @@
 from decimal import Decimal
 import datetime
-from sqlalchemy import Integer, Numeric, Date, String, ForeignKey
+from sqlalchemy import Integer, Numeric, DateTime, String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from models.base import Base
 
@@ -10,8 +10,10 @@ class Venta(Base):
     idVenta: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     idCliente: Mapped[int | None] = mapped_column(Integer, ForeignKey("cliente.idCliente"), nullable=True)
     idUsuario: Mapped[int] = mapped_column(Integer, ForeignKey("usuario.idUsuario"), nullable=False)
-    fechaVenta: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    fechaVenta: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, default=datetime.datetime.utcnow)
     montoTotal: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    estadoVenta: Mapped[str | None] = mapped_column(String(20), nullable=True, default="COMPLETADA")
+    estadoPago: Mapped[str | None] = mapped_column(String(20), nullable=True, default="PAGADA")
 
     # Relaciones bidireccionales (sin cascadas de eliminación para proteger el historial)
     cliente: Mapped["Cliente | None"] = relationship("Cliente", back_populates="ventas")
@@ -54,6 +56,7 @@ class MedioPago(Base):
 
     idMedioPago: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nombreMedioPago: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    estado: Mapped[str | None] = mapped_column(String(20), nullable=True, default="ACTIVO")
 
     # Relación bidireccional uno-a-muchos (sin cascada)
     pagos: Mapped[list["Pago"]] = relationship("Pago", back_populates="medio_pago")
@@ -64,7 +67,7 @@ class Pago(Base):
     idPago: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     idVenta: Mapped[int] = mapped_column(Integer, ForeignKey("venta.idVenta"), nullable=False)
     idMedioPago: Mapped[int] = mapped_column(Integer, ForeignKey("medio_pago.idMedioPago"), nullable=False)
-    fechaPago: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    fechaPago: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, default=datetime.datetime.utcnow)
     montoPagado: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
 
     # Relaciones bidireccionales (sin cascadas)

@@ -179,7 +179,7 @@ def obtener_o_insertar_producto(
 
 def insertar_o_actualizar_inventario(cursor, id_producto, fecha_registro, stock_actual):
     cursor.execute(
-        "SELECT idInventario FROM inventario WHERE idProducto = %s",
+        "SELECT idProducto FROM inventario WHERE idProducto = %s",
         (id_producto,)
     )
     resultado = cursor.fetchone()

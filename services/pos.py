@@ -26,30 +26,20 @@ class POSService:
             prod = item["producto"]
             cant_requerida = item["cantidad"]
             
-            # Buscar el inventario del producto ordenado por ID (o FIFO si hubiera lotes y fechas)
-            inventarios = session.query(Inventario).filter(Inventario.idProducto == prod.idProducto).order_by(Inventario.idInventario).all()
+            # Buscar el inventario del producto (uno-a-uno)
+            inv = session.query(Inventario).filter(Inventario.idProducto == prod.idProducto).first()
             
-            stock_disponible = sum(inv.cantidadDisponible for inv in inventarios)
+            stock_disponible = inv.cantidadDisponible if inv else 0
             if stock_disponible < cant_requerida:
                 raise ValueError(f"Stock insuficiente para {prod.nombre}. Requerido: {cant_requerida}, Disponible: {stock_disponible}")
                 
-            # Descuento FIFO
-            cant_a_descontar = cant_requerida
-            for inv in inventarios:
-                if cant_a_descontar <= 0:
-                    break
-                if inv.cantidadDisponible >= cant_a_descontar:
-                    inv.cantidadDisponible -= cant_a_descontar
-                    cant_a_descontar = 0
-                else:
-                    cant_a_descontar -= inv.cantidadDisponible
-                    inv.cantidadDisponible = 0
+            inv.cantidadDisponible -= cant_requerida
 
         # 2. Registrar Venta (Cabecera)
         nueva_venta = Venta(
             idCliente=id_cliente,
             idUsuario=id_usuario,
-            fechaVenta=datetime.date.today(),
+            fechaVenta=datetime.datetime.utcnow(),
             montoTotal=total
         )
         session.add(nueva_venta)
@@ -76,7 +66,7 @@ class POSService:
         pago = Pago(
             idVenta=nueva_venta.idVenta,
             idMedioPago=id_medio_pago,
-            fechaPago=datetime.date.today(),
+            fechaPago=datetime.datetime.utcnow(),
             montoPagado=total
         )
         session.add(pago)

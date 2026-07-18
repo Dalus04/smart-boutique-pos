@@ -2,30 +2,19 @@ import sys
 import datetime
 from decimal import Decimal
 from config.db import get_db
-from models.usuarios import Administrador, Usuario
+from models.usuarios import Usuario
 from models.catalogo import Categoria, Producto
 from models.actores import Cliente
 from models.pos import Venta, DetalleVenta, MedioPago, Pago
-# Importar suministro para que SQLAlchemy registre 'Compra' y otros modelos asociados
 import models.suministro
-
 
 def test_pos_operations():
     print("Iniciando prueba de operaciones de Punto de Venta (POS)...")
     
     with get_db() as db:
         try:
-            # 1. Crear Administrador y Usuario vendedor
-            admin = Administrador(
-                nombres="Administrador POS",
-                usuario="admin_pos",
-                contrasena="admin_pass_pos"
-            )
-            db.add(admin)
-            db.flush()
-            
+            # 1. Crear Usuario vendedor
             usuario = Usuario(
-                administrador=admin,
                 nombres="Vendedor Principal",
                 apellidos="Pérez",
                 nombreUsuario="vendedor_pos",
@@ -37,16 +26,18 @@ def test_pos_operations():
             db.flush()
             print(f"✅ Vendedor creado: {usuario.nombreUsuario} (ID: {usuario.idUsuario})")
             
-            # 2. Crear Cliente (ID manual dentro del rango de INT 32 bits)
+            # 2. Crear Cliente (ID auto-incremental con tipo/nro de documento)
             cliente = Cliente(
-                idCliente=77665544,
-                nombresCompletos="María Alejandra López",
+                tipoDocumento="DNI",
+                numeroDocumento="77665544",
+                nombres="María Alejandra",
+                apellidos="López",
                 telefono="+51988776655",
                 correoElectronico="maria.lopez@example.com"
             )
             db.add(cliente)
             db.flush()
-            print(f"✅ Cliente creado: {cliente.nombresCompletos} (ID Manual: {cliente.idCliente})")
+            print(f"✅ Cliente creado: {cliente.nombres} {cliente.apellidos} (ID: {cliente.idCliente})")
             
             # 3. Crear Categoría y Productos
             categoria = Categoria(nombreCategoria="Ropa de Estación")
@@ -85,13 +76,10 @@ def test_pos_operations():
             print(f"✅ Medio de pago creado: {medio_pago.nombreMedioPago} (ID: {medio_pago.idMedioPago})")
             
             # 5. Crear Venta y Detalles de Venta
-            # Casaca de Invierno (Cantidad: 2) -> Subtotal: 400.00
-            # Chompa de Lana (Cantidad: 3) -> Subtotal: 240.00
-            # Monto Total: 640.00
             venta = Venta(
                 cliente=cliente,
                 usuario=usuario,
-                fechaVenta=datetime.date.today(),
+                fechaVenta=datetime.datetime.utcnow(),
                 montoTotal=Decimal("640.00")
             )
             db.add(venta)
@@ -121,7 +109,7 @@ def test_pos_operations():
             pago = Pago(
                 venta=venta,
                 medio_pago=medio_pago,
-                fechaPago=datetime.date.today(),
+                fechaPago=datetime.datetime.utcnow(),
                 montoPagado=Decimal("640.00")
             )
             db.add(pago)

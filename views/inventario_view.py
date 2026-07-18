@@ -128,13 +128,13 @@ class InventarioView(QWidget):
         main_layout.addWidget(self.progress_bar)
         
         # Tabla de Inventario
-        columnas = ["Código", "Categoría", "Producto", "Stock Actual", "Venta Diaria Promedio", "Riesgo de Quiebre"]
+        columnas = ["Código", "Categoría", "Producto", "Stock Actual", "Venta Diaria Promedio", "Última Actualización", "Riesgo de Quiebre"]
         self.tabla = crear_tabla_estandar(columnas, editable=False, row_height=35)
         self.tabla.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.tabla.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         
         self.riesgo_delegate = RiesgoDelegate()
-        self.tabla.setItemDelegateForColumn(5, self.riesgo_delegate)
+        self.tabla.setItemDelegateForColumn(6, self.riesgo_delegate)
         
         self.tabla.setSortingEnabled(True)
         main_layout.addWidget(self.tabla)

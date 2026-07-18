@@ -4,8 +4,10 @@ from PySide6.QtWidgets import QTableWidgetItem, QFileDialog, QMessageBox
 from views.inventario_view import InventarioView
 from config.db import SessionLocal
 from models.catalogo import Producto, Categoria
+from models.suministro import Inventario
 from services.prediccion import PrediccionService
 from utils.ui_helpers import aplicar_estilo_tarjeta_kpi, get_palette
+from utils.signals import global_signals
 
 class NumericItem(QTableWidgetItem):
     """Subclase de QTableWidgetItem para ordenar correctamente valores numéricos."""
@@ -31,18 +33,21 @@ class InventarioWorker(QThread):
         db = SessionLocal()
         try:
             resultados = []
-            productos = db.query(Producto, Categoria).\
+            productos = db.query(Producto, Categoria, Inventario).\
                 join(Categoria, Producto.idCategoria == Categoria.idCategoria).\
+                outerjoin(Inventario, Producto.idProducto == Inventario.idProducto).\
                 all()
                 
-            for prod, cat in productos:
+            for prod, cat, inv in productos:
                 evaluacion = PrediccionService.evaluar_producto(db, prod.idProducto, self.dias_entrega)
+                fecha_str = inv.fechaActualizacion.strftime("%d/%m/%Y %H:%M") if inv and inv.fechaActualizacion else "N/A"
                 resultados.append({
                     "id": prod.idProducto,
                     "categoria": cat.nombreCategoria,
                     "nombre": prod.nombre,
                     "stock_actual": evaluacion["stock_actual"],
                     "velocidad": evaluacion["velocidad_venta_diaria"],
+                    "ultima_actualizacion": fecha_str,
                     "riesgo": evaluacion["riesgo"]
                 })
                 
@@ -71,6 +76,9 @@ class InventarioController(QObject):
         self.view.btn_actualizar.clicked.connect(self.cargar_datos)
         self.view.btn_limpiar.clicked.connect(self.limpiar_filtros)
         self.view.btn_exportar.clicked.connect(self.exportar_csv)
+        
+        # Hot-reloading
+        global_signals.inventario_actualizado.connect(self.cargar_datos)
         
         self.datos_completos = []
 
@@ -147,6 +155,10 @@ class InventarioController(QObject):
             item_vel.setToolTip("Ritmo promedio de ventas calculado en los últimos 30 días.")
             self.view.tabla.setItem(row, 4, item_vel)
             
+            item_fecha = QTableWidgetItem(dato["ultima_actualizacion"])
+            item_fecha.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.view.tabla.setItem(row, 5, item_fecha)
+            
             riesgo_original = dato["riesgo"]
             riesgo_prescriptivo = ""
             tooltip_riesgo = ""
@@ -165,7 +177,7 @@ class InventarioController(QObject):
             item_riesgo.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             item_riesgo.setToolTip(tooltip_riesgo)
             item_riesgo.setData(Qt.ItemDataRole.UserRole, riesgo_original)
-            self.view.tabla.setItem(row, 5, item_riesgo)
+            self.view.tabla.setItem(row, 6, item_riesgo)
             
         self.view.tabla.setSortingEnabled(True)
 

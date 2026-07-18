@@ -22,7 +22,7 @@ class AnaliticaService:
                     (Inventario.cantidadDisponible <= 15, "Bajo"),
                     else_="Óptimo"
                 ).label("estado"),
-                func.count(Inventario.idInventario).label("total_items"),
+                func.count(Inventario.idProducto).label("total_items"),
                 func.sum(Inventario.cantidadDisponible).label("total_unidades")
             )
             .group_by("estado")

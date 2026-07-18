@@ -2,7 +2,7 @@ import sys
 import datetime
 from decimal import Decimal
 from config.db import get_db
-from models.usuarios import Administrador, Usuario
+from models.usuarios import Usuario
 from models.catalogo import Categoria, Producto
 from models.actores import Proveedor
 from models.suministro import Inventario, Compra, DetalleCompra
@@ -12,18 +12,8 @@ def test_suministro_and_usuarios():
     
     with get_db() as db:
         try:
-            # 1. Crear Administrador y Usuario
-            admin = Administrador(
-                nombres="Administrador de Prueba",
-                usuario="admin_test",
-                contrasena="admin_pass_123"
-            )
-            db.add(admin)
-            db.flush()
-            print(f"✅ Administrador creado: {admin.usuario} (ID: {admin.idAdministrador})")
-            
+            # 1. Crear Usuario
             usuario = Usuario(
-                administrador=admin,
                 nombres="Usuario Suministro",
                 apellidos="De Prueba",
                 nombreUsuario="user_suministro",
@@ -54,9 +44,10 @@ def test_suministro_and_usuarios():
             db.flush()
             print(f"✅ Producto creado: {producto.nombre} (ID: {producto.idProducto})")
             
-            # 3. Crear Proveedor (Llave primaria manual dentro del rango de INT 32 bits)
+            # 3. Crear Proveedor (ID auto-incremental con tipo/nro de documento)
             proveedor = Proveedor(
-                idProveedor=99887766,
+                tipoDocumento="RUC",
+                numeroDocumento="99887766",
                 nombreRazonSocial="Importaciones Running S.A.C.",
                 telefono="01-5556666",
                 direccion="Av. Principal 456, Lima",
@@ -64,13 +55,13 @@ def test_suministro_and_usuarios():
             )
             db.add(proveedor)
             db.flush()
-            print(f"✅ Proveedor creado: {proveedor.nombreRazonSocial} (ID Manual: {proveedor.idProveedor})")
+            print(f"✅ Proveedor creado: {proveedor.nombreRazonSocial} (ID: {proveedor.idProveedor})")
             
             # 4. Crear Compra con su DetalleCompra asociado
             compra = Compra(
                 proveedor=proveedor,
                 usuario=usuario,
-                fechaCompra=datetime.date.today(),
+                fechaCompra=datetime.datetime.utcnow(),
                 montoTotal=Decimal("800.00")
             )
             db.add(compra)
@@ -95,7 +86,7 @@ def test_suministro_and_usuarios():
             # Estado Crítico (cantidadDisponible <= 5)
             inv_critico = Inventario(
                 producto=producto,
-                fechaActualizacion=datetime.date.today(),
+                fechaActualizacion=datetime.datetime.utcnow(),
                 cantidadDisponible=3
             )
             print(f"Stock: {inv_critico.cantidadDisponible} -> Estado esperado: Crítico | Estado calculado: '{inv_critico.estado_stock}'")
@@ -104,7 +95,7 @@ def test_suministro_and_usuarios():
             # Estado Bajo (cantidadDisponible <= 15)
             inv_bajo = Inventario(
                 producto=producto,
-                fechaActualizacion=datetime.date.today(),
+                fechaActualizacion=datetime.datetime.utcnow(),
                 cantidadDisponible=12
             )
             print(f"Stock: {inv_bajo.cantidadDisponible} -> Estado esperado: Bajo | Estado calculado: '{inv_bajo.estado_stock}'")
@@ -113,7 +104,7 @@ def test_suministro_and_usuarios():
             # Estado Óptimo (cantidadDisponible > 15)
             inv_optimo = Inventario(
                 producto=producto,
-                fechaActualizacion=datetime.date.today(),
+                fechaActualizacion=datetime.datetime.utcnow(),
                 cantidadDisponible=25
             )
             print(f"Stock: {inv_optimo.cantidadDisponible} -> Estado esperado: Óptimo | Estado calculado: '{inv_optimo.estado_stock}'")

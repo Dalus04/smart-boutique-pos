@@ -3,6 +3,7 @@ from PySide6.QtWidgets import QTableWidgetItem, QHBoxLayout, QVBoxLayout, QWidge
 from PySide6.QtGui import QColor, QBrush
 from views.pos_view import POSView, QuantityWidget
 from views.notification_toast import NotificationToast
+from utils.signals import global_signals
 from config.db import SessionLocal
 from models.catalogo import Producto, Categoria
 from models.actores import Cliente
@@ -44,6 +45,10 @@ class POSController(QObject):
         if qty_line_edit:
             qty_line_edit.returnPressed.connect(self.agregar_seleccionado)
 
+        # Hot-reloading global signals
+        global_signals.cliente_actualizado.connect(self._cargar_datos_maestros)
+        global_signals.inventario_actualizado.connect(self._cargar_datos_maestros)
+
     def _cargar_datos_maestros(self):
         db = SessionLocal()
         try:
@@ -65,10 +70,11 @@ class POSController(QObject):
             for cat in categorias:
                 self.view.combo_categorias.addItem(cat.nombreCategoria, cat.idCategoria)
 
-            # 2. Cargar Clientes (Cambiado de ID a Código)
+            # 2. Cargar Clientes
             clientes = db.query(Cliente).all()
             for cli in clientes:
-                self.view.combo_cliente.addItem(f"{cli.nombresCompletos} (Código: {cli.idCliente})", cli.idCliente)
+                nombre_mostrado = f"[{cli.tipoDocumento or ''} {cli.numeroDocumento or ''}] {cli.nombres or ''} {cli.apellidos or ''}".strip()
+                self.view.combo_cliente.addItem(nombre_mostrado, cli.idCliente)
 
             # Re-vincular modelo al completer de clientes
             self.view.cliente_completer.setModel(self.view.combo_cliente.model())
@@ -570,6 +576,7 @@ class POSController(QObject):
             self._cargar_datos_maestros()
             self.limpiar_carrito_silencioso()
             self.limpiar_busqueda()
+            global_signals.inventario_actualizado.emit()
         except ValueError as ve:
             db.rollback()
             QMessageBox.warning(self.view, "Error de Validación", str(ve))
