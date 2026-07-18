@@ -65,7 +65,10 @@ class MainWindow(QMainWindow):
         self.btn_inventario = QPushButton(" Inventario")
         self.btn_inventario.setCheckable(True)
 
-        self.nav_buttons = [self.btn_dashboard, self.btn_pos, self.btn_inventario]
+        self.btn_actores = QPushButton(" Clientes/Prov.")
+        self.btn_actores.setCheckable(True)
+
+        self.nav_buttons = [self.btn_dashboard, self.btn_pos, self.btn_inventario, self.btn_actores]
         for btn in self.nav_buttons:
             sidebar_layout.addWidget(btn)
 
