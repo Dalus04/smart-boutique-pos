@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models.base import Base
+import models  # Asegura que todos los modelos se importen y se registren en SQLAlchemy
 
 # Cargar variables de entorno desde el archivo .env
 load_dotenv()

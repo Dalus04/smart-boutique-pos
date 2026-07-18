@@ -10,16 +10,18 @@ class MineriaService:
     @classmethod
     def _extraer_transacciones(cls, session: Session) -> list[set[int]]:
         """
-        Extrae las transacciones de la base de datos.
-        Retorna una lista donde cada elemento es un conjunto de IDs de productos vendidos en una misma Venta.
+        Extrae las transacciones de la base de datos de manera eficiente con una única consulta.
         """
-        ventas = session.query(Venta).all()
-        transacciones = []
-        for venta in ventas:
-            productos_venta = {detalle.idProducto for detalle in venta.detalles}
-            if productos_venta:
-                transacciones.append(productos_venta)
-        return transacciones
+        from models.pos import DetalleVenta
+        
+        # Consulta de una sola llamada para obtener ID de venta y producto
+        detalles = session.query(DetalleVenta.idVenta, DetalleVenta.idProducto).all()
+        
+        transacciones_map = defaultdict(set)
+        for id_venta, id_producto in detalles:
+            transacciones_map[id_venta].add(id_producto)
+            
+        return [prod_ids for prod_ids in transacciones_map.values() if prod_ids]
 
     @classmethod
     def entrenar_modelo(cls, session: Session, min_support: int = 2, min_confidence: float = 0.5):
@@ -68,9 +70,9 @@ class MineriaService:
             cls._reglas[antecedente] = sorted(consecuentes, key=lambda x: x[1], reverse=True)
 
     @classmethod
-    def sugerir_venta_cruzada(cls, carrito_ids: list[int]) -> list[int]:
+    def sugerir_venta_cruzada(cls, carrito_ids: list[int]) -> list[tuple[int, float]]:
         """
-        Dado los IDs de productos en el carrito, retorna hasta 3 IDs recomendados.
+        Dado los IDs de productos en el carrito, retorna hasta 3 tuplas (id_producto, confianza) recomendadas.
         """
         recomendaciones_potenciales = defaultdict(float)
         
@@ -84,4 +86,4 @@ class MineriaService:
                             
         # Ordenar por confianza descendente y devolver el top 3
         top_sugerencias = sorted(recomendaciones_potenciales.items(), key=lambda x: x[1], reverse=True)
-        return [item_id for item_id, conf in top_sugerencias[:3]]
+        return top_sugerencias[:3]
