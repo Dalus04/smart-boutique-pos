@@ -1,10 +1,10 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QComboBox,
     QDateEdit, QPushButton, QTableWidget, QTableWidgetItem, QHeaderView,
-    QSpinBox, QDoubleSpinBox, QCompleter, QFrame
-)
+    QSpinBox, QDoubleSpinBox, QCompleter, QFrame)
 from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QFont
+from utils.ui_helpers import crear_tabla_estandar, crear_input_estandar, crear_combo_estandar, crear_boton
 
 class ComprasView(QWidget):
     def __init__(self):
@@ -36,7 +36,7 @@ class ComprasView(QWidget):
         prov_layout = QVBoxLayout()
         lbl_prov_titulo = QLabel("Proveedor:")
         lbl_prov_titulo.setStyleSheet("font-size: 12px; font-weight: bold; color: #BDBDBD;")
-        self.combo_proveedor = QComboBox()
+        self.combo_proveedor = crear_combo_estandar()
         self.combo_proveedor.setEditable(True)
         self.combo_proveedor.setPlaceholderText("Seleccione un Proveedor...")
         self.combo_proveedor.setMinimumWidth(250)
@@ -59,8 +59,7 @@ class ComprasView(QWidget):
         doc_layout = QVBoxLayout()
         lbl_doc_titulo = QLabel("Factura/Serie:")
         lbl_doc_titulo.setStyleSheet("font-size: 12px; font-weight: bold; color: #BDBDBD;")
-        self.line_factura = QLineEdit()
-        self.line_factura.setPlaceholderText("Ej. F001-0001 (Opcional)")
+        self.line_factura = crear_input_estandar("Ej. F001-0001 (Opcional)")
         doc_layout.addWidget(lbl_doc_titulo)
         doc_layout.addWidget(self.line_factura)
         panel_layout.addLayout(doc_layout)
@@ -70,8 +69,7 @@ class ComprasView(QWidget):
 
         # --- PANEL DE BÚSQUEDA POLIMÓRFICA ---
         search_layout = QHBoxLayout()
-        self.line_buscar = QLineEdit()
-        self.line_buscar.setPlaceholderText("Buscar Código o Nombre (Presione Enter para agregar)...")
+        self.line_buscar = crear_input_estandar("Buscar Código o Nombre (Presione Enter para agregar)...")
         self.line_buscar.setMinimumHeight(40)
         font_buscar = QFont()
         font_buscar.setPointSize(12)
@@ -80,10 +78,8 @@ class ComprasView(QWidget):
         main_layout.addLayout(search_layout)
 
         # --- GRILLA DE DETALLE ---
-        self.tabla_detalle = QTableWidget(0, 7)
-        self.tabla_detalle.setHorizontalHeaderLabels([
-            "Código", "Producto", "Stock Actual", "Cantidad", "Costo Unit.", "Subtotal", "Acciones"
-        ])
+        columnas = ["Código", "Producto", "Stock Actual", "Cantidad", "Costo Unit.", "Subtotal", "Acciones"]
+        self.tabla_detalle = crear_tabla_estandar(columnas, editable=False, alt_row_colors=True, row_height=35)
         header = self.tabla_detalle.horizontalHeader()
         header.setSectionResizeMode(1, QHeaderView.Stretch) # El nombre ocupa el resto
         main_layout.addWidget(self.tabla_detalle)
@@ -100,8 +96,7 @@ class ComprasView(QWidget):
         checkout_layout = QHBoxLayout(checkout_frame)
         checkout_layout.setContentsMargins(15, 10, 15, 10)
         
-        self.btn_limpiar = QPushButton("Limpiar / Cancelar")
-        self.btn_limpiar.setStyleSheet("background-color: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 4px; font-weight: bold;")
+        self.btn_limpiar = crear_boton("Limpiar / Cancelar", tipo="secundario")
         
         checkout_layout.addWidget(self.btn_limpiar)
         checkout_layout.addStretch()
@@ -113,8 +108,7 @@ class ComprasView(QWidget):
         self.lbl_total.setFont(font_total)
         self.lbl_total.setStyleSheet("color: #4CAF50; background: transparent; border: none;")
         
-        self.btn_emitir = QPushButton("EMITIR COMPRA")
-        self.btn_emitir.setStyleSheet("background-color: #388E3C; color: white; padding: 15px 30px; font-weight: bold; font-size: 16px; border-radius: 6px;")
+        self.btn_emitir = crear_boton("EMITIR COMPRA", tipo="exito")
         
         checkout_layout.addWidget(self.lbl_total)
         checkout_layout.addSpacing(20)

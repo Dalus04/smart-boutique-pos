@@ -3,6 +3,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                QHeaderView, QFrame, QTabWidget)
 from PySide6.QtCore import Qt, QRegularExpression
 from PySide6.QtGui import QRegularExpressionValidator
+from utils.ui_helpers import crear_tabla_estandar, crear_input_estandar, crear_boton
 
 class ActoresView(QWidget):
     def __init__(self):
@@ -78,19 +79,6 @@ class ActoresView(QWidget):
                 font-weight: bold;
                 color: #ffffff;
             }
-            QLineEdit {
-                background-color: #2d2d2d;
-                border: 1px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 6px;
-                font-size: 14px;
-                color: #ffffff;
-            }
-            QLineEdit:disabled {
-                background-color: #1a1a1a;
-                color: #777777;
-                border: 1px solid #2d2d2d;
-            }
         """)
         
         form_layout = QVBoxLayout(form_frame)
@@ -101,24 +89,20 @@ class ActoresView(QWidget):
         form_layout.addWidget(self.lbl_titulo_form_cliente)
         
         form_layout.addWidget(QLabel("DNI / Código (Requerido):"))
-        self.txt_cliente_id = QLineEdit()
-        self.txt_cliente_id.setPlaceholderText("Ej. 12345678")
+        self.txt_cliente_id = crear_input_estandar("Ej. 12345678")
         self.txt_cliente_id.setValidator(QRegularExpressionValidator(QRegularExpression("^\\d{1,12}$")))
         form_layout.addWidget(self.txt_cliente_id)
         
         form_layout.addWidget(QLabel("Nombres Completos (Requerido):"))
-        self.txt_cliente_nombre = QLineEdit()
-        self.txt_cliente_nombre.setPlaceholderText("Ej. Daniel Alfonzo")
+        self.txt_cliente_nombre = crear_input_estandar("Ej. Daniel Alfonzo")
         form_layout.addWidget(self.txt_cliente_nombre)
         
         form_layout.addWidget(QLabel("Teléfono:"))
-        self.txt_cliente_telefono = QLineEdit()
-        self.txt_cliente_telefono.setPlaceholderText("Ej. +51999888777")
+        self.txt_cliente_telefono = crear_input_estandar("Ej. +51999888777")
         form_layout.addWidget(self.txt_cliente_telefono)
         
         form_layout.addWidget(QLabel("Correo Electrónico:"))
-        self.txt_cliente_correo = QLineEdit()
-        self.txt_cliente_correo.setPlaceholderText("Ej. daniel@example.com")
+        self.txt_cliente_correo = crear_input_estandar("Ej. daniel@example.com")
         form_layout.addWidget(self.txt_cliente_correo)
         
         form_layout.addStretch()
@@ -127,23 +111,8 @@ class ActoresView(QWidget):
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(10)
         
-        self.btn_guardar_cliente = QPushButton("Guardar")
-        self.btn_guardar_cliente.setStyleSheet("""
-            QPushButton {
-                background-color: #2e7d32; color: #ffffff;
-                border-radius: 4px; padding: 8px 15px; font-weight: bold; font-size: 14px;
-            }
-            QPushButton:hover { background-color: #3e8d42; }
-        """)
-        
-        self.btn_limpiar_cliente = QPushButton("Limpiar Formulario")
-        self.btn_limpiar_cliente.setStyleSheet("""
-            QPushButton {
-                background-color: #3d3d3d; color: #ffffff;
-                border-radius: 4px; padding: 8px 15px; font-weight: bold; font-size: 14px;
-            }
-            QPushButton:hover { background-color: #4d4d4d; }
-        """)
+        self.btn_guardar_cliente = crear_boton("Guardar", tipo="exito")
+        self.btn_limpiar_cliente = crear_boton("Limpiar Formulario", tipo="secundario")
         
         btn_layout.addWidget(self.btn_guardar_cliente)
         btn_layout.addWidget(self.btn_limpiar_cliente)
@@ -160,79 +129,24 @@ class ActoresView(QWidget):
         # Buscador superior
         search_layout = QHBoxLayout()
         search_layout.addWidget(QLabel("Buscar:"))
-        self.txt_buscar_cliente = QLineEdit()
-        self.txt_buscar_cliente.setPlaceholderText("Código (DNI) o nombre del cliente...")
-        self.txt_buscar_cliente.setStyleSheet("""
-            QLineEdit {
-                background-color: #1e1e1e;
-                border: 1px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 6px;
-                font-size: 14px;
-                color: #ffffff;
-            }
-        """)
+        self.txt_buscar_cliente = crear_input_estandar("Código (DNI) o nombre del cliente...")
         search_layout.addWidget(self.txt_buscar_cliente)
         table_layout.addLayout(search_layout)
         
-        self.tabla_clientes = QTableWidget(0, 4)
-        self.tabla_clientes.setHorizontalHeaderLabels(["Código (DNI)", "Nombres Completos", "Teléfono", "Correo Electrónico"])
+        columnas_clientes = ["Código (DNI)", "Nombres Completos", "Teléfono", "Correo Electrónico"]
+        self.tabla_clientes = crear_tabla_estandar(columnas_clientes, editable=False, alt_row_colors=True, row_height=35)
         self.tabla_clientes.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.tabla_clientes.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        self.tabla_clientes.verticalHeader().setDefaultSectionSize(35) # Altura de fila incrementada
-        self.tabla_clientes.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.tabla_clientes.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.tabla_clientes.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self.tabla_clientes.setAlternatingRowColors(True)
         self.tabla_clientes.setSortingEnabled(True)
-        self.tabla_clientes.setStyleSheet("""
-            QTableWidget {
-                background-color: #1e1e1e;
-                alternate-background-color: #252525;
-                gridline-color: #333333;
-                border: none;
-                border-radius: 8px;
-                font-size: 14px;
-            }
-            QHeaderView::section {
-                background-color: #2d2d2d;
-                color: #ffffff;
-                padding: 8px;
-                border: 1px solid #333333;
-                font-weight: bold;
-                font-size: 14px;
-            }
-            QTableWidget::item {
-                padding: 5px;
-            }
-            QTableWidget::item:selected {
-                background-color: #2a82da;
-                color: #ffffff;
-            }
-        """)
         table_layout.addWidget(self.tabla_clientes)
         
         # Botones inferiores de la tabla
         table_btn_layout = QHBoxLayout()
         table_btn_layout.addStretch()
         
-        self.btn_editar_cliente = QPushButton("Editar Seleccionado")
-        self.btn_editar_cliente.setStyleSheet("""
-            QPushButton {
-                background-color: #2a82da; color: #ffffff;
-                border-radius: 4px; padding: 8px 15px; font-weight: bold; font-size: 14px;
-            }
-            QPushButton:hover { background-color: #3b93eb; }
-        """)
-        
-        self.btn_eliminar_cliente = QPushButton("Eliminar Seleccionado")
-        self.btn_eliminar_cliente.setStyleSheet("""
-            QPushButton {
-                background-color: #d9534f; color: #ffffff;
-                border-radius: 4px; padding: 8px 15px; font-weight: bold; font-size: 14px;
-            }
-            QPushButton:hover { background-color: #c9302c; }
-        """)
+        self.btn_editar_cliente = crear_boton("Editar Seleccionado", tipo="primario")
+        self.btn_eliminar_cliente = crear_boton("Eliminar Seleccionado", tipo="peligro")
         
         table_btn_layout.addWidget(self.btn_editar_cliente)
         table_btn_layout.addWidget(self.btn_eliminar_cliente)
@@ -259,19 +173,6 @@ class ActoresView(QWidget):
                 font-weight: bold;
                 color: #ffffff;
             }
-            QLineEdit {
-                background-color: #2d2d2d;
-                border: 1px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 6px;
-                font-size: 14px;
-                color: #ffffff;
-            }
-            QLineEdit:disabled {
-                background-color: #1a1a1a;
-                color: #777777;
-                border: 1px solid #2d2d2d;
-            }
         """)
         
         form_layout = QVBoxLayout(form_frame)
@@ -282,29 +183,24 @@ class ActoresView(QWidget):
         form_layout.addWidget(self.lbl_titulo_form_proveedor)
         
         form_layout.addWidget(QLabel("RUC / Código (Requerido):"))
-        self.txt_proveedor_id = QLineEdit()
-        self.txt_proveedor_id.setPlaceholderText("Ej. 20123456789")
+        self.txt_proveedor_id = crear_input_estandar("Ej. 20123456789")
         self.txt_proveedor_id.setValidator(QRegularExpressionValidator(QRegularExpression("^\\d{1,8}$")))
         form_layout.addWidget(self.txt_proveedor_id)
         
         form_layout.addWidget(QLabel("Nombre o Razón Social (Requerido):"))
-        self.txt_proveedor_nombre = QLineEdit()
-        self.txt_proveedor_nombre.setPlaceholderText("Ej. Textiles Del Sur S.A.C.")
+        self.txt_proveedor_nombre = crear_input_estandar("Ej. Textiles Del Sur S.A.C.")
         form_layout.addWidget(self.txt_proveedor_nombre)
         
         form_layout.addWidget(QLabel("Teléfono:"))
-        self.txt_proveedor_telefono = QLineEdit()
-        self.txt_proveedor_telefono.setPlaceholderText("Ej. 01-4445555")
+        self.txt_proveedor_telefono = crear_input_estandar("Ej. 01-4445555")
         form_layout.addWidget(self.txt_proveedor_telefono)
         
         form_layout.addWidget(QLabel("Dirección:"))
-        self.txt_proveedor_direccion = QLineEdit()
-        self.txt_proveedor_direccion.setPlaceholderText("Ej. Av. Industrial 123, Lima")
+        self.txt_proveedor_direccion = crear_input_estandar("Ej. Av. Industrial 123, Lima")
         form_layout.addWidget(self.txt_proveedor_direccion)
         
         form_layout.addWidget(QLabel("Correo Electrónico:"))
-        self.txt_proveedor_correo = QLineEdit()
-        self.txt_proveedor_correo.setPlaceholderText("Ej. contacto@textilesdelsur.com")
+        self.txt_proveedor_correo = crear_input_estandar("Ej. contacto@textilesdelsur.com")
         form_layout.addWidget(self.txt_proveedor_correo)
         
         form_layout.addStretch()
@@ -313,23 +209,8 @@ class ActoresView(QWidget):
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(10)
         
-        self.btn_guardar_proveedor = QPushButton("Guardar")
-        self.btn_guardar_proveedor.setStyleSheet("""
-            QPushButton {
-                background-color: #2e7d32; color: #ffffff;
-                border-radius: 4px; padding: 8px 15px; font-weight: bold; font-size: 14px;
-            }
-            QPushButton:hover { background-color: #3e8d42; }
-        """)
-        
-        self.btn_limpiar_proveedor = QPushButton("Limpiar Formulario")
-        self.btn_limpiar_proveedor.setStyleSheet("""
-            QPushButton {
-                background-color: #3d3d3d; color: #ffffff;
-                border-radius: 4px; padding: 8px 15px; font-weight: bold; font-size: 14px;
-            }
-            QPushButton:hover { background-color: #4d4d4d; }
-        """)
+        self.btn_guardar_proveedor = crear_boton("Guardar", tipo="exito")
+        self.btn_limpiar_proveedor = crear_boton("Limpiar Formulario", tipo="secundario")
         
         btn_layout.addWidget(self.btn_guardar_proveedor)
         btn_layout.addWidget(self.btn_limpiar_proveedor)
@@ -346,79 +227,24 @@ class ActoresView(QWidget):
         # Buscador superior
         search_layout = QHBoxLayout()
         search_layout.addWidget(QLabel("Buscar:"))
-        self.txt_buscar_proveedor = QLineEdit()
-        self.txt_buscar_proveedor.setPlaceholderText("Código (RUC) o razón social...")
-        self.txt_buscar_proveedor.setStyleSheet("""
-            QLineEdit {
-                background-color: #1e1e1e;
-                border: 1px solid #3d3d3d;
-                border-radius: 4px;
-                padding: 6px;
-                font-size: 14px;
-                color: #ffffff;
-            }
-        """)
+        self.txt_buscar_proveedor = crear_input_estandar("Código (RUC) o razón social...")
         search_layout.addWidget(self.txt_buscar_proveedor)
         table_layout.addLayout(search_layout)
         
-        self.tabla_proveedores = QTableWidget(0, 5)
-        self.tabla_proveedores.setHorizontalHeaderLabels(["Código (RUC)", "Nombre / Razón Social", "Teléfono", "Dirección", "Correo Electrónico"])
+        columnas_proveedores = ["Código (RUC)", "Nombre / Razón Social", "Teléfono", "Dirección", "Correo Electrónico"]
+        self.tabla_proveedores = crear_tabla_estandar(columnas_proveedores, editable=False, alt_row_colors=True, row_height=35)
         self.tabla_proveedores.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.tabla_proveedores.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        self.tabla_proveedores.verticalHeader().setDefaultSectionSize(35) # Altura de fila incrementada
-        self.tabla_proveedores.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.tabla_proveedores.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.tabla_proveedores.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self.tabla_proveedores.setAlternatingRowColors(True)
         self.tabla_proveedores.setSortingEnabled(True)
-        self.tabla_proveedores.setStyleSheet("""
-            QTableWidget {
-                background-color: #1e1e1e;
-                alternate-background-color: #252525;
-                gridline-color: #333333;
-                border: none;
-                border-radius: 8px;
-                font-size: 14px;
-            }
-            QHeaderView::section {
-                background-color: #2d2d2d;
-                color: #ffffff;
-                padding: 8px;
-                border: 1px solid #333333;
-                font-weight: bold;
-                font-size: 14px;
-            }
-            QTableWidget::item {
-                padding: 5px;
-            }
-            QTableWidget::item:selected {
-                background-color: #2a82da;
-                color: #ffffff;
-            }
-        """)
         table_layout.addWidget(self.tabla_proveedores)
         
         # Botones inferiores de la tabla
         table_btn_layout = QHBoxLayout()
         table_btn_layout.addStretch()
         
-        self.btn_editar_proveedor = QPushButton("Editar Seleccionado")
-        self.btn_editar_proveedor.setStyleSheet("""
-            QPushButton {
-                background-color: #2a82da; color: #ffffff;
-                border-radius: 4px; padding: 8px 15px; font-weight: bold; font-size: 14px;
-            }
-            QPushButton:hover { background-color: #3b93eb; }
-        """)
-        
-        self.btn_eliminar_proveedor = QPushButton("Eliminar Seleccionado")
-        self.btn_eliminar_proveedor.setStyleSheet("""
-            QPushButton {
-                background-color: #d9534f; color: #ffffff;
-                border-radius: 4px; padding: 8px 15px; font-weight: bold; font-size: 14px;
-            }
-            QPushButton:hover { background-color: #c9302c; }
-        """)
+        self.btn_editar_proveedor = crear_boton("Editar Seleccionado", tipo="primario")
+        self.btn_eliminar_proveedor = crear_boton("Eliminar Seleccionado", tipo="peligro")
         
         table_btn_layout.addWidget(self.btn_editar_proveedor)
         table_btn_layout.addWidget(self.btn_eliminar_proveedor)

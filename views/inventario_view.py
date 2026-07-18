@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                QPushButton, QLineEdit)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QBrush, QFont
+from utils.ui_helpers import crear_tabla_estandar, crear_tarjeta_kpi, crear_input_estandar, crear_combo_estandar, crear_boton
 
 class RiesgoDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
@@ -58,33 +59,9 @@ class InventarioView(QWidget):
         kpi_layout = QHBoxLayout()
         kpi_layout.setSpacing(15)
         
-        def crear_kpi(titulo, color_borde):
-            frame = QFrame()
-            frame.setStyleSheet(f"""
-                QFrame {{
-                    background-color: #1e1e1e;
-                    border-radius: 8px;
-                    border-left: 4px solid {color_borde};
-                    padding: 10px;
-                }}
-            """)
-            layout = QVBoxLayout(frame)
-            layout.setContentsMargins(15, 10, 15, 10)
-            
-            lbl_valor = QLabel("0")
-            lbl_valor.setStyleSheet("color: #ffffff; font-size: 28px; font-weight: bold;")
-            
-            lbl_titulo = QLabel(titulo)
-            lbl_titulo.setStyleSheet("color: #a0a0a0; font-size: 14px; font-weight: bold;")
-            
-            # Jerarquía invertida: Valor grande arriba, Título descriptivo abajo
-            layout.addWidget(lbl_valor)
-            layout.addWidget(lbl_titulo)
-            return frame, lbl_valor
-            
-        self.kpi_frame_total, self.lbl_kpi_total = crear_kpi("Total de Productos", "#2a82da")
-        self.kpi_frame_saludable, self.lbl_kpi_saludable = crear_kpi("Stock Saludable", "#2e7d32")
-        self.kpi_frame_urgente, self.lbl_kpi_urgente = crear_kpi("Reposición Urgente", "#3d3d3d")
+        self.kpi_frame_total, self.lbl_kpi_total = crear_tarjeta_kpi("Total de Productos", color_borde="#2a82da")
+        self.kpi_frame_saludable, self.lbl_kpi_saludable = crear_tarjeta_kpi("Stock Saludable", color_borde="#2e7d32")
+        self.kpi_frame_urgente, self.lbl_kpi_urgente = crear_tarjeta_kpi("Reposición Urgente", color_borde="#3d3d3d")
         
         kpi_layout.addWidget(self.kpi_frame_total)
         kpi_layout.addWidget(self.kpi_frame_saludable)
@@ -103,7 +80,7 @@ class InventarioView(QWidget):
                 font-size: 14px;
                 font-weight: bold;
             }
-            QComboBox, QSpinBox, QLineEdit {
+            QSpinBox {
                 background-color: #2d2d2d;
                 border: 1px solid #3d3d3d;
                 border-radius: 4px;
@@ -112,32 +89,26 @@ class InventarioView(QWidget):
                 min-width: 150px;
                 color: #ffffff;
             }
-            QComboBox::drop-down, QSpinBox::up-button, QSpinBox::down-button {
+            QSpinBox::up-button, QSpinBox::down-button {
                 border: none;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #1e1e1e;
-                color: #ffffff;
-                selection-background-color: #2a82da;
-                selection-color: #ffffff;
             }
         """)
         filters_layout = QHBoxLayout(filters_frame)
         
         # Buscador Polimórfico
         filters_layout.addWidget(QLabel("Buscar Producto:"))
-        self.txt_buscar = QLineEdit()
-        self.txt_buscar.setPlaceholderText("Código o nombre del producto...")
+        self.txt_buscar = crear_input_estandar("Código o nombre del producto...")
+        self.txt_buscar.setMinimumWidth(150)
         filters_layout.addWidget(self.txt_buscar)
         
         filters_layout.addWidget(QLabel("Categoría:"))
-        self.combo_categoria = QComboBox()
-        self.combo_categoria.addItem("Todas")
+        self.combo_categoria = crear_combo_estandar(["Todas"])
+        self.combo_categoria.setMinimumWidth(150)
         filters_layout.addWidget(self.combo_categoria)
         
         filters_layout.addWidget(QLabel("Alerta Stock:"))
-        self.combo_alerta = QComboBox()
-        self.combo_alerta.addItems(["Todas", "Riesgo Alto", "Riesgo Medio", "Sin Riesgo"])
+        self.combo_alerta = crear_combo_estandar(["Todas", "Riesgo Alto", "Riesgo Medio", "Sin Riesgo"])
+        self.combo_alerta.setMinimumWidth(150)
         filters_layout.addWidget(self.combo_alerta)
         
         filters_layout.addWidget(QLabel("Días de Espera de Proveedor:"))
@@ -150,32 +121,9 @@ class InventarioView(QWidget):
         filters_layout.addStretch()
         
         # Botones de Acción
-        self.btn_actualizar = QPushButton(" Actualizar")
-        self.btn_actualizar.setStyleSheet("""
-            QPushButton {
-                background-color: #2a82da; color: #ffffff;
-                border-radius: 4px; padding: 6px 15px; font-weight: bold; font-size: 14px;
-            }
-            QPushButton:hover { background-color: #3b93eb; }
-        """)
-        
-        self.btn_limpiar = QPushButton(" Limpiar Filtros")
-        self.btn_limpiar.setStyleSheet("""
-            QPushButton {
-                background-color: #3d3d3d; color: #ffffff;
-                border-radius: 4px; padding: 6px 15px; font-weight: bold; font-size: 14px;
-            }
-            QPushButton:hover { background-color: #4d4d4d; }
-        """)
-        
-        self.btn_exportar = QPushButton(" Exportar CSV")
-        self.btn_exportar.setStyleSheet("""
-            QPushButton {
-                background-color: #2e7d32; color: #ffffff;
-                border-radius: 4px; padding: 6px 15px; font-weight: bold; font-size: 14px;
-            }
-            QPushButton:hover { background-color: #3e8d42; }
-        """)
+        self.btn_actualizar = crear_boton(" Actualizar", tipo="primario")
+        self.btn_limpiar = crear_boton(" Limpiar Filtros", tipo="secundario")
+        self.btn_exportar = crear_boton(" Exportar CSV", tipo="exito")
         
         filters_layout.addWidget(self.btn_actualizar)
         filters_layout.addWidget(self.btn_limpiar)
@@ -201,38 +149,10 @@ class InventarioView(QWidget):
         main_layout.addWidget(self.progress_bar)
         
         # Tabla de Inventario
-        self.tabla = QTableWidget(0, 6)
-        self.tabla.setHorizontalHeaderLabels(["Código", "Categoría", "Producto", "Stock Actual", "Venta Diaria Promedio", "Riesgo de Quiebre"])
+        columnas = ["Código", "Categoría", "Producto", "Stock Actual", "Venta Diaria Promedio", "Riesgo de Quiebre"]
+        self.tabla = crear_tabla_estandar(columnas, editable=False, row_height=35)
         self.tabla.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.tabla.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        self.tabla.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.tabla.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.tabla.setAlternatingRowColors(True)
-        self.tabla.setStyleSheet("""
-            QTableWidget {
-                background-color: #1e1e1e;
-                alternate-background-color: #252525;
-                gridline-color: #333333;
-                border: none;
-                border-radius: 8px;
-                font-size: 14px;
-            }
-            QHeaderView::section {
-                background-color: #2d2d2d;
-                color: #ffffff;
-                padding: 8px;
-                border: 1px solid #333333;
-                font-weight: bold;
-                font-size: 14px;
-            }
-            QTableWidget::item {
-                padding: 5px;
-            }
-            QTableWidget::item:selected {
-                background-color: #2a82da;
-                color: #ffffff;
-            }
-        """)
         
         self.riesgo_delegate = RiesgoDelegate()
         self.tabla.setItemDelegateForColumn(5, self.riesgo_delegate)

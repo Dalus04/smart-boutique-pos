@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTableWidget, QTableWidgetItem, QHeaderView, QPushButton, QComboBox, QLabel, QGroupBox, QFrame, QSpinBox, QCompleter, QLineEdit
 from PySide6.QtCore import Qt
+from utils.ui_helpers import crear_tabla_estandar, crear_boton, crear_combo_estandar, crear_input_estandar
 
 class QuantityWidget(QWidget):
     def __init__(self, quantity, on_increment, on_decrement, parent=None):
@@ -77,92 +78,23 @@ class POSView(QWidget):
         # Combo Categoría
         cat_label = QLabel("Categoría:")
         cat_label.setStyleSheet("font-size: 15px; color: #ffffff;")
-        self.combo_categorias = QComboBox()
+        self.combo_categorias = crear_combo_estandar(["Todas"])
         self.combo_categorias.setMinimumWidth(120)
-        self.combo_categorias.addItem("Todas", None)
-        self.combo_categorias.setStyleSheet("""
-            QComboBox {
-                background-color: #1e1e1e;
-                color: #ffffff;
-                border: 1px solid #333333;
-                border-radius: 4px;
-                padding: 6px;
-                font-size: 15px;
-            }
-            QComboBox:focus {
-                border: 1px solid #2a82da;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #1e1e1e;
-                color: #ffffff;
-                selection-background-color: #2a82da;
-                selection-color: #ffffff;
-            }
-            QComboBox QAbstractItemView::item {
-                background-color: #1e1e1e;
-                color: #ffffff;
-            }
-            QComboBox QAbstractItemView::item:selected {
-                background-color: #2a82da;
-                color: #ffffff;
-            }
-        """)
         
         # Entrada de Código (con Placeholder largo e interactividad de Foco)
         cod_label = QLabel("Código:")
         cod_label.setStyleSheet("font-size: 15px; color: #ffffff;")
-        self.txt_codigo = QLineEdit()
-        self.txt_codigo.setPlaceholderText("Ingrese un código...")
+        self.txt_codigo = crear_input_estandar("Ingrese un código...")
         self.txt_codigo.setFixedWidth(130) # Un poco más ancho para albergar el placeholder
-        self.txt_codigo.setStyleSheet("""
-            QLineEdit {
-                background-color: #1e1e1e;
-                color: #ffffff;
-                border: 1px solid #333333;
-                border-radius: 4px;
-                padding: 6px;
-                font-size: 15px;
-            }
-            QLineEdit:focus {
-                border: 1px solid #2a82da;
-            }
-        """)
         
         search_label = QLabel("Producto:")
         search_label.setStyleSheet("font-size: 15px; color: #ffffff;")
         
-        self.combo_productos = QComboBox()
+        self.combo_productos = crear_combo_estandar()
         self.combo_productos.setMinimumWidth(200)
         self.combo_productos.setEditable(True)
         self.combo_productos.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self.combo_productos.setPlaceholderText("Seleccione un producto...")
-        self.combo_productos.setStyleSheet("""
-            QComboBox {
-                background-color: #1e1e1e;
-                color: #ffffff;
-                border: 1px solid #333333;
-                border-radius: 4px;
-                padding: 6px;
-                font-size: 15px;
-            }
-            QComboBox:focus {
-                border: 1px solid #2a82da;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #1e1e1e;
-                color: #ffffff;
-                selection-background-color: #2a82da;
-                selection-color: #ffffff;
-            }
-            QComboBox QAbstractItemView::item {
-                background-color: #1e1e1e;
-                color: #ffffff;
-            }
-            QComboBox QAbstractItemView::item:selected {
-                background-color: #2a82da;
-                color: #ffffff;
-            }
-        """)
         
         # Configurar QCompleter para autocompletado en caliente
         self.completer = QCompleter(self.combo_productos.model(), self)
@@ -198,21 +130,8 @@ class POSView(QWidget):
         qty_label = QLabel("Cant:")
         qty_label.setStyleSheet("font-size: 14px; color: #ffffff; margin-left: 5px;")
         
-        self.btn_minus_qty = QPushButton("-")
+        self.btn_minus_qty = crear_boton("-", tipo="secundario")
         self.btn_minus_qty.setFixedWidth(30)
-        self.btn_minus_qty.setStyleSheet("""
-            QPushButton {
-                background-color: #2d2d2d;
-                color: white;
-                font-weight: bold;
-                border-radius: 4px;
-                padding: 5px;
-                border: none;
-            }
-            QPushButton:hover {
-                background-color: #3d3d3d;
-            }
-        """)
         
         self.spin_cantidad = QSpinBox()
         self.spin_cantidad.setRange(1, 999)
@@ -234,60 +153,18 @@ class POSView(QWidget):
             }
         """)
         
-        self.btn_plus_qty = QPushButton("+")
+        self.btn_plus_qty = crear_boton("+", tipo="secundario")
         self.btn_plus_qty.setFixedWidth(30)
-        self.btn_plus_qty.setStyleSheet("""
-            QPushButton {
-                background-color: #2d2d2d;
-                color: white;
-                font-weight: bold;
-                border-radius: 4px;
-                padding: 5px;
-                border: none;
-            }
-            QPushButton:hover {
-                background-color: #3d3d3d;
-            }
-        """)
         
         # Conexión básica de incremento/decremento rápido
         self.btn_minus_qty.clicked.connect(lambda: self.spin_cantidad.setValue(max(1, self.spin_cantidad.value() - 1)))
         self.btn_plus_qty.clicked.connect(lambda: self.spin_cantidad.setValue(min(999, self.spin_cantidad.value() + 1)))
         
-        self.btn_agregar = QPushButton("Agregar")
+        self.btn_agregar = crear_boton("Agregar", tipo="primario")
         self.btn_agregar.setEnabled(False) # Deshabilitado inicialmente
-        self.btn_agregar.setStyleSheet("""
-            QPushButton {
-                background-color: #2a82da;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 8px 15px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #3b93eb;
-            }
-            QPushButton:disabled {
-                background-color: #444444;
-                color: #888888;
-            }
-        """)
 
         # Botón Limpiar Búsqueda ("Limpiar selección")
-        self.btn_limpiar_busqueda = QPushButton("Limpiar selección")
-        self.btn_limpiar_busqueda.setStyleSheet("""
-            QPushButton {
-                background-color: #444444;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 8px 12px;
-            }
-            QPushButton:hover {
-                background-color: #555555;
-            }
-        """)
+        self.btn_limpiar_busqueda = crear_boton("Limpiar selección", tipo="secundario")
 
         # Etiqueta de confirmación visual breve
         self.lbl_feedback = QLabel("")
@@ -313,11 +190,9 @@ class POSView(QWidget):
         left_layout.addLayout(row2_layout)
         
         # Tabla del carrito
-        self.cart_table = QTableWidget()
-        self.cart_table.verticalHeader().setVisible(False)
-        self.cart_table.verticalHeader().setDefaultSectionSize(40) # Incrementar altura de fila a 40px
-        self.cart_table.setColumnCount(6) # Código, Producto, Cantidad (+/-), Precio, Subtotal, Acción (Eliminar)
-        self.cart_table.setHorizontalHeaderLabels(["Código", "Producto", "Cantidad", "Precio", "Subtotal", "Acción"])
+        columnas = ["Código", "Producto", "Cantidad", "Precio", "Subtotal", "Acción"]
+        self.cart_table = crear_tabla_estandar(columnas, editable=False, alt_row_colors=True, row_height=40)
+        
         self.cart_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         self.cart_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.cart_table.setColumnWidth(0, 70)
@@ -326,44 +201,9 @@ class POSView(QWidget):
         self.cart_table.setColumnWidth(4, 100)
         self.cart_table.setColumnWidth(5, 70)
         
-        self.cart_table.horizontalHeader().setStyleSheet("""
-            QHeaderView::section {
-                background-color: #1e1e1e;
-                color: white;
-                padding: 8px;
-                border: 1px solid #2d2d2d;
-                font-weight: bold;
-                font-size: 13px;
-            }
-        """)
-        self.cart_table.setStyleSheet("""
-            QTableWidget {
-                background-color: #121212;
-                gridline-color: #2d2d2d;
-                color: #e0e0e0;
-                border: 1px solid #2d2d2d;
-                border-radius: 6px;
-                font-size: 14px; /* Incrementar tamaño de la tipografía en filas */
-            }
-            QTableWidget::item {
-                padding: 8px;
-            }
-        """)
         left_layout.addWidget(self.cart_table)
         
-        self.btn_limpiar = QPushButton("Limpiar Carrito")
-        self.btn_limpiar.setStyleSheet("""
-            QPushButton {
-                background-color: #d9534f;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 8px 15px;
-            }
-            QPushButton:hover {
-                background-color: #c9302c;
-            }
-        """)
+        self.btn_limpiar = crear_boton("Limpiar Carrito", tipo="peligro")
         left_layout.addWidget(self.btn_limpiar, alignment=Qt.AlignmentFlag.AlignRight)
         
         # --- PANEL DERECHO: Resumen, Sugerencias y Checkout ---
@@ -445,38 +285,10 @@ class POSView(QWidget):
         lbl_cliente.setStyleSheet("color: #a0a0a0; font-size: 14px;")
         
         # Combo Cliente (editable y autocompletable con Placeholder e interactividad de Foco)
-        self.combo_cliente = QComboBox()
+        self.combo_cliente = crear_combo_estandar(["Consumidor Final"])
         self.combo_cliente.setEditable(True)
         self.combo_cliente.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self.combo_cliente.setPlaceholderText("Buscar cliente...")
-        self.combo_cliente.addItem("Consumidor Final", None)
-        self.combo_cliente.setStyleSheet("""
-            QComboBox {
-                background-color: #1e1e1e;
-                color: #ffffff;
-                border: 1px solid #333333;
-                border-radius: 4px;
-                padding: 6px;
-                font-size: 14px;
-            }
-            QComboBox:focus {
-                border: 1px solid #2a82da;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #1e1e1e;
-                color: #ffffff;
-                selection-background-color: #2a82da;
-                selection-color: #ffffff;
-            }
-            QComboBox QAbstractItemView::item {
-                background-color: #1e1e1e;
-                color: #ffffff;
-            }
-            QComboBox QAbstractItemView::item:selected {
-                background-color: #2a82da;
-                color: #ffffff;
-            }
-        """)
         
         self.cliente_completer = QCompleter(self.combo_cliente.model(), self)
         self.cliente_completer.setFilterMode(Qt.MatchFlag.MatchContains)
@@ -503,20 +315,7 @@ class POSView(QWidget):
         self.combo_cliente.setCompleter(self.cliente_completer)
 
         # Botón para limpiar cliente
-        self.btn_limpiar_cliente = QPushButton("Limpiar selección")
-        self.btn_limpiar_cliente.setStyleSheet("""
-            QPushButton {
-                background-color: #444444;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 6px 10px;
-                font-size: 12px;
-            }
-            QPushButton:hover {
-                background-color: #555555;
-            }
-        """)
+        self.btn_limpiar_cliente = crear_boton("Limpiar selección", tipo="secundario")
 
         # Layout horizontal para combo_cliente y su botón limpiar
         cliente_layout = QHBoxLayout()
@@ -526,51 +325,9 @@ class POSView(QWidget):
         
         lbl_pago = QLabel("Medio de Pago:")
         lbl_pago.setStyleSheet("color: #a0a0a0; font-size: 14px;")
-        self.combo_pago = QComboBox()
-        self.combo_pago.setStyleSheet("""
-            QComboBox {
-                background-color: #1e1e1e;
-                color: #ffffff;
-                border: 1px solid #333333;
-                border-radius: 4px;
-                padding: 6px;
-                font-size: 14px;
-            }
-            QComboBox:focus {
-                border: 1px solid #2a82da;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #1e1e1e;
-                color: #ffffff;
-                selection-background-color: #2a82da;
-                selection-color: #ffffff;
-            }
-            QComboBox QAbstractItemView::item {
-                background-color: #1e1e1e;
-                color: #ffffff;
-            }
-            QComboBox QAbstractItemView::item:selected {
-                background-color: #2a82da;
-                color: #ffffff;
-            }
-        """)
+        self.combo_pago = crear_combo_estandar()
         
-        self.btn_procesar = QPushButton("Procesar Venta")
-        self.btn_procesar.setStyleSheet("""
-            QPushButton {
-                background-color: #5cb85c;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 12px;
-                font-weight: bold;
-                font-size: 14px;
-                margin-top: 10px;
-            }
-            QPushButton:hover {
-                background-color: #4cae4c;
-            }
-        """)
+        self.btn_procesar = crear_boton("Procesar Venta", tipo="exito")
         
         checkout_layout.addWidget(lbl_cliente)
         checkout_layout.addLayout(cliente_layout)

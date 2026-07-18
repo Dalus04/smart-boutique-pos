@@ -1,5 +1,6 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QGroupBox
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
 from PySide6.QtCore import Qt
+from utils.ui_helpers import crear_tarjeta_kpi
 
 class DashboardView(QWidget):
     def __init__(self):
@@ -18,9 +19,14 @@ class DashboardView(QWidget):
         self.kpi_layout.setSpacing(20)
         
         # Tarjetas de KPIs
-        self.lbl_salud_inv = self._create_kpi_card("Items Críticos (Inventario)")
-        self.lbl_unidades_inv = self._create_kpi_card("Unidades (Óptimo)")
-        self.lbl_total_ventas = self._create_kpi_card("Total Transacciones")
+        frame1, self.lbl_salud_inv = crear_tarjeta_kpi("Items Críticos (Inventario)", "Cargando...", "#d9534f")
+        self.kpi_layout.addWidget(frame1)
+        
+        frame2, self.lbl_unidades_inv = crear_tarjeta_kpi("Unidades (Óptimo)", "Cargando...", "#2e7d32")
+        self.kpi_layout.addWidget(frame2)
+        
+        frame3, self.lbl_total_ventas = crear_tarjeta_kpi("Total Transacciones", "Cargando...", "#2a82da")
+        self.kpi_layout.addWidget(frame3)
         
         self.main_layout.addLayout(self.kpi_layout)
         
@@ -38,27 +44,3 @@ class DashboardView(QWidget):
         
         self.setLayout(self.main_layout)
 
-    def _create_kpi_card(self, title: str) -> QLabel:
-        card = QGroupBox()
-        card.setStyleSheet("""
-            QGroupBox {
-                background-color: #1e1e1e;
-                border: 1px solid #333333;
-                border-radius: 8px;
-            }
-        """)
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(15, 15, 15, 15)
-        
-        title_label = QLabel(title)
-        title_label.setStyleSheet("color: #b0b0b0; font-size: 14px;")
-        
-        value_label = QLabel("Cargando...")
-        value_label.setStyleSheet("color: #ffffff; font-size: 24px; font-weight: bold;")
-        
-        layout.addWidget(title_label)
-        layout.addWidget(value_label)
-        
-        self.kpi_layout.addWidget(card)
-        
-        return value_label
