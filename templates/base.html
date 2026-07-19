@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Smart Boutique POS{% endblock %}</title>
+    <!-- Tailwind CSS (via CDN for Phase 1) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2a82da',
+                        secondary: '#27ae60',
+                        darkBg: '#1e1e1e',
+                        darkCard: '#2d2d2d',
+                        lightBg: '#f5f7fa',
+                        lightCard: '#ffffff'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-lightBg text-gray-800 dark:bg-darkBg dark:text-gray-200 transition-colors duration-200 font-sans h-screen flex overflow-hidden">
+    
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white dark:bg-darkCard shadow-md flex flex-col h-full z-10 transition-colors duration-200">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h1 class="text-2xl font-bold text-primary flex items-center gap-2">
+                <i class="fa-solid fa-shirt"></i> Smart POS
+            </h1>
+        </div>
+        
+        <nav class="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+            <a href="/dashboard" id="nav-dashboard" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                <i class="fa-solid fa-chart-line w-5"></i> Dashboard
+            </a>
+            <a href="/inventario" id="nav-inventario" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                <i class="fa-solid fa-box w-5"></i> Inventario
+            </a>
+            <a href="/pos" id="nav-pos" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                <i class="fa-solid fa-cash-register w-5"></i> Punto de Venta
+            </a>
+            <a href="/compras" id="nav-compras" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                <i class="fa-solid fa-truck-fast w-5"></i> Suministro (Compras)
+            </a>
+            <a href="/actores" id="nav-actores" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                <i class="fa-solid fa-users w-5"></i> Actores Comerciales
+            </a>
+        </nav>
+        
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <div class="text-sm font-medium">Tema</div>
+            <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors focus:outline-none">
+                <i id="theme-icon" class="fa-solid fa-moon text-gray-600 dark:text-yellow-400"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+        <header class="h-16 bg-white dark:bg-darkCard shadow-sm flex items-center justify-between px-8 z-0 transition-colors duration-200">
+            <h2 class="text-xl font-semibold">{% block header_title %}Centro de Inteligencia Comercial{% endblock %}</h2>
+            <div class="flex items-center gap-4">
+                <!-- Centro de Actividad -->
+                <div class="flex flex-col items-end mr-4 hidden md:flex">
+                    <div class="flex items-center gap-2 text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">
+                        <span>BD MySQL</span>
+                        <span class="relative flex h-2 w-2">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2 text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 mt-0.5">
+                        <span>Motor Apriori</span>
+                        <span class="relative flex h-2 w-2">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                    </div>
+                </div>
+                
+                <span class="text-sm text-gray-500 dark:text-gray-400" id="current-time"></span>
+                <div class="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white font-bold">
+                    A
+                </div>
+            </div>
+        </header>
+        
+        <div class="flex-1 overflow-auto p-8">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Base Scripts -->
+    <script>
+        // Set active nav link
+        const currentPath = window.location.pathname;
+        if (currentPath.includes('/inventario')) {
+            const nav = document.getElementById('nav-inventario');
+            if (nav) nav.className = "flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg font-medium";
+        } else if (currentPath.includes('/pos')) {
+            const nav = document.getElementById('nav-pos');
+            if (nav) nav.className = "flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg font-medium";
+        } else if (currentPath.includes('/actores')) {
+            const nav = document.getElementById('nav-actores');
+            if (nav) nav.className = "flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg font-medium";
+        } else if (currentPath.includes('/compras')) {
+            const nav = document.getElementById('nav-compras');
+            if (nav) nav.className = "flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg font-medium";
+        } else {
+            const nav = document.getElementById('nav-dashboard');
+            if (nav) nav.className = "flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg font-medium";
+        }
+        // Configuración de Tema
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const htmlElement = document.documentElement;
+
+        // Comprobar preferencia guardada
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            htmlElement.classList.add('dark');
+            themeIcon.classList.remove('fa-moon');
+            themeIcon.classList.add('fa-sun');
+        } else {
+            htmlElement.classList.remove('dark');
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            htmlElement.classList.toggle('dark');
+            if (htmlElement.classList.contains('dark')) {
+                localStorage.setItem('theme', 'dark');
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
+            } else {
+                localStorage.setItem('theme', 'light');
+                themeIcon.classList.remove('fa-sun');
+                themeIcon.classList.add('fa-moon');
+            }
+            // Disparar evento para actualizar gráficos si es necesario
+            window.dispatchEvent(new Event('themeChanged'));
+        });
+
+        // Reloj
+        setInterval(() => {
+            document.getElementById('current-time').textContent = new Date().toLocaleString('es-ES', { 
+                dateStyle: 'medium', timeStyle: 'short' 
+            });
+        }, 1000);
+    </script>
+    <script src="/static/js/api_client.js?v=5.3"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

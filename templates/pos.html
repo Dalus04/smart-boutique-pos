@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block header_title %}Punto de Venta (POS) Inteligente{% endblock %}
+
+{% block content %}
+<div class="flex flex-col lg:flex-row h-full gap-4 overflow-hidden">
+    
+    <!-- Zona 1: Productos (28%) -->
+    <div class="w-full lg:w-[28%] flex flex-col h-full gap-4 overflow-y-auto custom-scrollbar pr-1">
+        <!-- Buscador -->
+        <div class="bg-white dark:bg-darkCard rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 shrink-0">
+            <div class="relative w-full">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-barcode text-gray-400"></i>
+                </div>
+                <input type="text" id="search-input" placeholder="Buscar producto (F2)..." 
+                       class="w-full pl-10 pr-4 py-3 text-lg border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-[#1a1a1a] text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all shadow-inner" autofocus>
+            </div>
+            <!-- Productos Recientes -->
+            <div id="recent-items" class="mt-3 flex gap-2 overflow-x-auto pb-1 items-center">
+                <span class="text-xs text-gray-400 font-bold uppercase tracking-wider mr-1"><i class="fa-solid fa-clock-rotate-left"></i> Recientes:</span>
+            </div>
+        </div>
+
+        <!-- Resultados de Búsqueda -->
+        <div class="bg-white dark:bg-darkCard rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 h-auto overflow-y-auto hidden" id="search-results-container">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-darkCard z-10">
+                <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider">Resultados</h3>
+            </div>
+            <div class="flex flex-col gap-2 p-3" id="search-results">
+                <!-- Filas dinámicas de producto -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Zona 2: Ticket (47%) -->
+    <div class="w-full lg:w-[47%] flex flex-col h-full bg-white dark:bg-darkCard rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden relative">
+        <!-- Loading Overlay -->
+        <div id="checkout-loading" class="absolute inset-0 bg-white/80 dark:bg-darkCard/80 z-20 flex flex-col items-center justify-center hidden">
+            <i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mb-4"></i>
+            <span class="text-lg font-medium">Procesando Venta...</span>
+        </div>
+
+        <!-- Cabecera del Ticket -->
+        <div class="bg-gray-50 dark:bg-gray-800/80 p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center shrink-0">
+            <h3 class="font-bold text-gray-800 dark:text-white text-sm"><i class="fa-solid fa-receipt text-gray-400 mr-2"></i> Ticket Actual</h3>
+            <button id="btn-clear-cart" class="text-xs text-red-500 hover:text-red-700 transition-colors bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded font-bold">
+                <i class="fa-solid fa-trash-can"></i> Cancelar Venta (ESC)
+            </button>
+        </div>
+        
+        <!-- Líneas del Carrito -->
+        <div class="flex-1 overflow-auto p-2 bg-gray-50/30 dark:bg-[#1a1a1a]/30" id="cart-container">
+            <div id="cart-empty" class="h-full flex flex-col items-center justify-center text-gray-400">
+                <i class="fa-solid fa-cart-shopping text-5xl mb-4 text-gray-200 dark:text-gray-700"></i>
+                <p>El carrito está vacío</p>
+            </div>
+            <ul id="cart-items" class="space-y-2">
+                <!-- Items del carrito JS -->
+            </ul>
+        </div>
+        
+        <!-- Panel Inferior: Totalización -->
+        <div class="bg-gray-900 text-white p-6 shrink-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-gray-400">Subtotal</span>
+                <span class="text-lg font-mono" id="summary-subtotal">$0.00</span>
+            </div>
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-gray-400">Artículos</span>
+                <span class="font-bold" id="summary-items">0</span>
+            </div>
+            
+            <div class="border-t border-gray-700 pt-4 mb-4 flex justify-between items-end">
+                <span class="text-xl text-gray-300 font-medium">Total</span>
+                <span class="text-4xl font-bold text-green-400 font-mono tracking-tighter" id="summary-total">$0.00</span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Medio de Pago</label>
+                    <select id="select-pago" class="w-full bg-gray-800 border border-gray-700 rounded p-2 text-white outline-none focus:border-primary">
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Pago del Cliente</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                        <input type="number" id="input-pago" min="0" step="0.01" class="w-full bg-gray-800 border border-gray-700 rounded p-2 pl-8 text-white font-mono outline-none focus:border-primary" placeholder="0.00">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-between items-center mb-6 hidden" id="vuelto-container">
+                <span class="text-gray-400">Vuelto / Cambio</span>
+                <span class="text-xl font-bold text-blue-400 font-mono" id="summary-vuelto">$0.00</span>
+            </div>
+
+            <button id="btn-pre-checkout" class="w-full py-4 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold text-xl shadow-lg transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2" disabled>
+                <i class="fa-solid fa-cash-register"></i> COBRAR VENTA (F8)
+            </button>
+        </div>
+    </div>
+
+    <!-- Zona 3: Asistente Comercial (25%) -->
+    <div class="w-full lg:w-[25%] flex flex-col h-full gap-4 overflow-y-auto custom-scrollbar pr-1">
+        
+        <!-- Contexto de Cliente (Venta Rápida) -->
+        <div class="bg-white dark:bg-darkCard p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 shrink-0 relative">
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3"><i class="fa-solid fa-user-tag text-blue-400 mr-1"></i> Cliente</h3>
+            <div class="relative w-full z-10">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-user text-gray-400"></i>
+                </div>
+                <input type="text" id="search-cliente" placeholder="Buscar (F4)..." 
+                       class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+                <input type="hidden" id="selected-cliente-id">
+            </div>
+            
+            <!-- Resultados Clientes -->
+            <div id="cliente-results" class="absolute left-4 right-4 top-[4.5rem] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-20 hidden max-h-48 overflow-y-auto">
+            </div>
+            
+            <!-- Contexto Inteligente del Cliente -->
+            <div id="cliente-context" class="mt-3 flex flex-col gap-2 text-xs hidden">
+                <div class="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-100 dark:border-blue-800/50">
+                    <span class="text-blue-800 dark:text-blue-300 font-medium"><i class="fa-solid fa-money-bill-wave mr-1"></i> Ticket Promedio</span>
+                    <span id="ctx-ticket" class="font-bold text-blue-700 dark:text-blue-200">$0.00</span>
+                </div>
+                <div class="flex items-center justify-between bg-green-50 dark:bg-green-900/20 p-2 rounded border border-green-100 dark:border-green-800/50">
+                    <span class="text-green-800 dark:text-green-300 font-medium"><i class="fa-regular fa-calendar-check mr-1"></i> Última Visita</span>
+                    <span id="ctx-visita" class="font-bold text-green-700 dark:text-green-200">---</span>
+                </div>
+                <div id="ctx-clasificacion" class="bg-purple-50 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300 p-2 rounded border border-purple-100 dark:border-purple-800/50 font-medium shadow-sm text-center">
+                    <i class="fa-solid fa-star"></i> <span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Sugerencias Inteligentes -->
+        <div class="bg-gradient-to-b from-blue-50/80 to-white dark:from-blue-900/20 dark:to-darkCard rounded-xl shadow-sm border border-blue-100 dark:border-blue-900/30 flex-1 flex flex-col overflow-hidden relative">
+            <div class="p-4 border-b border-blue-100 dark:border-blue-900/30 bg-white/50 dark:bg-darkCard/50 backdrop-blur-sm shrink-0">
+                <h3 class="text-sm font-bold text-blue-800 dark:text-blue-300 tracking-wide flex items-center gap-2">
+                    <i class="fa-solid fa-lightbulb text-yellow-500"></i> Asistente de Ventas
+                </h3>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-4 custom-scrollbar" id="assistant-content">
+                <!-- Estado Vacío (Sin productos en ticket) -->
+                <div id="assistant-empty" class="h-full flex flex-col items-center justify-center text-center opacity-70">
+                    <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900/40 rounded-full flex items-center justify-center mb-4">
+                        <i class="fa-solid fa-wand-magic-sparkles text-2xl text-blue-500"></i>
+                    </div>
+                    <p class="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">Esperando ticket</p>
+                    <p class="text-xs text-blue-600/70 dark:text-blue-400/70 max-w-[80%]">Agrega productos al ticket para recibir sugerencias inteligentes.</p>
+                </div>
+
+                <!-- Estado Sin Recomendaciones (Con productos pero sin reglas) -->
+                <div id="assistant-no-rules" class="h-full flex flex-col items-center justify-center text-center opacity-70 hidden">
+                    <div class="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+                        <i class="fa-solid fa-box-open text-2xl text-gray-400"></i>
+                    </div>
+                    <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Sin sugerencias extra</p>
+                    <p class="text-xs text-gray-500 max-w-[80%]">No hay recomendaciones adicionales para estos productos por el momento.</p>
+                </div>
+
+                <!-- Contenedor de Sugerencias -->
+                <div id="cross-sell-items" class="flex flex-col gap-3 hidden">
+                    <!-- Tarjetas Verticales -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Pre-Checkout (Resumen de Impacto) -->
+<div id="preCheckoutModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-white dark:bg-darkCard w-full max-w-md rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300 overflow-hidden">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+            <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2"><i class="fa-solid fa-file-invoice-dollar text-primary"></i> Resumen de Impacto</h3>
+        </div>
+        <div class="p-6 space-y-4">
+            <p class="text-sm text-gray-600 dark:text-gray-300 text-center mb-4">Confirme la transacción para asentar la venta y afectar inventario.</p>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg text-center">
+                    <div class="text-xs text-gray-500 uppercase font-bold">Total Items</div>
+                    <div class="text-2xl font-bold text-gray-800 dark:text-white" id="modal-pre-items">0</div>
+                </div>
+                <div class="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg text-center">
+                    <div class="text-xs text-gray-500 uppercase font-bold">Monto Venta</div>
+                    <div class="text-2xl font-bold text-primary font-mono" id="modal-pre-total">$0.00</div>
+                </div>
+            </div>
+            
+            <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800 flex justify-between items-center mt-4">
+                <div class="flex items-center gap-2 text-green-700 dark:text-green-400 font-bold">
+                    <i class="fa-solid fa-arrow-trend-up"></i> Utilidad Proyectada
+                </div>
+                <div class="font-mono text-lg font-bold text-green-600 dark:text-green-400" id="modal-pre-utilidad">$0.00</div>
+            </div>
+        </div>
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 bg-gray-50 dark:bg-gray-800/50">
+            <button onclick="closePreCheckout()" class="px-5 py-2 rounded-lg font-bold text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">Cancelar</button>
+            <button id="btn-confirm-checkout" class="px-5 py-2 rounded-lg font-bold text-white bg-green-500 hover:bg-green-600 transition-colors shadow-lg flex items-center gap-2"><i class="fa-solid fa-check"></i> Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Post-Checkout (Éxito) -->
+<div id="postCheckoutModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-white dark:bg-darkCard w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300 overflow-hidden">
+        <div class="p-8 flex flex-col items-center">
+            <div class="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-6">
+                <i class="fa-solid fa-check text-4xl text-green-500"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">¡Venta Exitosa!</h2>
+            <p class="text-gray-500 font-mono mb-6" id="modal-post-ticket">Ticket #0</p>
+            
+            <div class="w-full space-y-3 mb-8">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">⏱️ Tiempo Atención:</span>
+                    <span class="font-bold text-gray-800 dark:text-gray-200" id="modal-post-tiempo">0 seg</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500 font-medium">📈 Utilidad Real:</span>
+                    <span class="font-bold text-green-500 font-mono" id="modal-post-utilidad">$0.00</span>
+                </div>
+            </div>
+            
+            <button onclick="closePostCheckout()" class="w-full py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg font-bold transition-colors">
+                Siguiente Cliente
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/pos.js?v=5.6"></script>
+{% endblock %}

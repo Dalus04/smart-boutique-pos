@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from models.pos import Venta, DetalleVenta
 
 class MineriaService:
-    # Diccionario de reglas: { antecedente_id: [(consecuente_id, confianza), ...] }
-    _reglas: dict[int, list[tuple[int, float]]] = {}
+    # Diccionario de reglas: { antecedente_id: [(consecuente_id, confianza, soporte, lift), ...] }
+    _reglas: dict[int, list[tuple[int, float, float, float]]] = {}
 
     @classmethod
     def _extraer_transacciones(cls, session: Session) -> list[set[int]]:
@@ -29,6 +29,10 @@ class MineriaService:
         Calcula las reglas de asociación de 2-itemsets y las almacena en memoria.
         """
         transacciones = cls._extraer_transacciones(session)
+        N = len(transacciones)
+        if N == 0:
+            cls._reglas = {}
+            return
         
         # 1. Calcular soporte individual de cada producto
         item_support = defaultdict(int)
@@ -54,15 +58,19 @@ class MineriaService:
             if count >= min_support:
                 item_a, item_b = pair
                 
+                # Calcular soporte de la regla y lift
+                soporte_regla = count / N
+                lift = (count * N) / (item_support[item_a] * item_support[item_b])
+                
                 # Regla A -> B
                 conf_a_b = count / item_support[item_a]
                 if conf_a_b >= min_confidence:
-                    reglas_temp[item_a].append((item_b, conf_a_b))
+                    reglas_temp[item_a].append((item_b, conf_a_b, soporte_regla, lift))
                     
                 # Regla B -> A
                 conf_b_a = count / item_support[item_b]
                 if conf_b_a >= min_confidence:
-                    reglas_temp[item_b].append((item_a, conf_b_a))
+                    reglas_temp[item_b].append((item_a, conf_b_a, soporte_regla, lift))
                     
         # Ordenar reglas de cada antecedente por confianza descendente
         cls._reglas = {}
@@ -70,34 +78,41 @@ class MineriaService:
             cls._reglas[antecedente] = sorted(consecuentes, key=lambda x: x[1], reverse=True)
 
     @classmethod
-    def sugerir_venta_cruzada(cls, carrito_ids: list[int]) -> list[tuple[int, float]]:
+    def sugerir_venta_cruzada(cls, carrito_ids: list[int]) -> list[tuple[int, int, float, float, float, str]]:
         """
-        Dado los IDs de productos en el carrito, retorna hasta 3 tuplas (id_producto, confianza) recomendadas.
+        Dado los IDs de productos en el carrito, retorna hasta 3 tuplas (antecedente_id, consecuente_id, confianza, soporte, lift, tipo) recomendadas.
         """
-        recomendaciones_potenciales = defaultdict(float)
+        # Para almacenar la mejor tupla de sugerencia para cada consecuente
+        # { consecuente_id: (antecedente_id, confianza, soporte, lift, tipo) }
+        recomendaciones_potenciales = {}
         
         for item_id in carrito_ids:
             if item_id in cls._reglas:
-                for consecuente_id, confianza in cls._reglas[item_id]:
+                for consecuente_id, confianza, soporte, lift in cls._reglas[item_id]:
                     # Evitar recomendar algo que ya está en el carrito
                     if consecuente_id not in carrito_ids:
-                        if confianza > recomendaciones_potenciales[consecuente_id]:
-                            recomendaciones_potenciales[consecuente_id] = confianza
+                        actual_confianza = recomendaciones_potenciales.get(consecuente_id, (None, 0.0))[1]
+                        if confianza > actual_confianza:
+                            # Por defecto clasificamos como "Cross Sell"
+                            recomendaciones_potenciales[consecuente_id] = (item_id, confianza, soporte, lift, "Cross Sell")
                             
-        # Ordenar por confianza descendente y devolver el top 3
-        top_sugerencias = sorted(recomendaciones_potenciales.items(), key=lambda x: x[1], reverse=True)
+        # Ordenar por confianza descendente y devolver el top 3 (antecedente, consecuente, conf, sop, lift, tipo)
+        top_sugerencias = [
+            (datos[0], consecuente_id, datos[1], datos[2], datos[3], datos[4]) 
+            for consecuente_id, datos in sorted(recomendaciones_potenciales.items(), key=lambda x: x[1][1], reverse=True)
+        ]
         return top_sugerencias[:3]
 
     @classmethod
-    def obtener_mejores_reglas(cls, limit: int = 3) -> list[tuple[int, int, float]]:
+    def obtener_mejores_reglas(cls, limit: int = 3) -> list[tuple[int, int, float, float, float]]:
         """
         Retorna las reglas más fuertes de la base de conocimiento global.
-        Retorna: [(antecedente_id, consecuente_id, confianza)]
+        Retorna: [(antecedente_id, consecuente_id, confianza, soporte, lift)]
         """
         todas_las_reglas = []
         for antecedente, consecuentes in cls._reglas.items():
-            for consecuente, confianza in consecuentes:
-                todas_las_reglas.append((antecedente, consecuente, confianza))
+            for consecuente, confianza, soporte, lift in consecuentes:
+                todas_las_reglas.append((antecedente, consecuente, confianza, soporte, lift))
                 
         todas_las_reglas.sort(key=lambda x: x[2], reverse=True)
         return todas_las_reglas[:limit]
@@ -150,8 +165,17 @@ class MineriaService:
             
         # Oportunidades basadas en reglas de asociación
         reglas = metricas.get("reglas", [])
-        for a, c, conf in reglas:
+        for a, c, conf, sop, lift in reglas:
             if a and c:
-                insights.append({"tipo": "oportunidad", "mensaje": f"Sugerencia: Promocionar {a} con {c} (Prob: {conf*100:.0f}%).", "icono": "💡"})
+                insights.append({
+                    "tipo": "oportunidad_apriori", 
+                    "mensaje": f"Sugerencia: Promocionar {a} con {c} (Prob: {conf*100:.0f}%).", 
+                    "icono": "💡",
+                    "apriori_data": {
+                        "soporte": sop,
+                        "confianza": conf,
+                        "lift": lift
+                    }
+                })
                 
         return insights

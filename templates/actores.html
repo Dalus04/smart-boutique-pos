@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block header_title %}Gestión de Actores Comerciales{% endblock %}
+
+{% block content %}
+<div class="flex flex-col h-full gap-6">
+
+    <!-- Navegación de Pestañas -->
+    <div class="bg-white dark:bg-darkCard rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-2 shrink-0 flex gap-2">
+        <button id="tab-clientes" class="px-6 py-2 rounded-lg font-bold transition-colors bg-primary text-white" onclick="switchTab('clientes')">
+            <i class="fa-solid fa-users mr-2"></i> Clientes
+        </button>
+        <button id="tab-proveedores" class="px-6 py-2 rounded-lg font-bold transition-colors text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" onclick="switchTab('proveedores')">
+            <i class="fa-solid fa-truck mr-2"></i> Proveedores
+        </button>
+        <div class="flex-1"></div>
+        <button class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg transition-colors flex items-center gap-2" onclick="openModal()">
+            <i class="fa-solid fa-plus"></i> <span id="btn-nuevo-texto">Nuevo Cliente</span>
+        </button>
+    </div>
+
+    <!-- Tabla Principal -->
+    <div class="bg-white dark:bg-darkCard rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex-1 flex flex-col overflow-hidden relative">
+        <div id="table-loading" class="absolute inset-0 bg-white/80 dark:bg-darkCard/80 z-10 flex items-center justify-center">
+            <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary"></i>
+        </div>
+        
+        <div class="overflow-x-auto flex-1">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-0">
+                    <tr id="table-head">
+                        <!-- Headers dinámicos JS -->
+                    </tr>
+                </thead>
+                <tbody id="table-body" class="divide-y divide-gray-200 dark:divide-gray-700">
+                    <!-- Filas dinámicas JS -->
+                </tbody>
+            </table>
+            <div id="table-empty" class="hidden p-8 text-center text-gray-500 dark:text-gray-400">
+                No hay registros disponibles.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Creación/Edición -->
+<div id="actor-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-white dark:bg-darkCard w-full max-w-2xl rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300 overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center shrink-0 bg-gray-50 dark:bg-gray-800/50">
+            <h3 class="text-xl font-bold text-gray-800 dark:text-white" id="modal-title">Nuevo Cliente</h3>
+            <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" onclick="closeModal()">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+        
+        <div class="p-6 overflow-auto flex-1">
+            <form id="actor-form" class="space-y-4">
+                <input type="hidden" id="form-id">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo Documento</label>
+                        <select id="form-tipo-doc" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-gray-50 dark:bg-[#1a1a1a] text-gray-800 dark:text-gray-200 outline-none focus:border-primary">
+                            <option value="DNI">DNI (8 dígitos)</option>
+                            <option value="RUC">RUC (11 dígitos)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">N° Documento <span class="text-red-500">*</span></label>
+                        <input type="text" id="form-num-doc" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-[#1a1a1a] text-gray-800 dark:text-white outline-none focus:border-primary font-mono" placeholder="Ej: 12345678">
+                        <p class="text-xs text-red-500 mt-1 hidden" id="doc-error">Longitud inválida.</p>
+                    </div>
+                </div>
+
+                <!-- Campos de Cliente -->
+                <div id="campos-cliente" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombres <span class="text-red-500">*</span></label>
+                        <input type="text" id="form-nombres" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-[#1a1a1a] text-gray-800 dark:text-white outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Apellidos <span class="text-red-500">*</span></label>
+                        <input type="text" id="form-apellidos" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-[#1a1a1a] text-gray-800 dark:text-white outline-none focus:border-primary">
+                    </div>
+                </div>
+
+                <!-- Campos de Proveedor -->
+                <div id="campos-proveedor" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Razón Social / Empresa <span class="text-red-500">*</span></label>
+                    <input type="text" id="form-razon-social" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-[#1a1a1a] text-gray-800 dark:text-white outline-none focus:border-primary">
+                </div>
+
+                <!-- Campos Comunes -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Teléfono</label>
+                        <input type="text" id="form-telefono" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-[#1a1a1a] text-gray-800 dark:text-white outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Correo Electrónico</label>
+                        <input type="email" id="form-correo" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-[#1a1a1a] text-gray-800 dark:text-white outline-none focus:border-primary">
+                    </div>
+                </div>
+
+                <!-- Dirección (Sólo Proveedor) -->
+                <div id="campos-direccion" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Dirección</label>
+                    <input type="text" id="form-direccion" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-[#1a1a1a] text-gray-800 dark:text-white outline-none focus:border-primary">
+                </div>
+
+            </form>
+        </div>
+        
+        <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 shrink-0 bg-gray-50 dark:bg-gray-800/50">
+            <button class="px-6 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium" onclick="closeModal()">Cancelar</button>
+            <button class="px-6 py-2.5 bg-primary hover:bg-blue-600 text-white rounded-lg transition-colors font-bold shadow-md" onclick="saveActor()" id="btn-save">Guardar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/actores.js"></script>
+{% endblock %}
