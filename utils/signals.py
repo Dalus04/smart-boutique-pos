@@ -4,6 +4,7 @@ class AppSignals(QObject):
     cliente_actualizado = Signal()
     proveedor_actualizado = Signal()
     inventario_actualizado = Signal()
+    navegar_a_modulo = Signal(str)
 
 # Instancia global del bus de eventos
 global_signals = AppSignals()

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from models.catalogo import Categoria, Producto
 from models.suministro import Inventario
 from models.pos import Venta, DetalleVenta
+from models.actores import Cliente
 
 class AnaliticaService:
     @staticmethod
@@ -138,3 +139,105 @@ class AnaliticaService:
                 "total_recaudado": float(monto or 0)
             })
         return ranking
+
+    @staticmethod
+    def obtener_metricas_completas(db: Session, periodo: str = "7_dias") -> dict:
+        now = datetime.datetime.now()
+        
+        # Calcular rangos
+        if periodo == "mes":
+            dias_t0 = 30
+        elif periodo == "anio":
+            dias_t0 = 365
+        elif periodo == "hoy":
+            dias_t0 = 1
+        else:
+            dias_t0 = 7
+            
+        fin_t0 = now
+        inicio_t0 = fin_t0 - datetime.timedelta(days=dias_t0)
+        
+        fin_t1 = inicio_t0
+        inicio_t1 = fin_t1 - datetime.timedelta(days=dias_t0)
+        
+        # Helpers
+        def get_ventas(ini, fin):
+            stmt = select(func.sum(Venta.montoTotal), func.count(Venta.idVenta)).where(Venta.fechaVenta >= ini, Venta.fechaVenta <= fin)
+            return db.execute(stmt).first()
+            
+        def get_utilidad(ini, fin):
+            stmt = select(
+                func.sum((DetalleVenta.precioUnitario - DetalleVenta.costoUnitario) * DetalleVenta.cantidad)
+            ).join(Venta, Venta.idVenta == DetalleVenta.idVenta).where(
+                Venta.fechaVenta >= ini, Venta.fechaVenta <= fin
+            )
+            return db.execute(stmt).scalar() or Decimal("0")
+            
+        def get_clientes(ini, fin):
+            stmt = select(func.count(func.distinct(Venta.idCliente))).where(Venta.fechaVenta >= ini, Venta.fechaVenta <= fin)
+            return db.execute(stmt).scalar() or 0
+
+        # T0 metrics
+        ventas_t0, count_t0 = get_ventas(inicio_t0, fin_t0)
+        ventas_t0 = float(ventas_t0 or 0)
+        utilidad_t0 = float(get_utilidad(inicio_t0, fin_t0))
+        clientes_t0 = get_clientes(inicio_t0, fin_t0)
+        
+        # T1 metrics
+        ventas_t1, _ = get_ventas(inicio_t1, fin_t1)
+        ventas_t1 = float(ventas_t1 or 0)
+        utilidad_t1 = float(get_utilidad(inicio_t1, fin_t1))
+        clientes_t1 = get_clientes(inicio_t1, fin_t1)
+        
+        # Variations
+        def calc_var(t0, t1):
+            if t1 == 0:
+                return 100.0 if t0 > 0 else 0.0
+            return ((t0 - t1) / t1) * 100.0
+            
+        # Margen Bruto
+        margen_t0 = (utilidad_t0 / ventas_t0 * 100) if ventas_t0 > 0 else 0
+        margen_t1 = (utilidad_t1 / ventas_t1 * 100) if ventas_t1 > 0 else 0
+        
+        # Obtener inventario actual
+        salud = AnaliticaService.obtener_salud_inventario(db)
+        
+        # Chart data for T0
+        tendencia_t0 = AnaliticaService.obtener_tendencia_ventas(db, inicio_t0.date(), fin_t0.date())
+        ranking_t0 = AnaliticaService.obtener_ranking_productos(db, 5, inicio_t0.date(), fin_t0.date())
+        categorias_t0 = AnaliticaService.obtener_rentabilidad_por_categoria(db) 
+        
+        return {
+            "kpis": {
+                "ventas": {"valor": ventas_t0, "var": calc_var(ventas_t0, ventas_t1)},
+                "utilidad": {"valor": utilidad_t0, "var": calc_var(utilidad_t0, utilidad_t1)},
+                "clientes": {"valor": clientes_t0, "var": calc_var(clientes_t0, clientes_t1)},
+                "margen": {"valor": margen_t0, "var": margen_t0 - margen_t1} # Variación en puntos porcentuales
+            },
+            "charts": {
+                "tendencia": tendencia_t0,
+                "ranking": ranking_t0,
+                "categorias": categorias_t0
+            },
+            "salud_inventario": salud,
+            "proyeccion_mes": AnaliticaService.proyectar_ventas_mes(db)
+        }
+
+    @staticmethod
+    def proyectar_ventas_mes(db: Session) -> float:
+        import calendar
+        now = datetime.datetime.now()
+        inicio_mes = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        stmt = select(func.sum(Venta.montoTotal)).where(
+            Venta.fechaVenta >= inicio_mes,
+            Venta.fechaVenta <= now
+        )
+        ventas_actuales = db.execute(stmt).scalar() or Decimal("0")
+        ventas_actuales = float(ventas_actuales)
+        
+        dia_actual = now.day
+        _, dias_del_mes = calendar.monthrange(now.year, now.month)
+        
+        if dia_actual == 0: return 0.0
+        return (ventas_actuales / dia_actual) * dias_del_mes
