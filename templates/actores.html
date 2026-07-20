@@ -5,22 +5,62 @@
 {% block content %}
 <div class="flex flex-col h-full gap-6">
 
-    <!-- Navegación de Pestañas -->
-    <div class="bg-white dark:bg-darkCard rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-2 shrink-0 flex gap-2">
-        <button id="tab-clientes" class="px-6 py-2 rounded-lg font-bold transition-colors bg-primary text-white" onclick="switchTab('clientes')">
-            <i class="fa-solid fa-users mr-2"></i> Clientes
-        </button>
-        <button id="tab-proveedores" class="px-6 py-2 rounded-lg font-bold transition-colors text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" onclick="switchTab('proveedores')">
-            <i class="fa-solid fa-truck mr-2"></i> Proveedores
-        </button>
-        <div class="flex-1"></div>
-        <button class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg transition-colors flex items-center gap-2" onclick="openModal()">
+    <!-- Métricas Rápidas -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">
+        <div class="card p-4 flex items-center justify-between border-l-4 border-blue-500">
+            <div>
+                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Total Registrados</p>
+                <h3 class="text-2xl font-bold text-gray-800 dark:text-gray-100" id="metric-total">0</h3>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-500">
+                <i class="fa-solid fa-users text-lg"></i>
+            </div>
+        </div>
+        <div class="card p-4 flex items-center justify-between border-l-4 border-emerald-500">
+            <div>
+                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Activos (Recientes)</p>
+                <h3 class="text-2xl font-bold text-gray-800 dark:text-gray-100" id="metric-activos">0</h3>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-500">
+                <i class="fa-solid fa-bolt text-lg"></i>
+            </div>
+        </div>
+        <div class="card p-4 flex items-center justify-between border-l-4 border-purple-500">
+            <div>
+                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Valor Promedio</p>
+                <h3 class="text-2xl font-bold text-gray-800 dark:text-gray-100 font-mono" id="metric-ticket">$0.00</h3>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-purple-500">
+                <i class="fa-solid fa-money-bill-wave text-lg"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navegación y Búsqueda -->
+    <div class="card p-3 shrink-0 flex flex-col lg:flex-row gap-4 items-center justify-between shadow-sm border border-gray-200 dark:border-gray-700">
+        <div class="flex gap-2 w-full lg:w-auto">
+            <button id="tab-clientes" class="flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors bg-primary text-white shadow-sm" onclick="switchTab('clientes')">
+                <i class="fa-solid fa-users mr-2"></i> Clientes
+            </button>
+            <button id="tab-proveedores" class="flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" onclick="switchTab('proveedores')">
+                <i class="fa-solid fa-truck mr-2"></i> Proveedores
+            </button>
+        </div>
+        
+        <div class="flex-1 w-full lg:max-w-md relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+            </div>
+            <input type="text" id="search-actor" placeholder="Buscar por documento, nombre o empresa..." class="input-base pl-10 pr-4 py-2.5 w-full bg-gray-50 dark:bg-gray-900/50">
+        </div>
+        
+        <button class="btn-primary px-5 py-2.5 w-full lg:w-auto flex items-center justify-center gap-2 shadow-sm" onclick="openModal()">
             <i class="fa-solid fa-plus"></i> <span id="btn-nuevo-texto">Nuevo Cliente</span>
         </button>
     </div>
 
     <!-- Tabla Principal -->
-    <div class="bg-white dark:bg-darkCard rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex-1 flex flex-col overflow-hidden relative">
+    <div class="card flex-1 flex flex-col overflow-hidden relative">
         <div id="table-loading" class="absolute inset-0 bg-white/80 dark:bg-darkCard/80 z-10 flex items-center justify-center">
             <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary"></i>
         </div>
@@ -60,14 +100,14 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo Documento</label>
-                        <select id="form-tipo-doc" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-gray-50 dark:bg-[#1a1a1a] text-gray-800 dark:text-gray-200 outline-none focus:border-primary">
+                        <select id="form-tipo-doc" class="input-base p-2.5">
                             <option value="DNI">DNI (8 dígitos)</option>
                             <option value="RUC">RUC (11 dígitos)</option>
                         </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">N° Documento <span class="text-red-500">*</span></label>
-                        <input type="text" id="form-num-doc" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-[#1a1a1a] text-gray-800 dark:text-white outline-none focus:border-primary font-mono" placeholder="Ej: 12345678">
+                        <input type="text" id="form-num-doc" required class="input-base p-2.5 font-mono" placeholder="Ej: 12345678">
                         <p class="text-xs text-red-500 mt-1 hidden" id="doc-error">Longitud inválida.</p>
                     </div>
                 </div>
@@ -76,36 +116,36 @@
                 <div id="campos-cliente" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombres <span class="text-red-500">*</span></label>
-                        <input type="text" id="form-nombres" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-[#1a1a1a] text-gray-800 dark:text-white outline-none focus:border-primary">
+                        <input type="text" id="form-nombres" class="input-base p-2.5">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Apellidos <span class="text-red-500">*</span></label>
-                        <input type="text" id="form-apellidos" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-[#1a1a1a] text-gray-800 dark:text-white outline-none focus:border-primary">
+                        <input type="text" id="form-apellidos" class="input-base p-2.5">
                     </div>
                 </div>
 
                 <!-- Campos de Proveedor -->
                 <div id="campos-proveedor" class="hidden">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Razón Social / Empresa <span class="text-red-500">*</span></label>
-                    <input type="text" id="form-razon-social" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-[#1a1a1a] text-gray-800 dark:text-white outline-none focus:border-primary">
+                    <input type="text" id="form-razon-social" class="input-base p-2.5">
                 </div>
 
                 <!-- Campos Comunes -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Teléfono</label>
-                        <input type="text" id="form-telefono" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-[#1a1a1a] text-gray-800 dark:text-white outline-none focus:border-primary">
+                        <input type="text" id="form-telefono" class="input-base p-2.5">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Correo Electrónico</label>
-                        <input type="email" id="form-correo" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-[#1a1a1a] text-gray-800 dark:text-white outline-none focus:border-primary">
+                        <input type="email" id="form-correo" class="input-base p-2.5">
                     </div>
                 </div>
 
                 <!-- Dirección (Sólo Proveedor) -->
                 <div id="campos-direccion" class="hidden">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Dirección</label>
-                    <input type="text" id="form-direccion" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-[#1a1a1a] text-gray-800 dark:text-white outline-none focus:border-primary">
+                    <input type="text" id="form-direccion" class="input-base p-2.5">
                 </div>
 
             </form>

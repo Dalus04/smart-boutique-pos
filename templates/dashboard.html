@@ -8,7 +8,7 @@
         <!-- Controles y Salud -->
         <div class="flex justify-between items-end gap-6">
             <!-- Tarjeta Salud -->
-            <div class="bg-white dark:bg-darkCard rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 flex-1 flex flex-col justify-center relative">
+            <div class="card p-5 flex-1 flex flex-col justify-center relative">
                 <div class="absolute top-4 right-4">
                     <i class="fa-solid fa-circle-info text-gray-400 hover:text-primary cursor-pointer text-sm" title="Score de Salud (0-100): +30 si hay Utilidad Positiva, +30 si Ventas crecen, +40 si no hay stock Crítico."></i>
                 </div>
@@ -25,7 +25,7 @@
             </div>
 
             <!-- Filtros de Tiempo -->
-            <div class="bg-white dark:bg-darkCard rounded-xl p-1 shadow-sm border border-gray-100 dark:border-gray-700 flex h-fit">
+            <div class="card p-1 flex h-fit">
                 <button class="filter-btn active px-5 py-2 rounded-lg font-bold text-sm transition-colors text-white bg-primary" data-period="hoy">Hoy</button>
                 <button class="filter-btn px-5 py-2 rounded-lg font-bold text-sm transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" data-period="7_dias">Semana</button>
                 <button class="filter-btn px-5 py-2 rounded-lg font-bold text-sm transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" data-period="mes">Mes</button>
@@ -36,35 +36,35 @@
         <!-- KPIs Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <!-- Ventas -->
-            <div class="bg-white dark:bg-darkCard rounded-xl p-4 shadow-sm border-b-4 border-blue-500 hover:shadow-md transition-shadow relative group">
+            <div class="card p-4 border-b-4 border-blue-500 hover:shadow-md transition-shadow relative group">
                 <h4 class="text-blue-500 font-bold text-sm mb-1">Ventas</h4>
                 <div class="text-2xl font-bold text-gray-800 dark:text-white" id="kpi-ventas-val" title="Total recaudado en el periodo">$0.00</div>
                 <div class="text-xs text-gray-400 mt-1 font-medium" id="kpi-ventas-var">Calculando...</div>
             </div>
             
             <!-- Utilidad -->
-            <div class="bg-white dark:bg-darkCard rounded-xl p-4 shadow-sm border-b-4 border-green-500 hover:shadow-md transition-shadow relative group">
+            <div class="card p-4 border-b-4 border-green-500 hover:shadow-md transition-shadow relative group">
                 <h4 class="text-green-500 font-bold text-sm mb-1">Utilidad Bruta</h4>
                 <div class="text-2xl font-bold text-gray-800 dark:text-white" id="kpi-utilidad-val" title="Diferencia entre Precio y Costo">$0.00</div>
                 <div class="text-xs text-gray-400 mt-1 font-medium" id="kpi-utilidad-var">Calculando...</div>
             </div>
 
             <!-- Margen -->
-            <div class="bg-white dark:bg-darkCard rounded-xl p-4 shadow-sm border-b-4 border-orange-500 hover:shadow-md transition-shadow relative group">
+            <div class="card p-4 border-b-4 border-orange-500 hover:shadow-md transition-shadow relative group">
                 <h4 class="text-orange-500 font-bold text-sm mb-1">Margen Bruto %</h4>
                 <div class="text-2xl font-bold text-gray-800 dark:text-white" id="kpi-margen-val" title="Porcentaje de utilidad sobre ventas">0.0%</div>
                 <div class="text-xs text-gray-400 mt-1 font-medium" id="kpi-margen-var">Calculando...</div>
             </div>
 
             <!-- Clientes -->
-            <div class="bg-white dark:bg-darkCard rounded-xl p-4 shadow-sm border-b-4 border-purple-500 hover:shadow-md transition-shadow relative group">
+            <div class="card p-4 border-b-4 border-purple-500 hover:shadow-md transition-shadow relative group">
                 <h4 class="text-purple-500 font-bold text-sm mb-1">Nuevos Clientes</h4>
                 <div class="text-2xl font-bold text-gray-800 dark:text-white" id="kpi-clientes-val" title="Clientes únicos atendidos">0</div>
                 <div class="text-xs text-gray-400 mt-1 font-medium" id="kpi-clientes-var">Calculando...</div>
             </div>
 
             <!-- Proyección -->
-            <div class="bg-white dark:bg-darkCard rounded-xl p-4 shadow-sm border-b-4 border-teal-500 hover:shadow-md transition-shadow relative group">
+            <div class="card p-4 border-b-4 border-teal-500 hover:shadow-md transition-shadow relative group">
                 <h4 class="text-teal-500 font-bold text-sm mb-1">Proyección Mensual</h4>
                 <div class="text-2xl font-bold text-gray-800 dark:text-white" id="kpi-proyeccion-val" title="Cálculo lineal proyectado a fin de mes">$0.00</div>
                 <div class="text-xs text-gray-400 mt-1 font-medium" id="kpi-proyeccion-var">Calculando...</div>
@@ -75,7 +75,7 @@
         </div>
 
         <!-- Área de Gráficos (Stacked equivalent) -->
-        <div class="bg-white dark:bg-darkCard rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex-1 relative overflow-hidden min-h-[300px]">
+        <div class="card flex-1 relative overflow-hidden min-h-[300px]">
             
             <!-- Loading State -->
             <div id="chart-loading" class="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-darkCard/80 z-20">

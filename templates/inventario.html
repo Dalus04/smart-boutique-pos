@@ -1,117 +1,134 @@
 {% extends "base.html" %}
 
-{% block header_title %}Inventario y Catálogo Inteligente{% endblock %}
+{% block header_title %}Inventario Inteligente v5.5{% endblock %}
 
 {% block content %}
 <div class="flex flex-col h-full gap-6">
     
-    <!-- Banda Superior de KPIs -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 shrink-0">
-        <!-- Total Productos -->
-        <div class="bg-white dark:bg-darkCard rounded-xl p-4 shadow-sm border-l-4 border-blue-500 flex items-center gap-4">
-            <div class="h-12 w-12 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-500 flex items-center justify-center text-xl">
-                <i class="fa-solid fa-boxes-stacked"></i>
+    <!-- Cabecera: Salud y Carrusel de Insights -->
+    <div class="flex flex-col md:flex-row gap-4 shrink-0 min-h-[120px] md:h-32">
+        <!-- Salud de Stock -->
+        <div class="card p-4 border-l-4 border-blue-500 flex flex-col justify-between w-full md:w-1/4 relative overflow-hidden group">
+            <div class="absolute -right-6 -bottom-6 text-blue-500/10 group-hover:scale-110 transition-transform duration-500">
+                <i class="fa-solid fa-heart-pulse text-7xl"></i>
             </div>
             <div>
-                <h4 class="text-sm font-bold text-gray-500 dark:text-gray-400">Total Productos</h4>
-                <div class="text-2xl font-bold text-gray-800 dark:text-white" id="kpi-productos">0</div>
+                <h4 class="text-xs font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1 relative z-10">Salud de Stock</h4>
+                <div class="flex items-baseline justify-between gap-2 relative z-10 mt-1">
+                    <div class="flex items-baseline gap-1">
+                        <span class="text-3xl font-black text-gray-800 dark:text-white" id="kpi-health-score">--</span>
+                        <span class="text-sm font-bold text-gray-400">/100</span>
+                    </div>
+                    <span class="text-xs font-bold px-2 py-0.5 rounded text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300" id="kpi-health-status">Analizando...</span>
+                </div>
             </div>
+            <p class="text-xs text-gray-600 dark:text-gray-300 leading-snug relative z-10 mt-2" id="kpi-health-subtitle">Evaluando integridad del catálogo...</p>
         </div>
         
-        <!-- Stock Total -->
-        <div class="bg-white dark:bg-darkCard rounded-xl p-4 shadow-sm border-l-4 border-green-500 flex items-center gap-4">
-            <div class="h-12 w-12 rounded-full bg-green-50 dark:bg-green-900/30 text-green-500 flex items-center justify-center text-xl">
-                <i class="fa-solid fa-cubes"></i>
+        <!-- Carrusel de Insights (Insights Slider) -->
+        <div class="card flex-1 flex flex-col justify-center overflow-hidden relative bg-gradient-to-r from-gray-50 to-white dark:from-darkCard dark:to-gray-800/50">
+            <div class="absolute top-3 left-4 text-xs font-bold text-purple-500 uppercase tracking-wider flex items-center gap-1">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Insights Comerciales
             </div>
-            <div>
-                <h4 class="text-sm font-bold text-gray-500 dark:text-gray-400">Stock Total (Unid.)</h4>
-                <div class="text-2xl font-bold text-gray-800 dark:text-white" id="kpi-stock">0</div>
-            </div>
-        </div>
-
-        <!-- Quiebres / Riesgo Alto -->
-        <div class="bg-white dark:bg-darkCard rounded-xl p-4 shadow-sm border-l-4 border-red-500 flex items-center gap-4">
-            <div class="h-12 w-12 rounded-full bg-red-50 dark:bg-red-900/30 text-red-500 flex items-center justify-center text-xl">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-            </div>
-            <div>
-                <h4 class="text-sm font-bold text-gray-500 dark:text-gray-400">Riesgo / Crítico</h4>
-                <div class="text-2xl font-bold text-red-500" id="kpi-riesgo">0</div>
-            </div>
-        </div>
-
-        <!-- Categorías -->
-        <div class="bg-white dark:bg-darkCard rounded-xl p-4 shadow-sm border-l-4 border-purple-500 flex items-center gap-4">
-            <div class="h-12 w-12 rounded-full bg-purple-50 dark:bg-purple-900/30 text-purple-500 flex items-center justify-center text-xl">
-                <i class="fa-solid fa-tags"></i>
-            </div>
-            <div>
-                <h4 class="text-sm font-bold text-gray-500 dark:text-gray-400">Categorías Activas</h4>
-                <div class="text-2xl font-bold text-gray-800 dark:text-white" id="kpi-categorias">0</div>
+            
+            <div class="relative w-full h-full flex items-center px-12 mt-4">
+                <button class="absolute left-3 text-gray-400 hover:text-primary transition-colors text-xl" onclick="prevInsight()">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                
+                <div class="flex-1 overflow-hidden h-full flex items-center relative" id="insights-track">
+                    <!-- Dinámico vía JS -->
+                    <div class="w-full shrink-0 flex items-center gap-4 insight-slide absolute inset-0 opacity-100 transition-opacity duration-500" id="insight-1">
+                        <div class="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 text-green-500 flex items-center justify-center text-lg shrink-0">
+                            <i class="fa-solid fa-arrow-trend-up"></i>
+                        </div>
+                        <p class="text-gray-700 dark:text-gray-200 font-medium text-lg leading-tight">Calculando insights de inventario...</p>
+                    </div>
+                </div>
+                
+                <button class="absolute right-3 text-gray-400 hover:text-primary transition-colors text-xl" onclick="nextInsight()">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Barra de Filtros y Búsqueda -->
-    <div class="bg-white dark:bg-darkCard rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col md:flex-row gap-4 justify-between items-center shrink-0">
-        <!-- Buscador Inteligente -->
-        <div class="relative w-full md:w-96">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+    <!-- Layout Principal: Acciones Izquierda / Tabla Derecha -->
+    <div class="flex-1 flex gap-6 overflow-hidden">
+        
+        <!-- Panel Izquierdo: Acciones Prioritarias -->
+        <div class="w-72 card flex flex-col overflow-hidden shrink-0">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700 bg-red-50/50 dark:bg-red-900/10">
+                <h3 class="font-bold text-red-600 dark:text-red-400 uppercase tracking-wider text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-bolt"></i> Acciones Prioritarias
+                </h3>
             </div>
-            <input type="text" id="search-input" placeholder="Buscar por código, ID, nombre o marca..." 
-                   class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-[#1a1a1a] text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+            <div class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar" id="acciones-container">
+                <!-- Se poblará por JS -->
+                <div class="text-center text-gray-500 text-xs mt-8 px-2 leading-relaxed">
+                    <i class="fa-solid fa-circle-check text-3xl mb-2 text-green-500 opacity-80"></i>
+                    <p class="font-medium text-gray-700 dark:text-gray-300">Revisando que nada falte en tu tienda...</p>
+                    <p class="text-[11px] text-gray-400 mt-1">No hay acciones urgentes pendientes.</p>
+                </div>
+            </div>
         </div>
-        
-        <div class="flex gap-4 w-full md:w-auto">
-            <!-- Categoría -->
-            <select id="filter-categoria" class="w-full md:w-48 py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-[#1a1a1a] text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
-                <option value="">Todas las Categorías</option>
-            </select>
-            
-            <!-- Estado Stock -->
-            <select id="filter-estado" class="w-full md:w-40 py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-[#1a1a1a] text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
-                <option value="">Todos los Estados</option>
-                <option value="Óptimo">Óptimo</option>
-                <option value="Bajo">Bajo</option>
-                <option value="Crítico">Crítico</option>
-            </select>
-            
-            <button id="btn-nuevo" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600 transition-colors font-medium flex items-center gap-2 whitespace-nowrap">
-                <i class="fa-solid fa-plus"></i> Nuevo
-            </button>
-        </div>
-    </div>
 
-    <!-- Tabla Principal (Data Grid) -->
-    <div class="bg-white dark:bg-darkCard rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex-1 flex flex-col overflow-hidden relative">
-        
-        <!-- Loading overlay -->
-        <div id="table-loading" class="absolute inset-0 bg-white/80 dark:bg-darkCard/80 z-10 flex items-center justify-center hidden">
-            <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary"></i>
-        </div>
-        
-        <div class="overflow-x-auto flex-1">
-            <table class="w-full text-left border-collapse">
-                <thead class="bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-0">
-                    <tr>
-                        <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider">ID</th>
-                        <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Código</th>
-                        <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Producto</th>
-                        <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Categoría</th>
-                        <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Precio</th>
-                        <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Stock</th>
-                        <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center" title="Unidades vendidas por día (estimado a 30 días)">Vel. Venta</th>
-                        <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Riesgo IA</th>
-                        <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="table-body" class="divide-y divide-gray-200 dark:divide-gray-700">
-                    <!-- Fila dinámica via JS -->
-                </tbody>
-            </table>
-            <div id="table-empty" class="hidden p-8 text-center text-gray-500 dark:text-gray-400">
-                No se encontraron productos que coincidan con la búsqueda.
+        <!-- Panel Derecho: Data Grid y Filtros -->
+        <div class="flex-1 flex flex-col gap-4 overflow-hidden">
+            <!-- Barra de Filtros -->
+            <div class="card p-3 flex flex-col md:flex-row gap-4 justify-between items-center shrink-0">
+                <div class="relative w-full md:w-80">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+                    </div>
+                    <input type="text" id="search-input" placeholder="Buscar producto..." class="input-base pl-10 pr-4 py-2 text-sm">
+                </div>
+                
+                <div class="flex gap-3 w-full md:w-auto">
+                    <select id="filter-categoria" class="input-base w-40 py-2 px-3 text-sm">
+                        <option value="">Categorías</option>
+                    </select>
+                    <select id="filter-estado" class="input-base w-36 py-2 px-3 text-sm">
+                        <option value="">Estados</option>
+                        <option value="Óptimo">Óptimo</option>
+                        <option value="Bajo">Bajo</option>
+                        <option value="Crítico">Crítico</option>
+                    </select>
+                    <button class="btn-primary px-4 py-2 text-sm">
+                        <i class="fa-solid fa-plus"></i> Nuevo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabla Principal -->
+            <div class="card flex-1 flex flex-col overflow-hidden relative">
+                <!-- Loading overlay -->
+                <div id="table-loading" class="absolute inset-0 bg-white/80 dark:bg-darkCard/80 z-20 flex items-center justify-center hidden">
+                    <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary"></i>
+                </div>
+                
+                <div class="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
+                    <table class="w-full text-left border-collapse whitespace-nowrap">
+                        <thead class="bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Producto</th>
+                                <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Impacto en Ventas</th>
+                                <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Margen %</th>
+                                <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Stock</th>
+                                <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Días Restantes</th>
+                                <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Diagnóstico</th>
+                                <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Acción Recomendada</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="divide-y divide-gray-100 dark:divide-gray-700/50 text-sm">
+                            <!-- Fila dinámica via JS -->
+                        </tbody>
+                    </table>
+                    <div id="table-empty" class="hidden p-12 text-center text-gray-500 dark:text-gray-400 flex-col items-center">
+                        <i class="fa-solid fa-box-open text-4xl mb-3 opacity-50"></i>
+                        <p>No se encontraron productos.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
