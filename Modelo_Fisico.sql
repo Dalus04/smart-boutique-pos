@@ -124,7 +124,7 @@ CREATE TABLE compra (
     idUsuario INT NOT NULL,
     fechaCompra DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     montoTotal DECIMAL(10,2) NOT NULL,
-    estado VARCHAR(20) DEFAULT 'COMPLETADA',
+    estado VARCHAR(20) DEFAULT 'Borrador',
     CONSTRAINT fk_compra_proveedor FOREIGN KEY (idProveedor) REFERENCES proveedor(idProveedor),
     CONSTRAINT fk_compra_usuario FOREIGN KEY (idUsuario) REFERENCES usuario(idUsuario)
 );
@@ -138,4 +138,16 @@ CREATE TABLE detalle_compra (
     subtotal DECIMAL(10,2) NOT NULL,
     CONSTRAINT fk_detalle_compra_compra FOREIGN KEY (idCompra) REFERENCES compra(idCompra),
     CONSTRAINT fk_detalle_compra_producto FOREIGN KEY (idProducto) REFERENCES producto(idProducto)
+);
+
+-- 9. SOLICITUDES DE REPOSICIÓN
+CREATE TABLE solicitud_reposicion (
+    idSolicitud INT AUTO_INCREMENT PRIMARY KEY,
+    idProducto INT NOT NULL,
+    cantidad_sugerida INT NOT NULL DEFAULT 0,
+    motivo VARCHAR(100) NOT NULL,
+    origen VARCHAR(20) NOT NULL DEFAULT 'IA',
+    estado VARCHAR(20) NOT NULL DEFAULT 'Pendiente',
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_solicitud_producto FOREIGN KEY (idProducto) REFERENCES producto(idProducto)
 );

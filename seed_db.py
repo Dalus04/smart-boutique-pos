@@ -12,7 +12,7 @@ from models.base import Base
 from models.actores import Cliente, Proveedor
 from models.catalogo import Categoria, Producto
 from models.pos import Venta, DetalleVenta, MedioPago, Pago
-from models.suministro import Inventario, Compra, DetalleCompra
+from models.suministro import Inventario, Compra, DetalleCompra, SolicitudReposicion
 from models.usuarios import Usuario
 
 # 1. Recrear BD
@@ -140,12 +140,18 @@ def seed_db():
             pago = Pago(idVenta=venta.idVenta, idMedioPago=m3.idMedioPago, montoPagado=130.00, fechaPago=fecha_venta)
             db.add(pago)
 
-        print("Simulando Compras Históricas...")
-        compra1 = Compra(idProveedor=prov1.idProveedor, idUsuario=u1.idUsuario, fechaCompra=now - timedelta(days=15), montoTotal=Decimal("450.00"), estado="COMPLETADA")
+        print("Simulando Compras Históricas y Estados...")
+        compra1 = Compra(idProveedor=prov1.idProveedor, idUsuario=u1.idUsuario, fechaCompra=now - timedelta(days=15), montoTotal=Decimal("450.00"), estado="Completada")
         db.add(compra1)
         db.flush()
         det_c1 = DetalleCompra(idCompra=compra1.idCompra, idProducto=p1.idProducto, cantidad=25, costoUnitario=p1.costoProducto, subtotal=Decimal("450.00"))
         db.add(det_c1)
+
+        print("Poblando Solicitudes de Reposición de Prueba...")
+        sol1 = SolicitudReposicion(idProducto=p2.idProducto, cantidad_sugerida=15, motivo="Stock crítico. Riesgo de quiebre inminente.", origen="IA", estado="Pendiente", fecha_creacion=now - timedelta(hours=4))
+        sol2 = SolicitudReposicion(idProducto=p3.idProducto, cantidad_sugerida=25, motivo="Producto agotado. Reposición urgente.", origen="IA", estado="Pendiente", fecha_creacion=now - timedelta(hours=1))
+        sol3 = SolicitudReposicion(idProducto=p5.idProducto, cantidad_sugerida=10, motivo="Campaña comercial de temporada", origen="Manual", estado="Pendiente", fecha_creacion=now - timedelta(days=1))
+        db.add_all([sol1, sol2, sol3])
 
         db.commit()
         print("¡Base de datos poblada exitosamente con datos ricos de prueba!")

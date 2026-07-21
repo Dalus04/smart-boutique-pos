@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, desc
 from pydantic import BaseModel
 from typing import List, Optional
 from decimal import Decimal
 
 from api.dependencies import get_db_session
-from models.catalogo import Producto
+from models.catalogo import Producto, Categoria
 from models.suministro import Inventario
 from models.pos import Venta, DetalleVenta, Pago, MedioPago
 from models.actores import Cliente
@@ -40,9 +40,13 @@ class ContextoPayload(BaseModel):
 @router.get("/productos")
 def buscar_productos(
     q: Optional[str] = Query(None, description="Búsqueda por código, nombre o ID"),
+    categoria: Optional[int] = Query(None, description="Filtro por ID de categoría"),
     db: Session = Depends(get_db_session)
 ):
     query = db.query(Producto).filter(Producto.estado == 'ACTIVO')
+    
+    if categoria:
+        query = query.filter(Producto.idCategoria == categoria)
     
     if q:
         search_term = f"%{q}%"
@@ -68,20 +72,27 @@ def buscar_productos(
             
     return resultados
 
+class QuickClientePayload(BaseModel):
+    numeroDocumento: str
+    nombres: str
+    apellidos: str
+
 @router.get("/clientes")
 def buscar_clientes(
-    q: Optional[str] = Query(None, description="Búsqueda por DNI o nombre"),
+    q: Optional[str] = Query(None, description="Búsqueda por DNI, Nombre o Apellido"),
     db: Session = Depends(get_db_session)
 ):
     query = db.query(Cliente).filter(Cliente.estado == 'ACTIVO')
     
     if q:
-        search_term = f"%{q}%"
+        search_term = f"%{q.strip()}%"
         query = query.filter(
             or_(
-                Cliente.numeroDocumento == q,
+                Cliente.numeroDocumento.ilike(search_term),
                 Cliente.nombres.ilike(search_term),
-                Cliente.apellidos.ilike(search_term)
+                Cliente.apellidos.ilike(search_term),
+                func.concat(Cliente.nombres, ' ', Cliente.apellidos).ilike(search_term),
+                func.concat(Cliente.apellidos, ' ', Cliente.nombres).ilike(search_term)
             )
         )
         
@@ -92,6 +103,37 @@ def buscar_clientes(
         resultados.append(AsistenteComercialService.analizar_cliente(db, c.idCliente))
         
     return resultados
+
+@router.post("/clientes")
+def registrar_cliente_rapido(
+    payload: QuickClientePayload,
+    db: Session = Depends(get_db_session)
+):
+    dni = payload.numeroDocumento.strip()
+    nombres = payload.nombres.strip()
+    apellidos = payload.apellidos.strip()
+    
+    if not dni or not nombres or not apellidos:
+        raise HTTPException(status_code=400, detail="DNI, Nombres y Apellidos son obligatorios")
+        
+    # Verificar si existe por DNI
+    existente = db.query(Cliente).filter(Cliente.numeroDocumento == dni).first()
+    if existente:
+        # Si ya existe, lo retornamos directo
+        return AsistenteComercialService.analizar_cliente(db, existente.idCliente)
+        
+    nuevo_cliente = Cliente(
+        tipoDocumento="DNI",
+        numeroDocumento=dni,
+        nombres=nombres,
+        apellidos=apellidos,
+        estado="ACTIVO"
+    )
+    db.add(nuevo_cliente)
+    db.commit()
+    db.refresh(nuevo_cliente)
+    
+    return AsistenteComercialService.analizar_cliente(db, nuevo_cliente.idCliente)
 
 @router.get("/medios-pago")
 def get_medios_pago(db: Session = Depends(get_db_session)):
@@ -185,3 +227,69 @@ def procesar_checkout(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error procesando la venta: {str(e)}")
+
+@router.get("/categorias")
+def get_categorias(db: Session = Depends(get_db_session)):
+    categorias = db.query(Categoria).filter(Categoria.estado == 'ACTIVO').all()
+    return [{"id": c.idCategoria, "nombre": c.nombreCategoria} for c in categorias]
+
+@router.get("/historial")
+def get_historial(
+    limit: int = Query(20, description="Límite de resultados"),
+    db: Session = Depends(get_db_session)
+):
+    ventas = db.query(Venta).order_by(desc(Venta.fechaVenta)).limit(limit).all()
+    resultados = []
+    for v in ventas:
+        cliente_nombre = "Cliente Genérico"
+        if v.cliente:
+            cliente_nombre = f"{v.cliente.nombres} {v.cliente.apellidos}"
+        
+        resultados.append({
+            "idVenta": v.idVenta,
+            "fecha": v.fechaVenta.isoformat(),
+            "cliente": cliente_nombre,
+            "montoTotal": float(v.montoTotal),
+            "articulos": v.total_articulos,
+            "estado": v.estadoVenta
+        })
+    return resultados
+
+@router.get("/historial/{id_venta}")
+def get_detalle_venta(id_venta: int, db: Session = Depends(get_db_session)):
+    venta = db.query(Venta).filter(Venta.idVenta == id_venta).first()
+    if not venta:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+        
+    cliente_nombre = "Cliente Genérico"
+    if venta.cliente:
+        cliente_nombre = f"{venta.cliente.nombres} {venta.cliente.apellidos}"
+        
+    detalles = []
+    utilidad_total = 0.0
+    for d in venta.detalles:
+        subtotal = float(d.subtotal)
+        costo_total = float(d.costoUnitario) * d.cantidad
+        utilidad_total += (subtotal - costo_total)
+        
+        detalles.append({
+            "idProducto": d.idProducto,
+            "nombreProducto": d.producto.nombre if d.producto else f"Producto #{d.idProducto}",
+            "cantidad": d.cantidad,
+            "precioUnitario": float(d.precioUnitario),
+            "subtotal": subtotal
+        })
+        
+    medio_pago = "Efectivo"
+    if venta.pagos and len(venta.pagos) > 0 and venta.pagos[0].medio_pago:
+        medio_pago = venta.pagos[0].medio_pago.nombreMedioPago
+        
+    return {
+        "idVenta": venta.idVenta,
+        "fecha": venta.fechaVenta.isoformat(),
+        "cliente": cliente_nombre,
+        "montoTotal": float(venta.montoTotal),
+        "medioPago": medio_pago,
+        "utilidad": utilidad_total,
+        "detalles": detalles
+    }

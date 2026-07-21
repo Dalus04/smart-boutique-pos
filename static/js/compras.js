@@ -1,29 +1,36 @@
 /**
- * Motor Reactivo - Compras y Abastecimiento (Refactor Arquitectónico v2)
+ * Motor Reactivo - Compras y Abastecimiento (Refactor Arquitectónico v4.5)
  */
 
 let orderItems = [];
 let proveedores = [];
-let sugerenciasOriginales = [];
+let solicitudesOriginales = [];
+let borradorIdCompra = null;
+let saveTimeout = null;
 
 // DOM Elements
 const selProveedor = document.getElementById('select-proveedor');
-const fechaActual = document.getElementById('fecha-actual');
 const searchInput = document.getElementById('search-input');
 const searchResults = document.getElementById('search-results');
-const searchEmptyState = document.getElementById('search-empty-state');
 const cartItems = document.getElementById('cart-items');
 const cartEmpty = document.getElementById('cart-empty');
 const sumItems = document.getElementById('summary-items');
 const sumTotal = document.getElementById('summary-total');
 const btnProcesar = document.getElementById('btn-procesar');
-
 const toast = document.getElementById('toast');
 const toastMsg = document.getElementById('toast-msg');
 
-const fmt = (val) => `$${Number(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`;
+const fmt = (val) => `S/ ${Number(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`;
 
-// Debounce
+const parseLocalDate = (isoString) => {
+    if (!isoString) return new Date();
+    let s = isoString;
+    if (!s.includes('Z') && !/[+-]\d{2}:\d{2}$/.test(s)) {
+        s = s + 'Z';
+    }
+    return new Date(s);
+};
+
 function debounce(func, delay = 300) {
     let timer;
     return (...args) => {
@@ -43,25 +50,68 @@ function showToast(msg, isError = false) {
 }
 
 // -------------------------------------------------------------
-// HUMANIZADOR DE LENGUAJE COMERCIAL
+// CONTROL DE PESTAÑAS Y DEEP LINKING
 // -------------------------------------------------------------
-function humanizarContexto(texto) {
-    if (!texto) return "";
-    let human = texto;
-    human = human.replace(/Quiebre inminente/ig, "Riesgo de perder ventas hoy");
-    human = human.replace(/Alto riesgo de quiebre/ig, "Quedan muy pocas unidades");
-    human = human.replace(/Alta rentabilidad/ig, "Producto con alto margen de ganancia");
-    human = human.replace(/Alta rotación/ig, "Este producto se vende constantemente");
-    return human;
+function switchTab(tabId) {
+    ['planificacion', 'ordenes', 'historial'].forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        if(el) {
+            el.classList.add('hidden');
+            if(t === 'planificacion') el.classList.remove('lg:grid');
+        }
+        
+        const btn = document.getElementById(`btn-tab-${t}`);
+        if(btn) {
+            btn.classList.remove('border-blue-600', 'text-blue-600', 'dark:border-blue-400', 'dark:text-blue-400');
+            btn.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+        }
+    });
+    
+    const targetEl = document.getElementById(`tab-${tabId}`);
+    if(targetEl) {
+        targetEl.classList.remove('hidden');
+        if(tabId === 'planificacion') targetEl.classList.add('lg:grid');
+    }
+    
+    const targetBtn = document.getElementById(`btn-tab-${tabId}`);
+    if(targetBtn) {
+        targetBtn.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+        targetBtn.classList.add('border-blue-600', 'text-blue-600', 'dark:border-blue-400', 'dark:text-blue-400');
+    }
+
+    if(tabId === 'historial') cargarHistorialGlobal();
+    if(tabId === 'ordenes') cargarOrdenesActivas();
+}
+
+function parseURLParams() {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    const hlReq = params.get('hl_req');
+
+    if (tab === 'solicitudes' || tab === 'planificacion') switchTab('planificacion');
+    else if (tab && ['ordenes', 'historial'].includes(tab)) switchTab(tab);
+    else switchTab('planificacion');
+
+    if (hlReq) {
+        setTimeout(() => {
+            const row = document.getElementById(`sol-row-${hlReq}`);
+            if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                row.classList.add('bg-amber-100', 'dark:bg-amber-900/40', 'transition-colors', 'duration-1000');
+                setTimeout(() => {
+                    row.classList.remove('bg-amber-100', 'dark:bg-amber-900/40');
+                }, 3000);
+            }
+        }, 800);
+    }
 }
 
 // -------------------------------------------------------------
-// INICIALIZACIÓN Y SUGERENCIAS
+// INICIALIZACIÓN
 // -------------------------------------------------------------
 async function init() {
-    const today = new Date();
-    if(fechaActual) fechaActual.textContent = today.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    
+    parseURLParams();
+
     try {
         proveedores = await ApiClient.get('/actores/proveedores');
         if(selProveedor) {
@@ -74,110 +124,41 @@ async function init() {
             });
         }
         
-        const data = await ApiClient.get('/compras/sugerencias');
-        
-        if (data.proveedorSugerido && selProveedor) {
-            selProveedor.value = data.proveedorSugerido;
+        // Load Draft Manifest
+        const borradorRes = await ApiClient.get('/compras/planificacion/borrador');
+        if (borradorRes.borrador) {
+            borradorIdCompra = borradorRes.borrador.idCompra;
+            if (borradorRes.borrador.idProveedor && borradorRes.borrador.idProveedor > 0) {
+                selProveedor.value = borradorRes.borrador.idProveedor;
+            }
+            orderItems = borradorRes.borrador.items || [];
         }
         
-        sugerenciasOriginales = data.sugerencias || [];
-        renderSugerencias();
+        // DEEP LINKING: Auto-seleccionar proveedor
+        const params = new URLSearchParams(window.location.search);
+        const supplierId = params.get('select_supplier_id');
+        if (supplierId && selProveedor) {
+            selProveedor.value = supplierId;
+            saveManifesto({ idProveedor: parseInt(supplierId) });
+        }
+        
+        await cargarSolicitudesPendientes();
+        updateOrderUI();
         
     } catch (e) {
         console.error("Error inicializando compras", e);
-        if(selProveedor) selProveedor.innerHTML = '<option value="">Error cargando datos</option>';
     }
-}
-
-function renderSugerencias() {
-    const container = document.getElementById('sugerencias-chips');
-    if (!container) return;
-    
-    const sugerenciasActivas = [];
-    
-    sugerenciasOriginales.forEach(s => {
-        const itemEnOrden = orderItems.find(i => i.idProducto === s.idProducto);
-        const cantidadYaPedida = itemEnOrden ? itemEnOrden.cantidad : 0;
-        const pendiente = s.sugerencia - cantidadYaPedida;
-        
-        if (pendiente > 0) {
-            sugerenciasActivas.push({
-                ...s,
-                pendiente: pendiente,
-                yaPedida: cantidadYaPedida
-            });
-        }
-    });
-    
-    if (sugerenciasActivas.length === 0) {
-        if (sugerenciasOriginales.length > 0 && orderItems.length > 0) {
-            container.innerHTML = `
-                <div class="p-6 text-center bg-green-50/50 dark:bg-green-900/10 rounded-xl border border-green-200 dark:border-green-800">
-                    <i class="fa-solid fa-circle-check text-3xl text-green-600 dark:text-green-400 mb-2"></i>
-                    <div class="text-green-800 dark:text-green-300 text-sm font-bold">¡Recomendaciones Cubiertas!</div>
-                    <div class="text-gray-600 dark:text-gray-400 text-xs mt-1">Has añadido las cantidades sugeridas por el sistema a tu orden.</div>
-                </div>`;
-        } else {
-            container.innerHTML = `
-                <div class="p-6 text-center">
-                    <i class="fa-solid fa-mug-hot text-3xl text-indigo-300 dark:text-indigo-500 mb-2"></i>
-                    <div class="text-gray-600 dark:text-gray-300 text-sm font-medium">El inventario está estable. No hay urgencias detectadas.</div>
-                </div>`;
-        }
-        return;
-    }
-    
-    container.innerHTML = sugerenciasActivas.map(s => {
-        const textoHumanizado = humanizarContexto(s.contexto);
-        const stockCritico = s.stockActual <= 5;
-        const textoBoton = s.yaPedida > 0 ? `Conviene pedir ${s.pendiente} unid. más` : `Conviene pedir ${s.sugerencia} unid.`;
-        
-        return `
-        <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all relative overflow-hidden group">
-            
-            <div class="flex justify-between items-start mb-2">
-                <div class="font-bold text-gray-900 dark:text-gray-100 text-sm pr-2 leading-tight" title="${s.nombre}">${s.nombre}</div>
-                <div class="text-xs font-bold px-2 py-0.5 rounded shrink-0 ${stockCritico ? 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-200 border border-red-200 dark:border-red-700' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/60 dark:text-orange-200 border border-orange-200 dark:border-orange-700'}">
-                    Quedan ${s.stockActual}
-                </div>
-            </div>
-            
-            <div class="text-xs text-indigo-700 dark:text-indigo-200 font-semibold mb-1 flex items-start gap-1.5 leading-snug">
-                <i class="fa-solid fa-lightbulb mt-0.5 text-indigo-500 dark:text-indigo-300"></i> <span>${textoHumanizado}</span>
-            </div>
-            <div class="text-xs text-gray-500 dark:text-gray-300 mb-3 ml-4">Demanda: <span class="font-semibold text-gray-700 dark:text-gray-200">${s.velocidadDiaria} u/día</span></div>
-            
-            <button onclick='addSugerenciaToOrder(${JSON.stringify(s).replace(/'/g, "&#39;")}, ${s.pendiente})' 
-                    class="w-full py-2 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white dark:bg-indigo-950 dark:hover:bg-indigo-600 dark:text-indigo-200 dark:hover:text-white border border-indigo-200 dark:border-indigo-800 transition-colors font-bold text-xs rounded-lg flex items-center justify-center gap-2">
-                <i class="fa-solid fa-plus"></i> ${textoBoton}
-            </button>
-        </div>
-    `}).join('');
-}
-
-function addSugerenciaToOrder(sug, cantidadPedir) {
-    addToOrder({
-        idProducto: sug.idProducto,
-        codigoBarras: sug.codigoBarras,
-        nombre: sug.nombre,
-        stock: sug.stockActual,
-        costo: sug.costo,
-        precioLista: sug.precioLista,
-        sugerencia: sug.sugerencia,
-        contexto: sug.contexto
-    }, cantidadPedir || sug.sugerencia);
 }
 
 // -------------------------------------------------------------
-// BUSCADOR EN COLUMNA 1
+// BUSCADOR EN COLUMNA 1 (Catálogo)
 // -------------------------------------------------------------
 const performSearch = async () => {
-    if(!searchInput || !searchResults || !searchEmptyState) return;
+    if(!searchInput || !searchResults) return;
     
     const q = searchInput.value.trim();
     if (!q) {
         searchResults.classList.add('hidden');
-        searchEmptyState.classList.remove('hidden');
         return;
     }
     
@@ -208,16 +189,22 @@ function renderSearchResults(productos) {
                 </div>
             `;
             item.onclick = () => {
-                addToOrder(prod, 1);
+                addToOrder({
+                    idProducto: prod.idProducto,
+                    codigoBarras: prod.codigoBarras,
+                    nombre: prod.nombre,
+                    stock: prod.stock,
+                    costoUnitario: prod.costo || "",
+                    precioLista: prod.precioLista || 0
+                }, 1);
                 searchInput.value = '';
                 searchResults.classList.add('hidden');
-                searchEmptyState.classList.remove('hidden');
+                showToast("Producto agregado al borrador");
             };
             searchResults.appendChild(item);
         });
     }
     
-    searchEmptyState.classList.add('hidden');
     searchResults.classList.remove('hidden');
 }
 
@@ -226,68 +213,148 @@ if(searchInput) {
 }
 
 // -------------------------------------------------------------
-// ORDEN DE COMPRA (CARRO) EN COLUMNA 2
+// SOLICITUDES SEPARADAS (MANUALES VS IA)
 // -------------------------------------------------------------
+async function cargarSolicitudesPendientes() {
+    try {
+        const res = await ApiClient.get('/compras/solicitudes/pendientes');
+        solicitudesOriginales = res.solicitudes || [];
+        renderSolicitudes();
+    } catch (e) {
+        console.error("Error cargando solicitudes", e);
+    }
+}
+
+function renderSolicitudesCard(s) {
+    const itemEnOrden = orderItems.find(i => i.idProducto === s.idProducto);
+    const isManual = (s.origen || '').toLowerCase() === 'manual';
+    
+    let actionBtn = "";
+    if (itemEnOrden) {
+        actionBtn = `<button class="w-full py-2 mt-2 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-bold text-xs rounded-lg flex items-center justify-center gap-2 cursor-not-allowed border border-green-200 dark:border-green-800" disabled><i class="fa-solid fa-circle-check"></i> En Borrador</button>`;
+    } else {
+        const bgBtnClass = isManual 
+            ? "bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white dark:bg-blue-900/30 dark:hover:bg-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-800"
+            : "bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white dark:bg-indigo-900/30 dark:hover:bg-indigo-600 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800";
+        actionBtn = `<button onclick='addToOrder({idProducto: ${s.idProducto}, nombre: "${s.productoNombre}", codigoBarras: "${s.codigoBarras}", stock: 0}, ${s.cantidadSugerida});' class="w-full py-2 mt-2 ${bgBtnClass} border transition-colors font-bold text-xs rounded-lg flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-plus"></i> Añadir ${s.cantidadSugerida} u. al Manifiesto</button>`;
+    }
+
+    return `
+    <div id="sol-row-${s.idSolicitud}" class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all">
+        <div class="font-bold text-gray-900 dark:text-gray-100 text-sm leading-tight">${s.productoNombre}</div>
+        <div class="text-[10px] text-gray-400 font-mono mb-2">${s.codigoBarras}</div>
+        <div class="text-xs text-gray-600 dark:text-gray-400 italic mb-2">"${s.motivo}"</div>
+        ${actionBtn}
+    </div>
+    `;
+}
+
+function renderSolicitudes() {
+    const containerManual = document.getElementById('solicitudes-manuales-chips');
+    const containerIa = document.getElementById('sugerencias-ia-chips');
+    if (!containerManual || !containerIa) return;
+
+    const manuales = solicitudesOriginales.filter(s => (s.origen || '').toLowerCase() === 'manual');
+    const ias = solicitudesOriginales.filter(s => (s.origen || '').toLowerCase() !== 'manual');
+
+    if (manuales.length === 0) {
+        containerManual.innerHTML = `
+            <div class="p-4 text-center text-gray-400 text-xs italic">
+                No hay solicitudes manuales registradas.
+            </div>`;
+    } else {
+        containerManual.innerHTML = manuales.map(renderSolicitudesCard).join('');
+    }
+
+    if (ias.length === 0) {
+        containerIa.innerHTML = `
+            <div class="p-4 text-center text-gray-400 text-xs italic">
+                El inventario está estable. No hay sugerencias de la IA.
+            </div>`;
+    } else {
+        containerIa.innerHTML = ias.map(renderSolicitudesCard).join('');
+    }
+}
+
+// -------------------------------------------------------------
+// BORRADOR / MANIFIESTO ACTIVO
+// -------------------------------------------------------------
+function syncBorrador() {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(async () => {
+        const idProv = parseInt(selProveedor.value) || 0;
+        const mTotal = orderItems.reduce((acc, i) => acc + (i.cantidad * parseFloat(i.costoUnitario || 0)), 0);
+        
+        const payload = {
+            idProveedor: idProv,
+            montoTotal: mTotal,
+            items: orderItems.map(i => ({
+                idProducto: i.idProducto,
+                cantidad: i.cantidad,
+                costoUnitario: parseFloat(i.costoUnitario || 0)
+            }))
+        };
+        
+        try {
+            const res = await ApiClient.put('/compras/planificacion/borrador', payload);
+            borradorIdCompra = res.idCompra;
+        } catch(e) {
+            console.error("Error sincronizando borrador", e);
+        }
+    }, 500);
+}
+
 function addToOrder(prod, cantidad = 1) {
     const existing = orderItems.find(i => i.idProducto === prod.idProducto);
     if (existing) {
+        if (!confirm(`Este producto (${prod.nombre}) ya está en el borrador. ¿Deseas actualizar la cantidad?`)) {
+            return;
+        }
         existing.cantidad += cantidad;
     } else {
         orderItems.push({
             idProducto: prod.idProducto,
             codigoBarras: prod.codigoBarras,
             nombre: prod.nombre,
-            stockActual: prod.stock,
-            costoUnitario: prod.costo || 0.0,
+            stockActual: prod.stock || 0,
+            costoUnitario: prod.costoUnitario || "",
             precioLista: prod.precioLista || 0.0,
-            cantidad: cantidad,
-            contexto: prod.contexto || '',
-            sugerencia: prod.sugerencia || 0
+            cantidad: cantidad
         });
     }
     updateOrderUI();
+    syncBorrador();
+    
+    if (!existing) {
+        setTimeout(() => {
+            const input = document.getElementById(`costo-input-${prod.idProducto}`);
+            if(input) input.focus();
+        }, 50);
+    }
 }
 
 function removeOrder(idProducto) {
     orderItems = orderItems.filter(i => i.idProducto !== idProducto);
     updateOrderUI();
+    syncBorrador();
 }
 
 function updateItem(idProducto, field, value) {
     const item = orderItems.find(i => i.idProducto === idProducto);
     if(item) {
+        if (field === 'costoUnitario' && value.trim() === "") {
+            item[field] = "";
+            updateOrderUI();
+            syncBorrador();
+            return;
+        }
         const val = parseFloat(value);
         if(!isNaN(val) && val >= 0) {
             item[field] = val;
             updateOrderUI();
+            syncBorrador();
         }
     }
-}
-
-function actualizarFraseImpacto() {
-    const fraseContainer = document.getElementById('frase-impacto');
-    if (!fraseContainer) return;
-    
-    if (orderItems.length === 0) {
-        fraseContainer.textContent = "Evaluando tu inventario... Comienza a armar la orden para ver el impacto comercial.";
-        return;
-    }
-    
-    let prodCriticos = orderItems.filter(i => i.contexto !== "").length;
-    let frase = `Esta orden actualizará ${orderItems.length} producto(s).`;
-    
-    if (prodCriticos > 0) {
-        frase += ` Con ella, resolverás ${prodCriticos} alertas comerciales.`;
-    }
-    
-    let margenDestruido = orderItems.some(i => i.costoUnitario >= i.precioLista && i.precioLista > 0);
-    if (margenDestruido) {
-        frase = `<span class="text-red-600 font-bold dark:text-red-400"><i class="fa-solid fa-triangle-exclamation"></i> Alerta: El costo propuesto en algunos artículos anula la ganancia según tu precio de lista actual.</span>`;
-        fraseContainer.innerHTML = frase;
-        return;
-    }
-    
-    fraseContainer.innerHTML = `<span class="text-indigo-700 dark:text-indigo-400 font-medium"><i class="fa-solid fa-check-circle"></i> ${frase}</span>`;
 }
 
 function updateOrderUI() {
@@ -302,16 +369,19 @@ function updateOrderUI() {
         if(btnProcesar) btnProcesar.disabled = true;
     } else {
         cartEmpty.classList.add('hidden');
-        if(btnProcesar) btnProcesar.disabled = !selProveedor.value;
+        // Permite procesar desde 1 artículo en adelante
+        if(btnProcesar) btnProcesar.disabled = false;
         
         orderItems.forEach(item => {
-            const itemSubtotal = item.cantidad * item.costoUnitario;
+            const itemSubtotal = item.cantidad * parseFloat(item.costoUnitario || 0);
             subtotal += itemSubtotal;
             totalItems += item.cantidad;
             
-            const isMargenDestruido = item.precioLista > 0 && item.costoUnitario >= item.precioLista;
+            const isMargenDestruido = item.precioLista > 0 && parseFloat(item.costoUnitario || 0) >= item.precioLista;
             const bgClass = isMargenDestruido ? "bg-red-50/50 dark:bg-red-900/10" : "hover:bg-gray-50 dark:hover:bg-gray-800/30";
             const alertIcon = isMargenDestruido ? `<i class="fa-solid fa-triangle-exclamation text-red-500" title="Costo supera o iguala precio de venta"></i>` : '';
+            
+            const costoValStr = item.costoUnitario === "" ? "" : Number(item.costoUnitario).toFixed(2);
             
             const tr = document.createElement('tr');
             tr.className = `${bgClass} transition-colors border-b border-gray-100 dark:border-gray-700/50`;
@@ -320,7 +390,6 @@ function updateOrderUI() {
                     <div class="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2 leading-tight">
                         ${item.nombre} ${alertIcon}
                     </div>
-                    <div class="text-[10px] text-gray-400 font-mono mt-0.5">Stock Actual: ${item.stockActual}</div>
                 </td>
                 <td class="py-3 px-2 text-center w-20">
                     <input type="number" step="1" min="1" class="w-full px-1 py-1.5 border border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-900 rounded focus:border-blue-500 text-center text-sm font-bold" value="${item.cantidad}" onchange="updateItem(${item.idProducto}, 'cantidad', this.value)">
@@ -328,11 +397,11 @@ function updateOrderUI() {
                 <td class="py-3 px-2 text-center w-28">
                     <div class="relative group">
                         <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
-                        <input type="number" step="0.01" min="0" class="w-full pl-5 pr-1 py-1.5 border ${isMargenDestruido ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/30' : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-900'} rounded focus:border-blue-500 text-right text-sm transition-colors" value="${item.costoUnitario.toFixed(2)}" onchange="updateItem(${item.idProducto}, 'costoUnitario', this.value)">
+                        <input id="costo-input-${item.idProducto}" type="number" step="0.01" min="0" class="w-full pl-5 pr-1 py-1.5 border ${isMargenDestruido ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/30' : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-900'} rounded focus:border-blue-500 text-right text-sm transition-colors" value="${costoValStr}" onchange="updateItem(${item.idProducto}, 'costoUnitario', this.value)">
                     </div>
                 </td>
                 <td class="py-3 px-4 text-right font-mono font-bold text-gray-800 dark:text-gray-200 w-24">
-                    ${fmt(itemSubtotal)}
+                    ${item.costoUnitario === "" ? "-" : fmt(itemSubtotal)}
                 </td>
                 <td class="py-3 px-2 text-center w-10">
                     <button onclick="removeOrder(${item.idProducto})" class="text-gray-400 hover:text-red-500 transition-colors p-1"><i class="fa-solid fa-trash-can"></i></button>
@@ -345,57 +414,230 @@ function updateOrderUI() {
     if(sumItems) sumItems.textContent = totalItems;
     if(sumTotal) sumTotal.textContent = fmt(subtotal); 
     
-    actualizarFraseImpacto();
-    renderSugerencias();
+    renderSolicitudes();
 }
 
-if(selProveedor) {
-    selProveedor.addEventListener('change', () => {
-        if(orderItems.length > 0 && btnProcesar) btnProcesar.disabled = !selProveedor.value;
-    });
-}
-
-// -------------------------------------------------------------
-// CHECKOUT COMPRAS
-// -------------------------------------------------------------
 if(btnProcesar) {
     btnProcesar.addEventListener('click', async () => {
-        if (orderItems.length === 0 || !selProveedor.value) return;
+        if (orderItems.length === 0) return;
         
-        const idProv = parseInt(selProveedor.value);
-        const mTotal = orderItems.reduce((acc, i) => acc + (i.cantidad * i.costoUnitario), 0);
+        const faltanCostos = orderItems.some(i => i.costoUnitario === "");
+        if (faltanCostos) {
+            showToast("Debes ingresar el costo unitario para todos los artículos", true);
+            return;
+        }
         
         btnProcesar.disabled = true;
-        btnProcesar.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Registrando...`;
-        
-        const payload = {
-            idProveedor: idProv,
-            montoTotal: mTotal,
-            items: orderItems.map(i => ({
-                idProducto: i.idProducto,
-                cantidad: i.cantidad,
-                costoUnitario: i.costoUnitario
-            }))
-        };
+        btnProcesar.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Consolidando...`;
         
         try {
-            const res = await ApiClient.post('/compras/registrar', payload);
-            showToast(`Ingreso de mercadería registrado exitosamente (ID: #${res.idCompra})`);
+            // Asegurar sincronización síncrona inmediata antes de consolidar
+            const idProv = parseInt(selProveedor.value) || 0;
+            const mTotal = orderItems.reduce((acc, i) => acc + (i.cantidad * parseFloat(i.costoUnitario || 0)), 0);
             
-            // Reset
+            const syncRes = await ApiClient.put('/compras/planificacion/borrador', {
+                idProveedor: idProv,
+                montoTotal: mTotal,
+                items: orderItems.map(i => ({
+                    idProducto: i.idProducto,
+                    cantidad: i.cantidad,
+                    costoUnitario: parseFloat(i.costoUnitario || 0)
+                }))
+            });
+            
+            const targetBorradorId = syncRes.idCompra || borradorIdCompra;
+            
+            const res = await ApiClient.post(`/compras/planificacion/borrador/${targetBorradorId}/consolidar`);
+            
+            showToast(`Orden Emitida Exitosamente (ID: #${res.idCompra})`);
+            
+            // Limpiar UI local
             orderItems = [];
-            selProveedor.value = '';
+            if (selProveedor) selProveedor.value = '';
+            borradorIdCompra = null;
             updateOrderUI();
-            init(); // Recargar sugerencias para ver cambios!
+            await cargarSolicitudesPendientes();
+            
+            // Pasar a Pestaña Órdenes
+            setTimeout(() => {
+                switchTab('ordenes');
+            }, 800);
             
         } catch (e) {
-            showToast(e.message || "Error al procesar el ingreso", true);
-        } finally {
-            btnProcesar.disabled = orderItems.length === 0;
-            btnProcesar.innerHTML = `<i class="fa-solid fa-check-double"></i> Aprobar Orden de Compra`;
+            showToast(e.message || "Error al consolidar", true);
+            btnProcesar.disabled = false;
+            btnProcesar.innerHTML = `<i class="fa-solid fa-lock"></i> Consolidar Orden`;
         }
     });
 }
 
-// Arrancar
+// -------------------------------------------------------------
+// ÓRDENES ACTIVAS
+// -------------------------------------------------------------
+async function cargarOrdenesActivas() {
+    try {
+        const data = await ApiClient.get('/compras/ordenes_activas');
+        renderOrdenesActivas(data.ordenes || []);
+    } catch(e) {
+        console.error("Error cargando órdenes activas", e);
+        renderOrdenesActivas([]);
+    }
+}
+
+function renderOrdenesActivas(ordenes) {
+    const tbody = document.getElementById('lista-ordenes-tabla');
+    const empty = document.getElementById('ordenes-empty');
+    if(!tbody || !empty) return;
+    
+    if (ordenes.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        empty.classList.add('flex');
+        return;
+    }
+    empty.classList.add('hidden');
+    empty.classList.remove('flex');
+    
+    tbody.innerHTML = ordenes.map(o => `
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+            <td class="py-3 px-4 font-mono font-bold text-gray-800 dark:text-gray-200">#${o.idCompra}</td>
+            <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">${parseLocalDate(o.fecha).toLocaleString('es-PE')}</td>
+            <td class="py-3 px-4 font-semibold text-gray-800 dark:text-gray-200">${o.proveedor}</td>
+            <td class="py-3 px-4 text-right font-mono font-bold text-gray-800 dark:text-gray-200">${fmt(o.montoTotal)}</td>
+            <td class="py-3 px-4 text-center">
+                <span class="bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 px-2.5 py-1 rounded text-xs font-bold border border-blue-200 dark:border-blue-800">
+                    <i class="fa-solid fa-clock mr-1"></i> ${o.estado}
+                </span>
+            </td>
+            <td class="py-3 px-4 text-right">
+                <div class="flex justify-end gap-2">
+                    <button onclick="abrirOffCanvasHistorial(${o.idCompra})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-bold text-xs bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-lg transition-colors active:scale-95">
+                        Ver Detalles
+                    </button>
+                    <button onclick="recibirOrden(${o.idCompra})" class="text-white bg-green-600 hover:bg-green-700 font-bold text-xs px-3 py-1.5 rounded-lg shadow-sm transition-colors active:scale-95 flex items-center gap-1.5">
+                        <i class="fa-solid fa-boxes-packing"></i> Recibir Física
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function recibirOrden(idCompra) {
+    if(!confirm(`¿Confirmas la recepción física de la Orden #${idCompra}? Esto ingresará el stock al inventario.`)) return;
+    try {
+        await ApiClient.put(`/compras/compra/${idCompra}/estado`, { estado: "Completada" });
+        showToast("Mercadería recibida. Stock físico actualizado correctamente.");
+        await cargarOrdenesActivas();
+    } catch(e) {
+        showToast("Error al recibir orden: " + e.message, true);
+    }
+}
+
+// -------------------------------------------------------------
+// HISTORIAL
+// -------------------------------------------------------------
+async function cargarHistorialGlobal() {
+    try {
+        const data = await ApiClient.get('/compras/historial');
+        renderHistorialGlobal(data.historial || []);
+    } catch (e) {
+        console.error("Error cargando historial", e);
+    }
+}
+
+function renderHistorialGlobal(historial) {
+    const tbody = document.getElementById('lista-historial-tabla');
+    const empty = document.getElementById('historial-empty');
+    if(!tbody || !empty) return;
+
+    if (historial.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        empty.classList.add('flex');
+        return;
+    }
+
+    empty.classList.add('hidden');
+    empty.classList.remove('flex');
+
+    tbody.innerHTML = historial.map(h => `
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+            <td class="py-3 px-4 font-mono font-bold text-gray-800 dark:text-gray-200">#${h.idCompra}</td>
+            <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">${parseLocalDate(h.fecha).toLocaleString('es-PE')}</td>
+            <td class="py-3 px-4 font-semibold text-gray-800 dark:text-gray-200">${h.proveedor}</td>
+            <td class="py-3 px-4 text-right font-mono font-bold text-gray-800 dark:text-gray-200">${fmt(h.montoTotal)}</td>
+            <td class="py-3 px-4 text-center">
+                <span class="bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-300 px-2 py-1 rounded text-xs font-bold border border-green-200 dark:border-green-800">
+                    <i class="fa-solid fa-check"></i> ${h.estado}
+                </span>
+            </td>
+            <td class="py-3 px-4 text-right">
+                <button onclick="abrirOffCanvasHistorial(${h.idCompra})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-bold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded transition-colors active:scale-95">
+                    Ver Detalles
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function abrirOffCanvasHistorial(idCompra) {
+    const oc = document.getElementById('offcanvas-historial');
+    const overlay = document.getElementById('offcanvas-overlay');
+    const title = document.getElementById('oc-historial-title');
+    const content = document.getElementById('oc-historial-content');
+    
+    if(!oc || !overlay || !title || !content) return;
+    
+    title.textContent = `Orden #${idCompra}`;
+    content.innerHTML = `<div class="flex justify-center p-8"><i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-600"></i></div>`;
+    
+    overlay.classList.remove('hidden');
+    void overlay.offsetWidth;
+    overlay.classList.remove('opacity-0');
+    oc.classList.remove('translate-x-full');
+
+    try {
+        const data = await ApiClient.get(`/compras/historial/${idCompra}/detalles`);
+        const detallesHTML = data.detalles.map(d => `
+            <div class="flex justify-between items-start py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                <div class="flex-1 pr-4">
+                    <div class="text-sm font-bold text-gray-800 dark:text-gray-200">${d.producto}</div>
+                    <div class="text-[10px] text-gray-500 font-mono">${d.codigo}</div>
+                </div>
+                <div class="text-right shrink-0">
+                    <div class="text-sm font-bold text-gray-800 dark:text-gray-200">${d.cantidad} x ${fmt(d.costoUnitario)}</div>
+                    <div class="text-xs font-mono font-bold text-gray-500 dark:text-gray-400">${fmt(d.subtotal)}</div>
+                </div>
+            </div>
+        `).join('');
+        
+        content.innerHTML = `
+            <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Proveedor</div>
+                <div class="font-bold text-gray-800 dark:text-gray-200 mb-3">${data.proveedor}</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Fecha de Ingreso</div>
+                <div class="font-bold text-gray-800 dark:text-gray-200 mb-3">${parseLocalDate(data.fecha).toLocaleString('es-PE')}</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Pagado</div>
+                <div class="font-mono text-xl font-black text-gray-900 dark:text-white">${fmt(data.montoTotal)}</div>
+            </div>
+            <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-3">Detalles de Artículos</h3>
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2 shadow-sm">
+                ${detallesHTML}
+            </div>
+        `;
+    } catch(e) {
+        content.innerHTML = `<div class="p-4 text-center text-red-500">Error al cargar detalles.</div>`;
+    }
+}
+
+function closeOffCanvasHistorial() {
+    const oc = document.getElementById('offcanvas-historial');
+    const overlay = document.getElementById('offcanvas-overlay');
+    if(!oc || !overlay) return;
+    oc.classList.add('translate-x-full');
+    overlay.classList.add('opacity-0');
+    setTimeout(() => { overlay.classList.add('hidden'); }, 300);
+}
+
 document.addEventListener('DOMContentLoaded', init);

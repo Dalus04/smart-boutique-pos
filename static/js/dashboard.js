@@ -56,11 +56,11 @@ async function loadDashboardData(period = '7_dias') {
         const { kpis, salud_inventario, proyeccion_mes, insights, charts } = data;
         
         // --- 1. Tarjetas KPI ---
-        animateValue(document.getElementById('kpi-ventas-val'), 0, kpis.ventas.valor, 500, val => `$${val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`);
-        animateValue(document.getElementById('kpi-utilidad-val'), 0, kpis.utilidad.valor, 500, val => `$${val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`);
+        animateValue(document.getElementById('kpi-ventas-val'), 0, kpis.ventas.valor, 500, val => `S/ ${val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`);
+        animateValue(document.getElementById('kpi-utilidad-val'), 0, kpis.utilidad.valor, 500, val => `S/ ${val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`);
         animateValue(document.getElementById('kpi-margen-val'), 0, kpis.margen.valor, 500, val => `${val.toFixed(1)}%`);
         animateValue(document.getElementById('kpi-clientes-val'), 0, kpis.clientes.valor, 500, val => Math.floor(val).toString());
-        animateValue(document.getElementById('kpi-proyeccion-val'), 0, proyeccion_mes, 500, val => `$${val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`);
+        animateValue(document.getElementById('kpi-proyeccion-val'), 0, proyeccion_mes, 500, val => `S/ ${val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`);
         
         const progProy = proyeccion_mes > 0 ? (kpis.ventas.valor / proyeccion_mes) * 100 : 0;
         document.getElementById('kpi-proyeccion-bar').style.width = `${Math.min(progProy, 100)}%`;
@@ -124,32 +124,45 @@ async function loadDashboardData(period = '7_dias') {
             card.className = `${bgClass} border ${borderClass} rounded-lg p-3`;
             
             let btnHtml = '';
+            // Data to be attached for the modal
+            let insightDataStr = encodeURIComponent(JSON.stringify(inv));
+
             if (inv.accion_texto && inv.accion_target) {
                 btnHtml = `
-                    <div class="mt-2 text-right">
-                        <button onclick="alert('Navegando a: ${inv.accion_target}')" class="text-xs font-bold text-white bg-gray-800 hover:bg-black dark:bg-gray-700 dark:hover:bg-gray-600 px-3 py-1.5 rounded transition-colors">
-                            ${inv.accion_texto}
+                    <div class="mt-3">
+                        <button onclick="event.stopPropagation(); resolveAction('${inv.accion_target}')" class="w-full text-xs font-bold text-white bg-gray-800 hover:bg-black dark:bg-gray-700 dark:hover:bg-gray-600 px-3 py-2 rounded-lg transition-colors flex items-center justify-between">
+                            <span>${inv.accion_texto}</span> <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
                 `;
             } else if (inv.tipo === 'oportunidad_apriori' && inv.apriori_data) {
                 btnHtml = `
-                    <div class="mt-2 text-right">
-                        <button onclick="openModal(${inv.apriori_data.soporte}, ${inv.apriori_data.confianza}, ${inv.apriori_data.lift})" class="text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 px-3 py-1.5 rounded transition-colors flex items-center gap-2 ml-auto">
-                            <i class="fa-solid fa-chart-simple"></i> Ver análisis
+                    <div class="mt-3">
+                        <button onclick="event.stopPropagation(); openModal(${inv.apriori_data.soporte}, ${inv.apriori_data.confianza}, ${inv.apriori_data.lift})" class="w-full text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded-lg transition-colors flex items-center justify-between">
+                            <span>Ver Análisis IA</span> <i class="fa-solid fa-chart-simple"></i>
                         </button>
                     </div>
                 `;
             }
 
+            card.className = `${bgClass} border ${borderClass} rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow relative overflow-hidden group`;
+            card.setAttribute("onclick", `openInsightModal(decodeURIComponent('${insightDataStr}'))`);
+            
+            // Un pequeño indicador visual al hover
+            let hoverInd = `<div class="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400"><i class="fa-solid fa-chevron-right"></i></div>`;
+            if (inv.accion_target || inv.apriori_data) {
+                 hoverInd = ''; // Si tiene botón directo, no hace falta la flecha
+            }
+
             card.innerHTML = `
                 <div class="flex gap-3">
-                    <div class="text-2xl">${inv.icono}</div>
+                    <div class="text-2xl mt-0.5">${inv.icono}</div>
                     <div class="flex-1">
-                        <p class="text-sm ${inv.tipo === 'resumen' ? 'font-bold' : ''} text-gray-800 dark:text-gray-200">${inv.mensaje}</p>
+                        <p class="text-sm ${inv.tipo === 'resumen' ? 'font-bold' : 'font-medium'} text-gray-800 dark:text-gray-200 leading-snug">${inv.mensaje}</p>
                         ${btnHtml}
                     </div>
                 </div>
+                ${hoverInd}
             `;
             container.appendChild(card);
         });
@@ -202,6 +215,14 @@ async function loadDashboardData(period = '7_dias') {
                         }]
                     },
                     options: {
+                        onClick: (e, elements) => {
+                             if (elements.length > 0) {
+                                 const idx = elements[0].index;
+                                 const label = chartCategorias.data.labels[idx];
+                                 const val = chartCategorias.data.datasets[0].data[idx];
+                                 alert(`Categoría ${label}: S/ ${val.toLocaleString('en-US')}`);
+                             }
+                        },
                         responsive: true, maintainAspectRatio: false,
                         plugins: {
                             legend: { position: 'bottom', labels: { color: themeColors.text, font: {size: 10}, boxWidth: 10 } }
@@ -223,6 +244,14 @@ async function loadDashboardData(period = '7_dias') {
                         }]
                     },
                     options: {
+                        onClick: (e, elements) => {
+                             if (elements.length > 0) {
+                                 const idx = elements[0].index;
+                                 const label = chartRanking.data.labels[idx];
+                                 const val = chartRanking.data.datasets[0].data[idx];
+                                 alert(`Producto Top: ${label} (${val} unidades)`);
+                             }
+                        },
                         indexAxis: 'y',
                         responsive: true, maintainAspectRatio: false,
                         scales: {
@@ -237,7 +266,7 @@ async function loadDashboardData(period = '7_dias') {
                                         // Context dataIndex -> charts.ranking[dataIndex].total_recaudado
                                         const r = charts.ranking[context.dataIndex];
                                         const usd = Number(r.total_recaudado || 0).toLocaleString('en-US', {style:'currency', currency:'USD'});
-                                        return ` Ingreso: ${usd} (${r.cantidad_vendida} unds)`;
+                                        return ` Ingreso: S/ {usd} (${r.cantidad_vendida} unds)`;
                                     },
                                     labelColor: function(context) {
                                         return { borderColor: '#22c55e', backgroundColor: '#22c55e' }; // Verde para el tooltip
@@ -251,7 +280,7 @@ async function loadDashboardData(period = '7_dias') {
         } else {
             // Mostrar Fallback
             document.getElementById('chart-fallback').classList.remove('hidden');
-            document.getElementById('fallback-msg').innerText = `Ventas consolidadas en este periodo: $${kpis.ventas.valor.toLocaleString('en-US')}. Salud actual: ${estadoTxt}.`;
+            document.getElementById('fallback-msg').innerText = `Ventas consolidadas en este periodo: S/ ${kpis.ventas.valor.toLocaleString('en-US')}. Salud actual: ${estadoTxt}.`;
         }
 
     } catch (error) {
@@ -294,9 +323,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Modal Logic
 function openModal(soporte, confianza, lift) {
-    document.getElementById('modal-soporte').innerText = (soporte * 100).toFixed(2) + '%';
-    document.getElementById('modal-confianza').innerText = (confianza * 100).toFixed(2) + '%';
-    document.getElementById('modal-lift').innerText = lift.toFixed(2);
+    document.getElementById('modal-soporte').innerText = (soporte * 100).toFixed(1) + '% de las ventas';
+    document.getElementById('modal-confianza').innerText = (confianza * 100).toFixed(0) + '% de clientes';
+    document.getElementById('modal-lift').innerText = lift.toFixed(1) + 'x más probable';
     
     const modal = document.getElementById('aprioriModal');
     modal.classList.remove('hidden');
@@ -313,4 +342,92 @@ function closeModal() {
     setTimeout(() => {
         modal.classList.add('hidden');
     }, 300);
+}
+
+let currentTargetAction = '';
+
+function resolveAction(target) {
+    if (target) {
+        window.location.href = target;
+    }
+}
+
+function openInsightModal(dataStr) {
+    try {
+        const inv = JSON.parse(dataStr);
+        document.getElementById('insight-modal-icon').innerText = inv.icono;
+        document.getElementById('insight-modal-msg').innerText = inv.mensaje;
+        
+        // Asignar descripción basada en tipo
+        let desc = "Revisar los detalles para tomar acción.";
+        if (inv.tipo === 'riesgo') desc = "Es necesario tomar acción inmediata para mitigar este riesgo operativo.";
+        if (inv.tipo === 'oportunidad' || inv.tipo === 'oportunidad_apriori') desc = "Aplicar esta sugerencia podría mejorar la utilidad o la experiencia del cliente.";
+        if (inv.tipo === 'resumen') desc = "Resumen automatizado del periodo analizado.";
+        document.getElementById('insight-modal-desc').innerText = desc;
+        
+        const extra = document.getElementById('insight-modal-extra');
+        extra.innerHTML = '';
+        extra.classList.add('hidden');
+        
+        if (inv.tipo === 'oportunidad_apriori' && inv.apriori_data) {
+             extra.classList.remove('hidden');
+             extra.innerHTML = `
+                 <div class="space-y-2.5">
+                     <h5 class="font-bold text-xs uppercase tracking-wider text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
+                         <i class="fa-solid fa-chart-line"></i> Diagnóstico de Venta Cruzada:
+                     </h5>
+                     <div class="space-y-2 text-xs">
+                         <div class="flex justify-between items-center bg-white dark:bg-gray-800 p-2.5 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+                             <span class="text-gray-600 dark:text-gray-300">🎯 Certeza de compra en conjunto:</span>
+                             <strong class="text-blue-600 dark:text-blue-400 font-mono text-sm">${(inv.apriori_data.confianza * 100).toFixed(0)}%</strong>
+                         </div>
+                         <div class="flex justify-between items-center bg-white dark:bg-gray-800 p-2.5 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+                             <span class="text-gray-600 dark:text-gray-300">🚀 Fuerza de la combinación:</span>
+                             <strong class="text-purple-600 dark:text-purple-400 font-mono text-sm">${inv.apriori_data.lift.toFixed(1)}x más probable</strong>
+                         </div>
+                         <div class="flex justify-between items-center bg-white dark:bg-gray-800 p-2.5 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+                             <span class="text-gray-600 dark:text-gray-300">🛍️ Presencia en ventas globales:</span>
+                             <strong class="text-green-600 dark:text-green-400 font-mono text-sm">${(inv.apriori_data.soporte * 100).toFixed(1)}% de tickets</strong>
+                         </div>
+                     </div>
+                     <p class="text-[11px] text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 p-2.5 rounded-lg border border-purple-100 dark:border-purple-900/50 leading-tight">
+                         💡 <strong>Sugerencia Comercial:</strong> Ofrece estos productos juntos en el mostrador o promociona el combo en tus redes sociales.
+                     </p>
+                 </div>
+             `;
+        }
+
+        const btn = document.getElementById('insight-modal-action-btn');
+        if (inv.accion_target) {
+            btn.classList.remove('hidden');
+            currentTargetAction = inv.accion_target;
+        } else {
+            btn.classList.add('hidden');
+            currentTargetAction = '';
+        }
+
+        const modal = document.getElementById('insightDetailModal');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.firstElementChild.classList.remove('scale-95');
+        }, 10);
+    } catch(e) {
+        console.error("Error modal:", e);
+    }
+}
+
+function closeInsightModal() {
+    const modal = document.getElementById('insightDetailModal');
+    modal.classList.add('opacity-0');
+    modal.firstElementChild.classList.add('scale-95');
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
+
+function executeModalAction() {
+    if (currentTargetAction) {
+        resolveAction(currentTargetAction);
+    }
 }

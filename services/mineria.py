@@ -128,7 +128,7 @@ class MineriaService:
         # 1. Resumen principal
         resumen = "Rendimiento estable."
         if ventas_var > 0:
-            resumen = f"Tu negocio está creciendo. Has recaudado ${ventas_val:,.2f} con un incremento del {ventas_var:.1f}% respecto al periodo anterior."
+            resumen = f"Tu negocio está creciendo. Has recaudado S/ ${ventas_val:,.2f} con un incremento del {ventas_var:.1f}% respecto al periodo anterior."
         elif ventas_var < 0:
             resumen = f"Precaución: Las ventas han caído un {abs(ventas_var):.1f}% respecto al periodo anterior."
         
@@ -145,7 +145,7 @@ class MineriaService:
                 "tipo": "riesgo", 
                 "mensaje": f"Margen bruto bajo ({margen:.1f}%). Revisa costos.", 
                 "icono": "🔴",
-                "accion_texto": "Revisar Catálogo",
+                "accion_texto": "Ver Catálogo",
                 "accion_target": "catalogo"
             })
             

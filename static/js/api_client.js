@@ -39,4 +39,44 @@ class ApiClient {
             throw error;
         }
     }
+
+    static async put(endpoint, body = {}) {
+        const url = new URL(`${API_BASE}${endpoint}`, window.location.origin);
+        
+        try {
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.detail || `HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('API PUT Error:', error);
+            throw error;
+        }
+    }
+
+    static async delete(endpoint) {
+        const url = new URL(`${API_BASE}${endpoint}`, window.location.origin);
+        
+        try {
+            const response = await fetch(url, {
+                method: 'DELETE'
+            });
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.detail || `HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('API DELETE Error:', error);
+            throw error;
+        }
+    }
 }

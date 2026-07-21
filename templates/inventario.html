@@ -4,134 +4,443 @@
 
 {% block content %}
 <div class="flex flex-col h-full gap-6">
+
+    <!-- Navegación de Pestañas -->
+    <div class="flex border-b border-gray-200 dark:border-gray-700 shrink-0">
+        <button id="btn-tab-productos" onclick="switchTab('productos')" class="px-6 py-3 font-semibold text-amber-500 border-b-2 border-amber-500 transition-colors flex items-center gap-2">
+            <i class="fa-solid fa-boxes-stacked"></i> Productos
+        </button>
+        <button id="btn-tab-decisiones" onclick="switchTab('decisiones')" class="px-6 py-3 font-semibold text-gray-400 hover:text-gray-700 dark:hover:text-white border-b-2 border-transparent transition-colors flex items-center gap-2">
+            <i class="fa-solid fa-chess-knight"></i> Decisiones Estratégicas
+        </button>
+    </div>
     
-    <!-- Cabecera: Salud y Carrusel de Insights -->
-    <div class="flex flex-col md:flex-row gap-4 shrink-0 min-h-[120px] md:h-32">
-        <!-- Salud de Stock -->
-        <div class="card p-4 border-l-4 border-blue-500 flex flex-col justify-between w-full md:w-1/4 relative overflow-hidden group">
-            <div class="absolute -right-6 -bottom-6 text-blue-500/10 group-hover:scale-110 transition-transform duration-500">
-                <i class="fa-solid fa-heart-pulse text-7xl"></i>
-            </div>
-            <div>
-                <h4 class="text-xs font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1 relative z-10">Salud de Stock</h4>
-                <div class="flex items-baseline justify-between gap-2 relative z-10 mt-1">
-                    <div class="flex items-baseline gap-1">
-                        <span class="text-3xl font-black text-gray-800 dark:text-white" id="kpi-health-score">--</span>
-                        <span class="text-sm font-bold text-gray-400">/100</span>
-                    </div>
-                    <span class="text-xs font-bold px-2 py-0.5 rounded text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300" id="kpi-health-status">Analizando...</span>
+    <!-- TAB 1: PRODUCTOS -->
+    <div id="tab-productos" class="flex-1 flex flex-col gap-4 overflow-hidden">
+        <!-- Barra de Filtros -->
+        <div class="card p-3 flex flex-col md:flex-row gap-4 justify-between items-center shrink-0">
+            <div class="relative w-full md:w-80">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
                 </div>
-            </div>
-            <p class="text-xs text-gray-600 dark:text-gray-300 leading-snug relative z-10 mt-2" id="kpi-health-subtitle">Evaluando integridad del catálogo...</p>
-        </div>
-        
-        <!-- Carrusel de Insights (Insights Slider) -->
-        <div class="card flex-1 flex flex-col justify-center overflow-hidden relative bg-gradient-to-r from-gray-50 to-white dark:from-darkCard dark:to-gray-800/50">
-            <div class="absolute top-3 left-4 text-xs font-bold text-purple-500 uppercase tracking-wider flex items-center gap-1">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Insights Comerciales
+                <input type="text" id="search-input" placeholder="Buscar producto..." class="input-base pl-10 pr-4 py-2 text-sm">
             </div>
             
-            <div class="relative w-full h-full flex items-center px-12 mt-4">
-                <button class="absolute left-3 text-gray-400 hover:text-primary transition-colors text-xl" onclick="prevInsight()">
-                    <i class="fa-solid fa-chevron-left"></i>
+            <div class="flex gap-3 w-full md:w-auto flex-wrap items-center">
+                <select id="filter-categoria" class="input-base w-40 py-2 px-3 text-sm">
+                    <option value="">Categorías</option>
+                </select>
+                <select id="filter-estado" class="input-base w-36 py-2 px-3 text-sm">
+                    <option value="">Estados</option>
+                    <option value="Óptimo">Óptimo</option>
+                    <option value="Bajo">Bajo</option>
+                    <option value="Crítico">Crítico</option>
+                </select>
+                <button id="btn-clean-filters" onclick="clearFilters()" class="px-3 py-2 text-sm rounded-lg bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-1.5 font-medium" title="Limpiar todos los filtros">
+                    <i class="fa-solid fa-filter-circle-xmark text-gray-400"></i> Limpiar
                 </button>
-                
-                <div class="flex-1 overflow-hidden h-full flex items-center relative" id="insights-track">
-                    <!-- Dinámico vía JS -->
-                    <div class="w-full shrink-0 flex items-center gap-4 insight-slide absolute inset-0 opacity-100 transition-opacity duration-500" id="insight-1">
-                        <div class="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 text-green-500 flex items-center justify-center text-lg shrink-0">
-                            <i class="fa-solid fa-arrow-trend-up"></i>
-                        </div>
-                        <p class="text-gray-700 dark:text-gray-200 font-medium text-lg leading-tight">Calculando insights de inventario...</p>
-                    </div>
+                <button onclick="openNewProductModal()" class="btn-primary px-4 py-2 text-sm shadow flex items-center gap-1.5">
+                    <i class="fa-solid fa-plus"></i> Nuevo
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabla Principal -->
+        <div class="card flex-1 flex flex-col overflow-hidden relative">
+            <!-- Loading overlay -->
+            <div id="table-loading" class="absolute inset-0 bg-white/80 dark:bg-darkCard/80 z-20 flex items-center justify-center hidden">
+                <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary"></i>
+            </div>
+            
+            <div class="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead class="bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10 shadow-sm">
+                        <tr>
+                            <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Código / SKU</th>
+                            <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Producto</th>
+                            <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Impacto en Ventas</th>
+                            <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Margen %</th>
+                            <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Stock</th>
+                            <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Días Restantes</th>
+                            <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Estado Operacional</th>
+                            <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Acción Recomendada</th>
+                            <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="divide-y divide-gray-200 dark:divide-slate-700 text-sm">
+                        <!-- Fila dinámica via JS -->
+                    </tbody>
+                </table>
+                <div id="table-empty" class="hidden p-12 text-center text-gray-500 dark:text-gray-400 flex-col items-center">
+                    <i class="fa-solid fa-box-open text-4xl mb-3 opacity-50"></i>
+                    <p>No se encontraron productos.</p>
                 </div>
-                
-                <button class="absolute right-3 text-gray-400 hover:text-primary transition-colors text-xl" onclick="nextInsight()">
-                    <i class="fa-solid fa-chevron-right"></i>
-                </button>
             </div>
         </div>
     </div>
 
-    <!-- Layout Principal: Acciones Izquierda / Tabla Derecha -->
-    <div class="flex-1 flex gap-6 overflow-hidden">
+    <!-- TAB 2: DECISIONES ESTRATÉGICAS -->
+    <div id="tab-decisiones" class="hidden flex-1 flex flex-col gap-8 overflow-y-auto custom-scrollbar pb-10">
         
-        <!-- Panel Izquierdo: Acciones Prioritarias -->
-        <div class="w-72 card flex flex-col overflow-hidden shrink-0">
-            <div class="p-4 border-b border-gray-100 dark:border-gray-700 bg-red-50/50 dark:bg-red-900/10">
-                <h3 class="font-bold text-red-600 dark:text-red-400 uppercase tracking-wider text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-bolt"></i> Acciones Prioritarias
-                </h3>
-            </div>
-            <div class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar" id="acciones-container">
-                <!-- Se poblará por JS -->
-                <div class="text-center text-gray-500 text-xs mt-8 px-2 leading-relaxed">
-                    <i class="fa-solid fa-circle-check text-3xl mb-2 text-green-500 opacity-80"></i>
-                    <p class="font-medium text-gray-700 dark:text-gray-300">Revisando que nada falte en tu tienda...</p>
-                    <p class="text-[11px] text-gray-400 mt-1">No hay acciones urgentes pendientes.</p>
+        <!-- Bloque 1: Resumen General (KPIs) -->
+        <div class="flex flex-col md:flex-row gap-4 shrink-0 min-h-[120px] md:h-32">
+            <!-- Salud de Stock -->
+            <div class="card p-4 border-l-4 border-blue-500 flex flex-col justify-between w-full md:w-1/3 relative overflow-hidden group">
+                <div class="absolute -right-6 -bottom-6 text-blue-500/10 group-hover:scale-110 transition-transform duration-500">
+                    <i class="fa-solid fa-heart-pulse text-7xl"></i>
                 </div>
-            </div>
-        </div>
-
-        <!-- Panel Derecho: Data Grid y Filtros -->
-        <div class="flex-1 flex flex-col gap-4 overflow-hidden">
-            <!-- Barra de Filtros -->
-            <div class="card p-3 flex flex-col md:flex-row gap-4 justify-between items-center shrink-0">
-                <div class="relative w-full md:w-80">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+                <div>
+                    <h4 class="text-xs font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1 relative z-10">Salud de Stock</h4>
+                    <div class="flex items-baseline justify-between gap-2 relative z-10 mt-1">
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-3xl font-black text-gray-800 dark:text-white" id="kpi-health-score">--</span>
+                            <span class="text-sm font-bold text-gray-400">/100</span>
+                        </div>
+                        <span class="text-xs font-bold px-2 py-0.5 rounded text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300" id="kpi-health-status">Analizando...</span>
                     </div>
-                    <input type="text" id="search-input" placeholder="Buscar producto..." class="input-base pl-10 pr-4 py-2 text-sm">
+                </div>
+                <p class="text-xs text-gray-600 dark:text-gray-300 leading-snug relative z-10 mt-2" id="kpi-health-subtitle">Evaluando integridad del catálogo...</p>
+            </div>
+            
+            <!-- Carrusel de Insights (Insights Slider) -->
+            <div class="card flex-1 flex flex-col justify-center overflow-hidden relative bg-gradient-to-r from-gray-50 to-white dark:from-darkCard dark:to-gray-800/50">
+                <div class="absolute top-3 left-4 text-xs font-bold text-purple-500 uppercase tracking-wider flex items-center gap-1">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Insights Comerciales
                 </div>
                 
-                <div class="flex gap-3 w-full md:w-auto">
-                    <select id="filter-categoria" class="input-base w-40 py-2 px-3 text-sm">
-                        <option value="">Categorías</option>
-                    </select>
-                    <select id="filter-estado" class="input-base w-36 py-2 px-3 text-sm">
-                        <option value="">Estados</option>
-                        <option value="Óptimo">Óptimo</option>
-                        <option value="Bajo">Bajo</option>
-                        <option value="Crítico">Crítico</option>
-                    </select>
-                    <button class="btn-primary px-4 py-2 text-sm">
-                        <i class="fa-solid fa-plus"></i> Nuevo
+                <div class="relative w-full h-full flex items-center px-12 mt-4">
+                    <button class="absolute left-3 text-gray-400 hover:text-primary transition-colors text-xl" onclick="prevInsight()">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    
+                    <div class="flex-1 overflow-hidden h-full flex items-center relative" id="insights-track">
+                        <!-- Dinámico vía JS -->
+                        <div class="w-full shrink-0 flex items-center gap-4 insight-slide absolute inset-0 opacity-100 transition-opacity duration-500" id="insight-1">
+                            <div class="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 text-green-500 flex items-center justify-center text-lg shrink-0">
+                                <i class="fa-solid fa-arrow-trend-up"></i>
+                            </div>
+                            <p class="text-gray-700 dark:text-gray-200 font-medium text-lg leading-tight">Calculando insights de inventario...</p>
+                        </div>
+                    </div>
+                    
+                    <button class="absolute right-3 text-gray-400 hover:text-primary transition-colors text-xl" onclick="nextInsight()">
+                        <i class="fa-solid fa-chevron-right"></i>
                     </button>
                 </div>
             </div>
+        </div>
 
-            <!-- Tabla Principal -->
-            <div class="card flex-1 flex flex-col overflow-hidden relative">
-                <!-- Loading overlay -->
-                <div id="table-loading" class="absolute inset-0 bg-white/80 dark:bg-darkCard/80 z-20 flex items-center justify-center hidden">
-                    <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary"></i>
+        <!-- Bloque 2: Acciones Prioritarias Expandidas -->
+        <div>
+            <h3 class="font-bold text-gray-800 dark:text-white uppercase tracking-wider text-sm mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-bolt text-amber-500"></i> Alertas y Acciones Requeridas
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="acciones-container-grid">
+                <!-- Se poblará por JS -->
+                <div class="card p-6 text-center text-gray-500 text-xs w-full col-span-full">
+                    <i class="fa-solid fa-circle-check text-4xl mb-3 text-green-500 opacity-80"></i>
+                    <p class="font-medium text-gray-700 dark:text-gray-300 text-lg">Todo está bajo control.</p>
+                    <p class="mt-1 text-sm">No hay acciones urgentes pendientes.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bloque 3: Oportunidades (Stubs de IA) -->
+        <div>
+            <h3 class="font-bold text-gray-800 dark:text-white uppercase tracking-wider text-sm mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-lightbulb text-purple-500"></i> Inteligencia Comercial Avanzada
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="card p-5 hover:shadow-lg transition-shadow border-t-4 border-purple-500 cursor-pointer group" onclick="showToast('Próximamente: Sugerencias de aumento de precio', 'info')">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 flex items-center justify-center text-lg"><i class="fa-solid fa-arrow-up-right-dots"></i></div>
+                        <h4 class="font-bold text-gray-800 dark:text-white text-base">Oportunidad de Precio</h4>
+                    </div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">5 productos tienen rotación alta y margen por debajo del mercado.</p>
+                    <button class="text-sm font-bold text-purple-600 group-hover:underline flex items-center gap-1">Ver productos <i class="fa-solid fa-arrow-right text-xs"></i></button>
                 </div>
                 
-                <div class="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
-                    <table class="w-full text-left border-collapse whitespace-nowrap">
-                        <thead class="bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10 shadow-sm">
-                            <tr>
-                                <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Producto</th>
-                                <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Impacto en Ventas</th>
-                                <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Margen %</th>
-                                <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Stock</th>
-                                <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Días Restantes</th>
-                                <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Diagnóstico</th>
-                                <th class="py-4 px-4 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-center">Acción Recomendada</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-body" class="divide-y divide-gray-100 dark:divide-gray-700/50 text-sm">
-                            <!-- Fila dinámica via JS -->
-                        </tbody>
-                    </table>
-                    <div id="table-empty" class="hidden p-12 text-center text-gray-500 dark:text-gray-400 flex-col items-center">
-                        <i class="fa-solid fa-box-open text-4xl mb-3 opacity-50"></i>
-                        <p>No se encontraron productos.</p>
+                <div class="card p-5 hover:shadow-lg transition-shadow border-t-4 border-blue-500 cursor-pointer group" onclick="showToast('Próximamente: Integración nativa con módulo Compras', 'info')">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center text-lg"><i class="fa-solid fa-cart-shopping"></i></div>
+                        <h4 class="font-bold text-gray-800 dark:text-white text-base">Compras Sugeridas</h4>
                     </div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">3 proveedores ofrecen descuento por volumen en tus top ventas de esta semana.</p>
+                    <button class="text-sm font-bold text-blue-600 group-hover:underline flex items-center gap-1">Ir a Compras <i class="fa-solid fa-arrow-right text-xs"></i></button>
+                </div>
+                
+                <div class="card p-5 hover:shadow-lg transition-shadow border-t-4 border-green-500 cursor-pointer group" onclick="showToast('Próximamente: Integración nativa con módulo POS', 'info')">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 flex items-center justify-center text-lg"><i class="fa-solid fa-cash-register"></i></div>
+                        <h4 class="font-bold text-gray-800 dark:text-white text-base">Combos para POS</h4>
+                    </div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">Sugerencias listas de 'comprados juntos frecuentemente' para habilitar en caja.</p>
+                    <button class="text-sm font-bold text-green-600 group-hover:underline flex items-center gap-1">Ver en POS <i class="fa-solid fa-arrow-right text-xs"></i></button>
                 </div>
             </div>
         </div>
     </div>
+
+
+    <!-- NODOS GLOBALES: Panel Lateral de Detalles (Off-Canvas) -->
+    <aside id="offcanvas-panel" class="fixed inset-y-0 right-0 w-96 bg-white dark:bg-darkCard shadow-2xl transform translate-x-full transition-transform duration-300 z-40 flex flex-col border-l border-gray-100 dark:border-gray-700/50">
+        <div class="p-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-700/50 shrink-0">
+            <h3 class="font-bold text-gray-800 dark:text-white" id="offcanvas-title">Detalle de Producto</h3>
+            <button onclick="closeOffCanvas()" class="text-gray-400 hover:text-red-500 transition-colors">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+        <div class="p-4 flex-1 overflow-y-auto custom-scrollbar" id="offcanvas-content">
+            <!-- Dinámico -->
+        </div>
+    </aside>
+
+    <!-- NODOS GLOBALES: Modal de Acción (Stub) -->
+    <div id="action-modal" class="fixed inset-0 bg-black/50 z-50 hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-darkCard rounded-xl shadow-xl w-full max-w-md overflow-hidden transform scale-95 transition-transform duration-300" id="action-modal-panel">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700/50 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center" id="action-modal-icon-bg">
+                    <i class="fa-solid fa-bolt text-lg" id="action-modal-icon"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-800 dark:text-white text-lg" id="action-modal-title">Ejecutar Acción</h3>
+                    <p class="text-xs text-gray-500" id="action-modal-subtitle">Contexto del producto</p>
+                </div>
+            </div>
+            <div class="p-5 bg-gray-50/50 dark:bg-gray-800/20" id="action-modal-body">
+                <!-- Data -->
+            </div>
+            <div class="p-4 border-t border-gray-100 dark:border-gray-700/50 flex justify-end gap-3 bg-gray-50 dark:bg-gray-800/50">
+                <button onclick="closeActionModal()" class="px-4 py-2 rounded text-sm font-medium text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">Cancelar</button>
+                <button onclick="executeStubAction()" class="px-4 py-2 rounded text-sm font-bold text-white shadow-sm transition-colors" id="action-modal-btn">Confirmar Acción</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NODOS GLOBALES: Modal Crear Nuevo Producto -->
+    <div id="modal-nuevo-producto" class="fixed inset-0 bg-black/50 z-50 hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-darkCard rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform scale-95 transition-transform duration-300 border border-gray-100 dark:border-gray-700">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/30">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-600 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-box text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800 dark:text-white text-base">Registrar Nuevo Producto</h3>
+                        <p class="text-xs text-gray-500">Ingresa los datos para guardarlo en la Base de Datos</p>
+                    </div>
+                </div>
+                <button onclick="closeNewProductModal()" class="text-gray-400 hover:text-red-500 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <form id="form-nuevo-producto" onsubmit="saveNewProduct(event)" class="p-6 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Nombre del Producto *</label>
+                        <input type="text" id="new-prod-nombre" required placeholder="Ej. Polera Algodón Slim Fit" class="input-base w-full text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Código de Barras / SKU</label>
+                        <input type="text" id="new-prod-codigo" placeholder="Ej. PROD-789012" class="input-base w-full text-sm font-mono">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Categoría *</label>
+                        <select id="new-prod-categoria" required onchange="handleCategorySelectChange(this, 'wrapper-nueva-categoria-new')" class="input-base w-full text-sm">
+                            <option value="">Seleccionar Categoría</option>
+                        </select>
+                        <div id="wrapper-nueva-categoria-new" class="hidden mt-2">
+                            <input type="text" id="new-prod-nueva-cat-input" placeholder="Escribe el nombre de la nueva categoría..." class="input-base w-full text-sm border-amber-500 font-semibold">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Precio de Venta (S/) *</label>
+                        <input type="number" step="0.01" min="0" id="new-prod-precio" required placeholder="0.00" class="input-base w-full text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Costo Unitario (S/) *</label>
+                        <input type="number" step="0.01" min="0" id="new-prod-costo" required placeholder="0.00" class="input-base w-full text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Stock Inicial</label>
+                        <input type="number" id="new-prod-stock" value="0" readonly class="input-base w-full text-sm font-bold bg-gray-100 dark:bg-gray-800 text-gray-500 cursor-not-allowed">
+                        <span class="text-[10px] text-gray-400 mt-0.5 block">Se abastecerá desde el módulo de Compras</span>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Marca</label>
+                        <input type="text" id="new-prod-marca" placeholder="Ej. Urban Style" class="input-base w-full text-sm">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 pt-2">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Talla</label>
+                        <input type="text" id="new-prod-talla" placeholder="Ej. M, L, 42" class="input-base w-full text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Color</label>
+                        <input type="text" id="new-prod-color" placeholder="Ej. Azul Marino" class="input-base w-full text-sm">
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-gray-100 dark:border-gray-700/50 flex justify-end gap-3">
+                    <button type="button" onclick="closeNewProductModal()" class="px-4 py-2 rounded text-sm font-medium text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">Cancelar</button>
+                    <button type="submit" class="btn-primary px-5 py-2 text-sm font-bold shadow flex items-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i> Guardar en BD
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- NODOS GLOBALES: Modal Editar Producto -->
+    <div id="modal-editar-producto" class="fixed inset-0 bg-black/50 z-50 hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-darkCard rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform scale-95 transition-transform duration-300 border border-gray-100 dark:border-gray-700">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/30">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-pen-to-square text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800 dark:text-white text-base">Modificar Producto</h3>
+                        <p class="text-xs text-gray-500" id="edit-modal-subtitle">Actualiza los datos del catálogo</p>
+                    </div>
+                </div>
+                <button onclick="closeEditProductModal()" class="text-gray-400 hover:text-red-500 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <form id="form-editar-producto" onsubmit="saveEditProduct(event)" class="p-6 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
+                <input type="hidden" id="edit-prod-id">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Nombre del Producto *</label>
+                        <input type="text" id="edit-prod-nombre" required class="input-base w-full text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Código de Barras / SKU</label>
+                        <input type="text" id="edit-prod-codigo" class="input-base w-full text-sm font-mono">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Categoría *</label>
+                        <select id="edit-prod-categoria" required onchange="handleCategorySelectChange(this, 'wrapper-nueva-categoria-edit')" class="input-base w-full text-sm">
+                            <option value="">Seleccionar Categoría</option>
+                        </select>
+                        <div id="wrapper-nueva-categoria-edit" class="hidden mt-2">
+                            <input type="text" id="edit-prod-nueva-cat-input" placeholder="Nombre de la nueva categoría..." class="input-base w-full text-sm border-amber-500 font-semibold">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Precio de Venta (S/) *</label>
+                        <input type="number" step="0.01" min="0" id="edit-prod-precio" required class="input-base w-full text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Costo Unitario (S/) *</label>
+                        <input type="number" step="0.01" min="0" id="edit-prod-costo" required class="input-base w-full text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Marca</label>
+                        <input type="text" id="edit-prod-marca" class="input-base w-full text-sm">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 pt-2">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Talla</label>
+                        <input type="text" id="edit-prod-talla" class="input-base w-full text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Color</label>
+                        <input type="text" id="edit-prod-color" class="input-base w-full text-sm">
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-gray-100 dark:border-gray-700/50 flex justify-end gap-3">
+                    <button type="button" onclick="closeEditProductModal()" class="px-4 py-2 rounded text-sm font-medium text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">Cancelar</button>
+                    <button type="submit" class="btn-primary px-5 py-2 text-sm font-bold shadow flex items-center gap-2">
+                        <i class="fa-solid fa-pen-to-square"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL REGISTRAR SOLICITUD MANUAL -->
+    <div id="modal-registrar-solicitud" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full mx-4 shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
+            <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-clipboard-question"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800 dark:text-white text-base">Registrar Solicitud</h3>
+                        <p class="text-xs text-gray-500" id="sol-modal-subtitle">Decisión manual de reabastecimiento</p>
+                    </div>
+                </div>
+                <button onclick="closeSolicitudManualModal()" class="text-gray-400 hover:text-red-500 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <form id="form-registrar-solicitud" onsubmit="saveSolicitudManual(event)" class="p-6 space-y-4">
+                <input type="hidden" id="sol-prod-id">
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Producto</label>
+                    <div id="sol-prod-nombre-display" class="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg text-sm font-bold text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700">
+                        --
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Cantidad Solicitada *</label>
+                    <input type="number" id="sol-cantidad" min="1" step="1" required class="input-base w-full text-sm font-bold">
+                    <p class="text-[11px] text-gray-400 mt-1">Puedes modificar esta cantidad libremente.</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Motivo de la Solicitud *</label>
+                    <select id="sol-motivo" required onchange="handleMotivoSelectChange(this)" class="input-base w-full text-sm font-semibold">
+                        <option value="Reposición manual">Reposición manual</option>
+                        <option value="Campaña comercial">Campaña comercial</option>
+                        <option value="Nueva colección">Nueva colección</option>
+                        <option value="Oferta del proveedor">Oferta del proveedor</option>
+                        <option value="Compra extraordinaria">Compra extraordinaria</option>
+                        <option value="__OTRO__">Otro motivo...</option>
+                    </select>
+                    <div id="wrapper-motivo-otro" class="hidden mt-2">
+                        <input type="text" id="sol-motivo-otro" placeholder="Especifica el motivo..." class="input-base w-full text-sm border-blue-500 font-semibold">
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-gray-100 dark:border-gray-700/50 flex justify-end gap-3">
+                    <button type="button" onclick="closeSolicitudManualModal()" class="px-4 py-2 rounded text-sm font-medium text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">Cancelar</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-bold shadow flex items-center gap-2 transition-colors">
+                        <i class="fa-solid fa-paper-plane"></i> Crear Solicitud
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- NODOS GLOBALES: Toast Notifications Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
 </div>
 {% endblock %}
 

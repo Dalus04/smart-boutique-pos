@@ -11,148 +11,241 @@
         <span id="toast-msg">Operación Exitosa</span>
     </div>
 
-    <!-- Layout de 3 Columnas (POS-like: 40% Productos | 35% Orden | 25% Sugerencias) -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 overflow-hidden h-full">
-        
-        <!-- Columna 1: Catálogo y Búsqueda (40%) -->
-        <div class="lg:col-span-5 flex flex-col gap-4 h-full overflow-hidden">
+    <!-- Navegación de Pestañas -->
+    <div class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shrink-0 mb-4 px-6 pt-4 flex gap-8">
+        <button id="btn-tab-planificacion" class="pb-3 border-b-2 font-bold text-sm transition-colors border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400" onclick="switchTab('planificacion')">
+            <i class="fa-solid fa-clipboard-list mr-2"></i>Planificación
+        </button>
+        <button id="btn-tab-ordenes" class="pb-3 border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 font-bold text-sm transition-colors" onclick="switchTab('ordenes')">
+            <i class="fa-solid fa-cart-shopping mr-2"></i>Órdenes Activas
+        </button>
+        <button id="btn-tab-historial" class="pb-3 border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 font-bold text-sm transition-colors" onclick="switchTab('historial')">
+            <i class="fa-solid fa-clock-rotate-left mr-2"></i>Historial
+        </button>
+    </div>
+
+    <!-- Contenedores de Pestañas -->
+    <div class="flex-1 overflow-hidden relative">
+
+        <!-- TAB 1: PLANIFICACIÓN DE COMPRAS -->
+        <div id="tab-planificacion" class="h-full flex flex-col gap-6 lg:grid lg:grid-cols-12 overflow-hidden px-2 pb-2">
             
-            <!-- Tarjeta Proveedor -->
-            <div class="card p-5 shrink-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
-                <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-3">Proveedor Principal</h3>
-                <div class="relative">
-                    <select id="select-proveedor" class="input-base w-full p-2.5 appearance-none font-semibold text-sm bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border-gray-300 dark:border-gray-600">
-                        <option value="">Cargando proveedores...</option>
-                    </select>
-                    <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-gray-500 dark:text-gray-400">
-                        <i class="fa-solid fa-chevron-down text-sm"></i>
+            <!-- Panel Izquierdo: Catálogo e Inbound (7 Col) -->
+            <div class="lg:col-span-7 flex flex-col gap-4 h-full overflow-hidden">
+                
+                <!-- Tarjeta Buscador Catálogo -->
+                <div class="card flex flex-col shrink-0 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                    <div class="p-3 shrink-0">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa-solid fa-magnifying-glass text-gray-400 dark:text-gray-400"></i>
+                            </div>
+                            <input type="text" id="search-input" placeholder="Buscar cualquier producto del catálogo para agregar..." 
+                                class="input-base w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-800">
+                        </div>
                     </div>
+                    
+                    <div id="search-results" class="max-h-56 overflow-y-auto p-2 hidden border-t border-gray-200 dark:border-gray-700"></div>
+                </div>
+
+                <!-- Sub-grid Paralelo de 2 Columnas para Solicitudes -->
+                <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto custom-scrollbar pr-1">
+                    
+                    <!-- COLUMNA IZQUIERDA: Solicitudes Manuales -->
+                    <div class="card flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm h-full">
+                        <div class="p-3 border-b border-gray-200 dark:border-gray-700 bg-blue-50/60 dark:bg-blue-950/30 shrink-0 flex items-center gap-2">
+                            <div class="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs shrink-0 font-bold">
+                                <i class="fa-solid fa-user-pen"></i>
+                            </div>
+                            <div>
+                                <h2 class="font-bold text-gray-800 dark:text-gray-100 text-xs">Solicitudes Manuales</h2>
+                                <p class="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Creadas manualmente desde Inventario</p>
+                            </div>
+                        </div>
+                        <div class="p-3 flex flex-col gap-3 flex-1 overflow-y-auto" id="solicitudes-manuales-chips">
+                            <!-- JS Renders here -->
+                        </div>
+                    </div>
+
+                    <!-- COLUMNA DERECHA: Sugerencias IA -->
+                    <div class="card flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm h-full">
+                        <div class="p-3 border-b border-gray-200 dark:border-gray-700 bg-indigo-50/60 dark:bg-indigo-950/30 shrink-0 flex items-center gap-2">
+                            <div class="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs shrink-0 font-bold">
+                                <i class="fa-solid fa-robot"></i>
+                            </div>
+                            <div>
+                                <h2 class="font-bold text-gray-800 dark:text-gray-100 text-xs">Sugerencias del Sistema</h2>
+                                <p class="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Alertas de quiebre e Inteligencia Activa</p>
+                            </div>
+                        </div>
+                        <div class="p-3 flex flex-col gap-3 flex-1 overflow-y-auto" id="sugerencias-ia-chips">
+                            <!-- JS Renders here -->
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
-            <!-- Tarjeta Buscador -->
-            <div class="card flex flex-col flex-1 overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
-                <div class="p-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fa-solid fa-magnifying-glass text-gray-400 dark:text-gray-400"></i>
-                        </div>
-                        <input type="text" id="search-input" placeholder="Buscar por nombre o código..." 
-                               class="input-base w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-800">
+            <!-- Panel Derecho: Manifiesto Activo / Borrador (5 Col) -->
+            <div class="lg:col-span-5 flex flex-col h-full overflow-hidden card bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-md">
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/90 shrink-0">
+                    <div>
+                        <h2 class="font-bold text-gray-800 dark:text-gray-100 text-base">Manifiesto Activo</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium" id="fecha-actual">Borrador</p>
+                    </div>
+                    <div class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
+                        <span class="relative flex h-2 w-2 mr-2 inline-block">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                        </span>
+                        EN BORRADOR
                     </div>
                 </div>
-                
-                <!-- Resultados Búsqueda (Integrados, no flotantes) -->
-                <div id="search-results" class="flex-1 overflow-y-auto p-2 hidden">
-                    <!-- Items JS -->
+
+                <!-- Selector de Proveedor -->
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shrink-0">
+                    <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Proveedor Principal</h3>
+                    <div class="relative">
+                        <select id="select-proveedor" onchange="syncBorrador()" class="input-base w-full p-2.5 appearance-none font-semibold text-sm bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border-gray-300 dark:border-gray-600">
+                            <option value="">Cargando proveedores...</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-gray-500 dark:text-gray-400">
+                            <i class="fa-solid fa-chevron-down text-sm"></i>
+                        </div>
+                    </div>
                 </div>
-                
-                <!-- Estado Vacío Buscador -->
-                <div id="search-empty-state" class="flex-1 flex flex-col items-center justify-center p-6 text-center text-gray-500 dark:text-gray-400">
-                    <i class="fa-solid fa-boxes-packing text-4xl mb-3 text-gray-300 dark:text-gray-600"></i>
-                    <p class="text-sm font-medium text-gray-600 dark:text-gray-300">Busca productos en el catálogo para añadirlos a la orden.</p>
+
+                <div class="flex-1 overflow-y-auto bg-white dark:bg-gray-800 relative">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-100 dark:bg-gray-900/80 sticky top-0 z-10 text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
+                            <tr>
+                                <th class="py-3 px-4 w-2/5">Producto</th>
+                                <th class="py-3 px-2 text-center" title="Cantidad">Cant.</th>
+                                <th class="py-3 px-2 text-right">Costo Unit.</th>
+                                <th class="py-3 px-4 text-right">Subtotal</th>
+                                <th class="py-3 px-2 text-center w-8"><i class="fa-solid fa-trash-can opacity-60"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cart-items" class="divide-y divide-gray-100 dark:divide-gray-700/60 text-sm">
+                            <!-- Filas JS -->
+                        </tbody>
+                    </table>
+                    
+                    <div id="cart-empty" class="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-white dark:bg-gray-800 z-0">
+                        <div class="w-20 h-20 bg-gray-100 dark:bg-gray-700/50 rounded-full flex items-center justify-center mb-3">
+                            <i class="fa-solid fa-file-invoice text-3xl text-gray-400 dark:text-gray-500"></i>
+                        </div>
+                        <h3 class="text-gray-700 dark:text-gray-200 font-bold text-base mb-1">Borrador Vacío</h3>
+                        <p class="text-gray-500 dark:text-gray-400 text-sm max-w-xs leading-relaxed">Añade productos desde el catálogo para iniciar la planificación.</p>
+                    </div>
+                </div>
+
+                <div class="p-5 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 shrink-0">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="text-gray-600 dark:text-gray-300 text-sm font-semibold"><span id="summary-items" class="font-bold text-gray-900 dark:text-gray-100">0</span> artículos</div>
+                        <div class="text-2xl font-black text-gray-900 dark:text-white font-mono" id="summary-total">S/ 0.00</div>
+                    </div>
+                    <div class="flex flex-col gap-2 mt-4">
+                        <button id="btn-procesar" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white rounded-xl font-bold shadow-md transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm" disabled>
+                            <i class="fa-solid fa-lock"></i> Consolidar Orden
+                        </button>
+                    </div>
                 </div>
             </div>
 
         </div>
 
-        <!-- Columna 2: Orden de Compra (35%) -->
-        <div class="lg:col-span-4 flex flex-col h-full overflow-hidden card bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-md">
-            
-            <!-- Cabecera Ticket -->
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/90 shrink-0">
+        <!-- TAB 2: ÓRDENES ACTIVAS -->
+        <div id="tab-ordenes" class="hidden h-full overflow-y-auto px-2 pb-6">
+            <div class="flex justify-between items-center mb-4">
                 <div>
-                    <h2 class="font-bold text-gray-800 dark:text-gray-100 text-base">Orden de Abastecimiento</h2>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 font-medium" id="fecha-actual">--/--/----</p>
-                </div>
-                <div class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 border border-blue-200 dark:border-blue-700">
-                    <span class="relative flex h-2 w-2 mr-2 inline-block">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                    </span>
-                    EN EDICIÓN
+                    <h2 class="text-lg font-bold text-gray-800 dark:text-white">Órdenes Activas</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Órdenes consolidadas pendientes de recepción física.</p>
                 </div>
             </div>
-
-            <!-- Tabla de Orden -->
-            <div class="flex-1 overflow-y-auto bg-white dark:bg-gray-800">
+            
+            <div class="card overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
                 <table class="w-full text-left border-collapse">
-                    <thead class="bg-gray-100 dark:bg-gray-900/80 sticky top-0 z-10 text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-900 text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
                         <tr>
-                            <th class="py-3 px-4 w-2/5">Producto</th>
-                            <th class="py-3 px-2 text-center">Cant.</th>
-                            <th class="py-3 px-2 text-right">Costo Unit.</th>
-                            <th class="py-3 px-4 text-right">Subtotal</th>
-                            <th class="py-3 px-2 text-center w-8"><i class="fa-solid fa-trash-can opacity-60"></i></th>
+                            <th class="py-3 px-4">ID Orden</th>
+                            <th class="py-3 px-4">Fecha</th>
+                            <th class="py-3 px-4">Proveedor</th>
+                            <th class="py-3 px-4 text-right">Costo Total</th>
+                            <th class="py-3 px-4 text-center">Estado</th>
+                            <th class="py-3 px-4 text-right">Acción</th>
                         </tr>
                     </thead>
-                    <tbody id="cart-items" class="divide-y divide-gray-100 dark:divide-gray-700/60 text-sm">
-                        <!-- Filas JS -->
+                    <tbody id="lista-ordenes-tabla" class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+                        <!-- Renderizado por JS -->
                     </tbody>
                 </table>
-                
-                <!-- Estado Vacío Orden -->
-                <div id="cart-empty" class="h-full flex flex-col items-center justify-center p-8 text-center">
-                    <div class="w-20 h-20 bg-gray-100 dark:bg-gray-700/50 rounded-full flex items-center justify-center mb-3">
-                        <i class="fa-solid fa-receipt text-3xl text-gray-400 dark:text-gray-400"></i>
+                <div id="ordenes-empty" class="hidden flex-col items-center justify-center p-12 text-center">
+                    <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                        <i class="fa-solid fa-box-open text-2xl text-gray-400"></i>
                     </div>
-                    <h3 class="text-gray-700 dark:text-gray-200 font-bold text-base mb-1">La orden está vacía</h3>
-                    <p class="text-gray-500 dark:text-gray-400 text-sm max-w-xs leading-relaxed">Añade productos desde el buscador o el Asistente Comercial.</p>
+                    <h3 class="text-gray-800 dark:text-gray-200 font-bold text-lg mb-1">Sin órdenes activas</h3>
+                    <p class="text-gray-500 text-sm">No hay órdenes pendientes de recepción física.</p>
                 </div>
-            </div>
-
-            <!-- Totalización y Acción -->
-            <div class="p-5 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 shrink-0">
-                <div class="flex justify-between items-center mb-4">
-                    <div class="text-gray-600 dark:text-gray-300 text-sm font-semibold"><span id="summary-items" class="font-bold text-gray-900 dark:text-gray-100">0</span> artículos</div>
-                    <div class="text-2xl font-black text-gray-900 dark:text-white font-mono" id="summary-total">$0.00</div>
-                </div>
-                <button id="btn-procesar" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white rounded-xl font-bold shadow-md transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm" disabled>
-                    <i class="fa-solid fa-check-double"></i> Aprobar Orden de Compra
-                </button>
             </div>
         </div>
 
-        <!-- Columna 3: Asistente Comercial (25%) -->
-        <div class="lg:col-span-3 flex flex-col h-full overflow-hidden rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
-            
-            <!-- Cabecera Asistente -->
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 shrink-0 bg-indigo-50/70 dark:bg-gray-800 flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm shrink-0">
-                    <i class="fa-solid fa-robot text-base"></i>
-                </div>
+        <!-- TAB 3: HISTORIAL Y AUDITORÍA -->
+        <div id="tab-historial" class="hidden h-full overflow-y-auto px-2 pb-6">
+            <div class="flex justify-between items-center mb-4">
                 <div>
-                    <h2 class="font-bold text-gray-900 dark:text-gray-100 text-sm">Asistente de Abastecimiento</h2>
-                    <p class="text-[10px] font-bold text-indigo-600 dark:text-indigo-300 uppercase tracking-wider">Inteligencia Activa</p>
-                </div>
-            </div>
-
-            <!-- Evaluación de Compra -->
-            <div class="p-4 shrink-0 bg-indigo-50/30 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700">
-                <p id="frase-impacto" class="text-xs font-semibold text-gray-700 dark:text-gray-200 leading-relaxed">
-                    Evaluando tu inventario... Comienza a armar la orden.
-                </p>
-            </div>
-
-            <!-- Recomendaciones -->
-            <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-                <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1 ml-0.5">Recomendaciones Clave</h3>
-                
-                <div id="sugerencias-chips" class="flex flex-col gap-3">
-                    <!-- Shimmer / Loading State -->
-                    <div class="animate-pulse flex flex-col gap-3">
-                        <div class="h-24 bg-gray-100 dark:bg-gray-700/50 rounded-xl"></div>
-                        <div class="h-24 bg-gray-100 dark:bg-gray-700/50 rounded-xl"></div>
-                    </div>
+                    <h2 class="text-lg font-bold text-gray-800 dark:text-white">Auditoría de Recepciones</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Historial inmutable de compras ingresadas al inventario.</p>
                 </div>
             </div>
             
+            <div class="card overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-50 dark:bg-gray-900 text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
+                        <tr>
+                            <th class="py-3 px-4">ID Orden</th>
+                            <th class="py-3 px-4">Fecha</th>
+                            <th class="py-3 px-4">Proveedor</th>
+                            <th class="py-3 px-4 text-right">Costo Total</th>
+                            <th class="py-3 px-4 text-center">Estado</th>
+                            <th class="py-3 px-4 text-right">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-historial-tabla" class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+                        <!-- Renderizado por JS -->
+                    </tbody>
+                </table>
+                <div id="historial-empty" class="hidden flex-col items-center justify-center p-12 text-center">
+                    <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                        <i class="fa-solid fa-clock-rotate-left text-2xl text-gray-400"></i>
+                    </div>
+                    <h3 class="text-gray-800 dark:text-gray-200 font-bold text-lg mb-1">Sin historial</h3>
+                    <p class="text-gray-500 text-sm">Aún no has completado ninguna orden de compra.</p>
+                </div>
+            </div>
         </div>
 
     </div>
 </div>
+
+<!-- OFF-CANVAS HISTORIAL (Read-Only) -->
+<div id="offcanvas-historial" class="fixed inset-y-0 right-0 w-96 max-w-full bg-white dark:bg-gray-800 shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col border-l border-gray-200 dark:border-gray-700">
+    <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center shrink-0">
+        <h2 id="oc-historial-title" class="font-bold text-gray-800 dark:text-white">Orden #---</h2>
+        <button onclick="closeOffCanvasHistorial()" class="text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 transition-colors w-8 h-8 rounded-full hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center justify-center">
+            <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+    </div>
+    <div id="oc-historial-content" class="p-4 flex-1 overflow-y-auto">
+        <!-- JS renderiza el contenido de sólo lectura aquí -->
+    </div>
+</div>
+
+<!-- Overlay oscuro para Off-Canvas -->
+<div id="offcanvas-overlay" onclick="closeOffCanvasHistorial()" class="fixed inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm z-40 hidden transition-opacity opacity-0"></div>
+
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/compras.js?v=2.1"></script>
+<script src="/static/js/compras.js?v=5.0"></script>
 {% endblock %}

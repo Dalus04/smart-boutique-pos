@@ -42,31 +42,45 @@ const camposDireccion = document.getElementById('campos-direccion');
 const fDireccion = document.getElementById('form-direccion');
 
 // Utils & Helpers
-const fmt = (val) => `$${Number(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`;
+const fmt = (val) => `S/ ${Number(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`;
 
 function tiempoRelativo(isoString) {
     if (!isoString) return '<span class="text-gray-400 font-normal">Sin operaciones</span>';
     
-    const fecha = new Date(isoString);
+    // Dado que el backend almacena las fechas con datetime.utcnow() (sin timezone),
+    // debemos añadir 'Z' al final del ISO string para que JavaScript lo interprete como UTC
+    // y lo convierta a la hora local peruana (-05:00) correctamente.
+    let dateStr = isoString;
+    if (!isoString.includes('Z') && !/[+-]\d{2}:\d{2}$/.test(isoString)) {
+        dateStr = isoString + 'Z';
+    }
+    
+    const fecha = new Date(dateStr);
     const ahora = new Date();
     const diffMs = ahora - fecha;
-    const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     
-    const fechaAbsoluta = fecha.toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
+    const diffSegs = Math.max(0, Math.floor(diffMs / 1000));
+    const diffMins = Math.floor(diffSegs / 60);
+    const diffHoras = Math.floor(diffMins / 60);
+    const diffDias = Math.floor(diffHoras / 24);
+    
+    const fechaAbsoluta = fecha.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
     
     let textoRelativo = '';
-    if (diffDias === 0) {
-        textoRelativo = 'Hoy';
-    } else if (diffDias === 1) {
-        textoRelativo = 'Ayer';
+    if (diffSegs < 60) {
+        textoRelativo = `Hace ${diffSegs} segundo${diffSegs !== 1 ? 's' : ''}`;
+    } else if (diffMins < 60) {
+        textoRelativo = `Hace ${diffMins} minuto${diffMins !== 1 ? 's' : ''}`;
+    } else if (diffHoras < 24) {
+        textoRelativo = `Hace ${diffHoras} hora${diffHoras !== 1 ? 's' : ''}`;
     } else if (diffDias < 30) {
-        textoRelativo = `Hace ${diffDias} días`;
+        textoRelativo = `Hace ${diffDias} día${diffDias !== 1 ? 's' : ''}`;
     } else if (diffDias < 365) {
         const meses = Math.floor(diffDias / 30);
         textoRelativo = `Hace ${meses} mes${meses > 1 ? 'es' : ''}`;
     } else {
         const años = Math.floor(diffDias / 365);
-        textoRelativo = `Hace ${años} año${años > 1 ? 's' : ''}`;
+        textoRelativo = `Hace ${años} año${años !== 1 ? 's' : ''}`;
     }
     
     return `<span class="cursor-help font-medium text-gray-700 dark:text-gray-300" title="Fecha exacta: ${fechaAbsoluta}">${textoRelativo}</span>`;
@@ -94,11 +108,17 @@ async function switchTab(tab) {
         btnC.className = "flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors bg-primary text-white shadow-sm";
         btnP.className = "flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800";
         btnNuevoTexto.textContent = "Nuevo Cliente";
+        document.getElementById('metric-total-label').textContent = "Total Clientes";
+        document.getElementById('metric-activos-label').textContent = "Clientes VIP";
+        document.getElementById('metric-ticket-label').textContent = "Ticket Promedio Global";
         renderTableHeaders(['Documento', 'Cliente', 'Frecuencia de compra', 'Categorías favoritas', 'Última compra', 'Oportunidad comercial', 'Acciones']);
     } else {
         btnP.className = "flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors bg-primary text-white shadow-sm";
         btnC.className = "flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800";
         btnNuevoTexto.textContent = "Nuevo Proveedor";
+        document.getElementById('metric-total-label').textContent = "Total Proveedores";
+        document.getElementById('metric-activos-label').textContent = "Órdenes en Tránsito";
+        document.getElementById('metric-ticket-label').textContent = "Compra Promedio";
         renderTableHeaders(['RUC', 'Razón Social', 'Estado de la relación', 'Líneas que provee', 'Último pedido', 'Próxima acción', 'Acciones']);
     }
     
@@ -134,7 +154,7 @@ function updateMetrics(list) {
     });
 
     mActivos.textContent = activosCount;
-    mTicket.textContent = ticketCount > 0 ? fmt(sumTicket / ticketCount) : '$0.00';
+    mTicket.textContent = ticketCount > 0 ? fmt(sumTicket / ticketCount) : 'S/ 0.00';
 }
 
 function getBadgeHtml(frecuencia, ultimaTransaccion, esCliente) {
@@ -182,9 +202,13 @@ async function fetchData(query = '') {
         } else {
             dataList.forEach(item => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-100 dark:border-gray-800/60";
-                
                 const id = currentTab === 'clientes' ? item.idCliente : item.idProveedor;
+                tr.className = "hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-100 dark:border-gray-800/60 cursor-pointer";
+                tr.onclick = (e) => {
+                    if (e.target.closest('button')) return;
+                    openOffCanvas(id);
+                };
+                
                 const esCliente = currentTab === 'clientes';
                 const badgeHtml = getBadgeHtml(item.frecuencia, item.ultima_transaccion, esCliente);
                 const nombreMain = esCliente ? `${item.nombres} ${item.apellidos}` : item.nombreRazonSocial;
@@ -236,6 +260,78 @@ async function fetchData(query = '') {
 searchInput.addEventListener('input', debounce(() => {
     fetchData(searchInput.value.trim());
 }, 350));
+
+// -------------------------------------------------------------
+// PANEL OFF-CANVAS ANALÍTICO
+// -------------------------------------------------------------
+function openOffCanvas(id) {
+    const item = dataList.find(i => (currentTab === 'clientes' ? i.idCliente : i.idProveedor) === id);
+    if (!item) return;
+
+    const overlay = document.getElementById('offcanvas-overlay');
+    const panel = document.getElementById('offcanvas-panel');
+    const esCliente = currentTab === 'clientes';
+
+    // Rellenar Header
+    document.getElementById('offcanvas-badge-container').innerHTML = getBadgeHtml(item.frecuencia, item.ultima_transaccion, esCliente);
+    document.getElementById('offcanvas-title').textContent = esCliente ? `${item.nombres} ${item.apellidos}` : item.nombreRazonSocial;
+    document.getElementById('offcanvas-subtitle').textContent = `${item.tipoDocumento}: ${item.numeroDocumento}`;
+
+    // Rellenar Contacto
+    document.getElementById('offcanvas-phone').textContent = (item.telefono && item.telefono !== "-") ? item.telefono : 'Sin teléfono';
+    document.getElementById('offcanvas-email').textContent = (item.correoElectronico && item.correoElectronico !== "-") ? item.correoElectronico : 'Sin correo electrónico';
+    
+    const addressRow = document.getElementById('offcanvas-address-row');
+    if (!esCliente) {
+        addressRow.classList.remove('hidden');
+        document.getElementById('offcanvas-address').textContent = (item.direccion && item.direccion !== "-") ? item.direccion : 'Sin dirección registrada';
+    } else {
+        addressRow.classList.add('hidden');
+    }
+
+    // Rellenar Métricas
+    document.getElementById('offcanvas-metric-1-label').textContent = esCliente ? 'Compras' : 'Órdenes';
+    document.getElementById('offcanvas-metric-1-value').textContent = item.frecuencia || 0;
+    
+    document.getElementById('offcanvas-metric-2-label').textContent = esCliente ? 'Ticket Promedio' : 'Compra Promedio';
+    document.getElementById('offcanvas-metric-2-value').textContent = fmt(item.ticket_promedio || 0);
+
+    document.getElementById('offcanvas-especialidad').textContent = item.especialidad || 'Sin registro';
+
+    // Sugerencia
+    const accion = item.accion_recomendada || { texto: 'N/A', explicacion: 'Sin información suficiente' };
+    document.getElementById('offcanvas-accion-title').textContent = accion.texto;
+    document.getElementById('offcanvas-accion-desc').textContent = accion.explicacion;
+    document.getElementById('offcanvas-accion').className = `p-4 rounded-xl border ${accion.badge_class}`;
+
+    // Footer Action (Deep Linking)
+    const btnAction = document.getElementById('offcanvas-main-action');
+    if (esCliente) {
+        document.getElementById('offcanvas-action-text').textContent = 'Registrar Venta';
+        btnAction.onclick = () => window.location.href = `/pos?tab=venta&select_client_id=${item.idCliente}`;
+    } else {
+        document.getElementById('offcanvas-action-text').textContent = 'Registrar Compra';
+        btnAction.onclick = () => window.location.href = `/compras?tab=planificacion&select_supplier_id=${item.idProveedor}`;
+    }
+
+    // Mostrar
+    overlay.classList.remove('hidden');
+    setTimeout(() => {
+        overlay.classList.remove('opacity-0');
+        panel.classList.remove('translate-x-full');
+    }, 10);
+}
+
+function closeOffCanvas() {
+    const overlay = document.getElementById('offcanvas-overlay');
+    const panel = document.getElementById('offcanvas-panel');
+    
+    overlay.classList.add('opacity-0');
+    panel.classList.add('translate-x-full');
+    setTimeout(() => {
+        overlay.classList.add('hidden');
+    }, 300);
+}
 
 // -------------------------------------------------------------
 // GESTIÓN DEL MODAL

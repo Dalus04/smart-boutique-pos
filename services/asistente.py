@@ -44,6 +44,7 @@ class AsistenteComercialService:
 
         return {
             "idCliente": cliente.idCliente,
+            "numeroDocumento": cliente.numeroDocumento,
             "nombres": cliente.nombres,
             "apellidos": cliente.apellidos,
             "clasificacion": clasificacion,
@@ -98,10 +99,20 @@ class AsistenteComercialService:
             contexto["cliente"] = AsistenteComercialService.analizar_cliente(db, id_cliente)
 
         # 2. Venta Cruzada (Apriori)
+        productos_comprados = set()
+        if id_cliente:
+            from models.pos import DetalleVenta, Venta
+            compras_recientes = db.query(DetalleVenta.idProducto).join(Venta).filter(Venta.idCliente == id_cliente).all()
+            productos_comprados = {c[0] for c in compras_recientes}
+
         if carrito_ids:
             sugerencias_tuplas = MineriaService.sugerir_venta_cruzada(carrito_ids)
             
             for antecedente_id, consecuente_id, conf, sop, lift, tipo in sugerencias_tuplas:
+                # Filtro exclusor: No sugerir lo que ya compró el cliente (Integración Silenciosa)
+                if consecuente_id in productos_comprados:
+                    continue
+                    
                 consecuente = db.query(Producto).get(consecuente_id)
                 antecedente = db.query(Producto).get(antecedente_id)
                 

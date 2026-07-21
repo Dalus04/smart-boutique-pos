@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block header_title %}Gestión de Actores Comerciales{% endblock %}
+{% block header_title %}Clientes y Proveedores{% endblock %}
 
 {% block content %}
 <div class="flex flex-col h-full gap-6">
@@ -9,7 +9,7 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">
         <div class="card p-4 flex items-center justify-between border-l-4 border-blue-500">
             <div>
-                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Total Registrados</p>
+                <p id="metric-total-label" class="text-xs text-gray-500 uppercase font-bold tracking-wider">Total Clientes</p>
                 <h3 class="text-2xl font-bold text-gray-800 dark:text-gray-100" id="metric-total">0</h3>
             </div>
             <div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-500">
@@ -18,7 +18,7 @@
         </div>
         <div class="card p-4 flex items-center justify-between border-l-4 border-emerald-500">
             <div>
-                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Activos (Recientes)</p>
+                <p id="metric-activos-label" class="text-xs text-gray-500 uppercase font-bold tracking-wider">Clientes VIP</p>
                 <h3 class="text-2xl font-bold text-gray-800 dark:text-gray-100" id="metric-activos">0</h3>
             </div>
             <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-500">
@@ -27,8 +27,8 @@
         </div>
         <div class="card p-4 flex items-center justify-between border-l-4 border-purple-500">
             <div>
-                <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Valor Promedio</p>
-                <h3 class="text-2xl font-bold text-gray-800 dark:text-gray-100 font-mono" id="metric-ticket">$0.00</h3>
+                <p id="metric-ticket-label" class="text-xs text-gray-500 uppercase font-bold tracking-wider">Ticket Promedio Global</p>
+                <h3 class="text-2xl font-bold text-gray-800 dark:text-gray-100 font-mono" id="metric-ticket">S/ 0.00</h3>
             </div>
             <div class="w-10 h-10 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-purple-500">
                 <i class="fa-solid fa-money-bill-wave text-lg"></i>
@@ -157,6 +157,85 @@
         </div>
     </div>
 </div>
+
+<!-- Panel Lateral (Off-Canvas) Analítico -->
+<div id="offcanvas-overlay" class="fixed inset-0 z-40 bg-gray-900/40 hidden backdrop-blur-sm transition-opacity duration-300 opacity-0" onclick="closeOffCanvas()"></div>
+<div id="offcanvas-panel" class="fixed inset-y-0 right-0 w-full md:w-[450px] bg-white dark:bg-gray-800 shadow-2xl transform translate-x-full transition-transform duration-300 z-50 border-l border-gray-200 dark:border-gray-700 flex flex-col">
+    <!-- Header -->
+    <div class="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-start bg-gray-50 dark:bg-gray-900/50">
+        <div>
+            <div id="offcanvas-badge-container" class="mb-2"></div>
+            <h2 id="offcanvas-title" class="text-xl font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wide">--</h2>
+            <p id="offcanvas-subtitle" class="text-sm text-gray-500 font-mono mt-1">--</p>
+        </div>
+        <button onclick="closeOffCanvas()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+            <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+    </div>
+
+    <!-- Body -->
+    <div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+        <!-- Bloque de Info de Contacto -->
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Información de Contacto</h3>
+            <div class="space-y-3 text-sm">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500 shrink-0"><i class="fa-solid fa-phone"></i></div>
+                    <span id="offcanvas-phone" class="text-gray-700 dark:text-gray-300 font-medium">--</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-500 shrink-0"><i class="fa-solid fa-envelope"></i></div>
+                    <span id="offcanvas-email" class="text-gray-700 dark:text-gray-300 font-medium truncate">--</span>
+                </div>
+                <div class="flex items-center gap-3" id="offcanvas-address-row">
+                    <div class="w-8 h-8 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-500 shrink-0"><i class="fa-solid fa-location-dot"></i></div>
+                    <span id="offcanvas-address" class="text-gray-700 dark:text-gray-300 font-medium">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Métricas Comerciales -->
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Métricas de Negocio</h3>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-gray-50 dark:bg-gray-900/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center">
+                    <span id="offcanvas-metric-1-label" class="text-[10px] uppercase font-bold text-gray-500 mb-1">Transacciones</span>
+                    <span id="offcanvas-metric-1-value" class="text-xl font-bold text-gray-800 dark:text-gray-200">0</span>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-900/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center">
+                    <span id="offcanvas-metric-2-label" class="text-[10px] uppercase font-bold text-gray-500 mb-1">Ticket Promedio</span>
+                    <span id="offcanvas-metric-2-value" class="text-xl font-bold text-primary font-mono">S/ 0.00</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Especialidad -->
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Top Categoría</h3>
+            <div class="flex items-center gap-3 bg-gray-50 dark:bg-gray-900/40 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                <i class="fa-solid fa-star text-amber-400 text-lg"></i>
+                <span id="offcanvas-especialidad" class="font-bold text-gray-700 dark:text-gray-300">--</span>
+            </div>
+        </div>
+
+        <!-- Acción Recomendada (AI) -->
+        <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Sugerencia Comercial</h3>
+            <div id="offcanvas-accion" class="p-4 rounded-xl border">
+                <p id="offcanvas-accion-title" class="font-bold text-sm mb-1">--</p>
+                <p id="offcanvas-accion-desc" class="text-xs">--</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Action -->
+    <div class="p-5 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-center">
+        <button id="offcanvas-main-action" class="w-full btn-primary py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2">
+            <i class="fa-solid fa-bolt"></i> <span id="offcanvas-action-text">Cargando...</span>
+        </button>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}

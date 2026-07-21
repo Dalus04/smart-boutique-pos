@@ -36,12 +36,26 @@ class Compra(Base):
     idUsuario: Mapped[int] = mapped_column(Integer, ForeignKey("usuario.idUsuario"), nullable=False)
     fechaCompra: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, default=datetime.datetime.utcnow)
     montoTotal: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    estado: Mapped[str | None] = mapped_column(String(20), nullable=True, default="COMPLETADA")
+    estado: Mapped[str] = mapped_column(String(20), nullable=False, default="Borrador") # Borrador, Emitida, Enviada, Confirmada, Recepción parcial, Completada
 
     # Relaciones bidireccionales (sin cascada de eliminación)
     proveedor: Mapped["Proveedor"] = relationship("Proveedor", back_populates="compras")
     usuario: Mapped["Usuario"] = relationship("Usuario", back_populates="compras")
     detalles: Mapped[list["DetalleCompra"]] = relationship("DetalleCompra", back_populates="compra")
+
+class SolicitudReposicion(Base):
+    __tablename__ = "solicitud_reposicion"
+
+    idSolicitud: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    idProducto: Mapped[int] = mapped_column(Integer, ForeignKey("producto.idProducto"), nullable=False)
+    cantidad_sugerida: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    motivo: Mapped[str] = mapped_column(String(100), nullable=False)
+    origen: Mapped[str] = mapped_column(String(20), nullable=False, default="IA") # IA, Manual
+    estado: Mapped[str] = mapped_column(String(20), nullable=False, default="Pendiente") # Pendiente, Agregada, Cancelada
+    fecha_creacion: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, default=datetime.datetime.utcnow)
+
+    # Relaciones
+    producto: Mapped["Producto"] = relationship("Producto")
 
 class DetalleCompra(Base):
     __tablename__ = "detalle_compra"
