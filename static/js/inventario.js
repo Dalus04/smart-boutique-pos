@@ -1,5 +1,5 @@
 /**
- * Smart POS - Inventario Inteligente v5.5
+ * Smart POS - Inventario Inteligente v5.5 (Refactorización UI/UX Fase 1)
  * Lógica Web para el Catálogo e Inventario
  */
 
@@ -20,6 +20,34 @@ const insightTrack = document.getElementById('insights-track');
 window.dashboardInsights = [];
 window.inventoryDataMap = {};
 
+// Dropdown Contextual global state
+let activeDropdownId = null;
+let globalKPIsData = null;
+
+function toggleContextMenu(prodId, event) {
+    if (event) event.stopPropagation();
+    const targetMenu = document.getElementById(`context-menu-${prodId}`);
+    const isHidden = targetMenu ? targetMenu.classList.contains('hidden') : true;
+
+    closeAllDropdowns();
+
+    if (isHidden && targetMenu) {
+        targetMenu.classList.remove('hidden');
+        activeDropdownId = prodId;
+    }
+}
+
+function closeAllDropdowns() {
+    document.querySelectorAll('.context-menu-dropdown').forEach(el => el.classList.add('hidden'));
+    activeDropdownId = null;
+}
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.context-menu-container')) {
+        closeAllDropdowns();
+    }
+});
+
 // Función Debounce para proteger a la API de sobrecarga
 function debounce(func, delay = 300) {
     let timer;
@@ -30,7 +58,7 @@ function debounce(func, delay = 300) {
 }
 
 // Formateador de moneda
-const fmtCurrency = (val) => `S/ ${val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`;
+const fmtCurrency = (val) => `S/ ${(val || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`;
 
 // Cargar Categorías para el dropdown
 async function loadCategorias() {
@@ -48,30 +76,28 @@ async function loadCategorias() {
     }
 }
 
-// Generador de Badges Semánticos con Tooltips Nativos (Tailwind group-hover)
+// Generador de Badges Semánticos con Tooltips Nativos
 function generateBadgeHtml(text, type, tooltipText) {
     let classes = "px-2 py-1 rounded text-xs font-medium w-full text-center ";
     let extraHtml = "";
     
     if (type === 'critico') {
-        classes += "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+        classes += "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 font-bold";
         extraHtml = `<span class="relative flex h-2 w-2 mr-1 inline-block">
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
           <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
         </span>`;
     } else if (type === 'bajo') {
-        classes += "bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300";
+        classes += "bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 font-semibold";
     } else if (type === 'optimo') {
-        classes += "bg-gray-50 text-gray-600 dark:bg-gray-700/50 dark:text-gray-300";
+        classes += "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300";
     }
 
-    // Estructura de Tooltip Nativo
     return `
         <div class="relative group cursor-help inline-block w-full">
             <div class="inline-flex items-center justify-center ${classes}">
                 ${extraHtml}${text}
             </div>
-            <!-- Tooltip -->
             <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-56 p-2 bg-gray-800 dark:bg-gray-700 text-white text-xs rounded shadow-xl z-50 text-center whitespace-normal leading-tight font-normal">
                 ${tooltipText}
                 <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800 dark:border-t-gray-700"></div>
@@ -86,15 +112,15 @@ function generateAbcBadge(abcClass, ingresos) {
     let tooltipText = "";
     let label = "";
     if (abcClass === 'A') {
-        label = "Estrella";
+        label = "Estrella (A)";
         colorClass = "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300";
         tooltipText = "Genera el 80% de tus ingresos. Es vital mantenerlo abastecido.";
     } else if (abcClass === 'B') {
-        label = "Frecuente";
+        label = "Frecuente (B)";
         colorClass = "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300";
         tooltipText = "Rotación estable. Contribuye de forma media a la facturación.";
     } else {
-        label = "Lento";
+        label = "Lento (C)";
         colorClass = "bg-gray-50 text-gray-600 dark:bg-gray-700/50 dark:text-gray-300";
         tooltipText = "Baja relevancia. Su impacto en los ingresos totales es menor.";
     }
@@ -103,7 +129,7 @@ function generateAbcBadge(abcClass, ingresos) {
         <div class="relative group cursor-help inline-block">
             <div class="flex flex-col items-center">
                 <span class="px-2 py-0.5 rounded text-xs font-black ${colorClass}">${label}</span>
-                <span class="text-[10px] text-green-600 dark:text-green-400 font-bold mt-1">${fmtCurrency(ingresos)}</span>
+                <span class="text-[10px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">${fmtCurrency(ingresos)}</span>
             </div>
             <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-56 p-2 bg-gray-800 dark:bg-gray-700 text-white text-xs rounded shadow-xl z-50 text-center whitespace-normal font-normal">
                 ${tooltipText}
@@ -113,8 +139,147 @@ function generateAbcBadge(abcClass, ingresos) {
     `;
 }
 
+async function refreshGlobalKPIs(force = false) {
+    if (globalKPIsData && !force) {
+        renderGlobalKPIs(globalKPIsData);
+        return;
+    }
+    try {
+        const data = await ApiClient.get('/inventario/data');
+        globalKPIsData = data;
+        renderGlobalKPIs(data);
+    } catch (e) {
+        console.error("Error al cargar KPIs globales", e);
+    }
+}
+
+function renderGlobalKPIs(data) {
+    const total = data.kpis.productos_activos;
+    const criticos = data.kpis.riesgo_alto_critico;
+    const healthScore = total > 0 ? Math.max(0, Math.round(((total - criticos) / total) * 100)) : 0;
+    
+    if (kpiHealthScore) kpiHealthScore.textContent = healthScore;
+    
+    if (kpiHealthStatus) {
+        const kpiHealthSubtitle = document.getElementById('kpi-health-subtitle');
+        if (healthScore >= 90) {
+            kpiHealthStatus.textContent = "Excelente";
+            kpiHealthStatus.className = "text-xs font-bold px-2 py-0.5 rounded text-green-700 bg-green-50 dark:bg-green-900/30 dark:text-green-300";
+            if (kpiHealthSubtitle) kpiHealthSubtitle.textContent = `Significa que el ${healthScore}% de tu catálogo fluye sin riesgo de quiebre.`;
+        } else if (healthScore >= 70) {
+            kpiHealthStatus.textContent = "Estable";
+            kpiHealthStatus.className = "text-xs font-bold px-2 py-0.5 rounded text-blue-700 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300";
+            if (kpiHealthSubtitle) kpiHealthSubtitle.textContent = `El inventario está controlado, pero hay un ${100 - healthScore}% de artículos que requieren vigilancia.`;
+        } else if (healthScore >= 50) {
+            kpiHealthStatus.textContent = "Requiere Atención";
+            kpiHealthStatus.className = "text-xs font-bold px-2 py-0.5 rounded text-orange-700 bg-orange-50 dark:bg-orange-900/30 dark:text-orange-300";
+            if (kpiHealthSubtitle) kpiHealthSubtitle.textContent = `Advertencia: El ${100 - healthScore}% de tu catálogo podría agotarse si no realizas reposiciones.`;
+        } else {
+            kpiHealthStatus.textContent = "Crítico";
+            kpiHealthStatus.className = "text-xs font-bold px-2 py-0.5 rounded text-red-700 bg-red-50 dark:bg-red-900/30 dark:text-red-300";
+            if (kpiHealthSubtitle) kpiHealthSubtitle.textContent = `¡Peligro! El ${100 - healthScore}% de tus productos están agotándose y perdiendo ventas potenciales.`;
+        }
+    }
+
+    // Clasificar todo el catálogo global
+    const productosEnSolicitud = [];
+    const productosQuiebre = [];
+    const productosOptimos = [];
+
+    data.productos.forEach(prod => {
+        if (prod.tiene_solicitud_pendiente) {
+            productosEnSolicitud.push(prod);
+        } else if (prod.accion === 'Reponer' || prod.estado_fisico === 'Crítico' || prod.estado_fisico === 'Bajo') {
+            productosQuiebre.push(prod);
+        } else {
+            productosOptimos.push(prod);
+        }
+    });
+
+    const accionesContainerGrid = document.getElementById('acciones-container-grid');
+    if (accionesContainerGrid) {
+        let summaryCardsHtml = "";
+
+        if (productosEnSolicitud.length > 0) {
+            summaryCardsHtml += `
+                <div class="card p-5 border-l-4 border-amber-500 flex flex-col justify-between h-full hover:shadow-md transition-shadow">
+                    <div class="flex items-start gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-amber-100 dark:bg-amber-900/30 text-amber-500 text-lg">
+                            <i class="fa-solid fa-clock"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800 dark:text-white text-sm">Solicitudes en Proceso</h4>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-snug">
+                                <b>${productosEnSolicitud.length} producto(s)</b> cuentan con orden de compra o reposición activa.
+                            </p>
+                        </div>
+                    </div>
+                    <button onclick="window.location.href='/compras?tab=planificacion'" class="w-full py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-xs font-bold text-white transition-colors shadow-sm flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-arrow-right-to-bracket"></i> Ver en Compras
+                    </button>
+                </div>
+            `;
+        }
+
+        if (productosQuiebre.length > 0) {
+            summaryCardsHtml += `
+                <div class="card p-5 border-l-4 border-red-500 flex flex-col justify-between h-full hover:shadow-md transition-shadow">
+                    <div class="flex items-start gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-red-100 dark:bg-red-900/30 text-red-500 text-lg">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800 dark:text-white text-sm">Reabastecimiento Urgente</h4>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-snug">
+                                <b>${productosQuiebre.length} producto(s)</b> están en stock bajo o riesgo de quiebre.
+                            </p>
+                        </div>
+                    </div>
+                    <button onclick="filtrarPorEstadoQuick('Crítico')" class="w-full py-2 rounded-lg bg-red-600 hover:bg-red-700 text-xs font-bold text-white transition-colors shadow-sm flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-filter"></i> Gestionar en Tabla
+                    </button>
+                </div>
+            `;
+        }
+
+        if (productosOptimos.length > 0) {
+            summaryCardsHtml += `
+                <div class="card p-5 border-l-4 border-green-500 flex flex-col justify-between h-full hover:shadow-md transition-shadow">
+                    <div class="flex items-start gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-green-100 dark:bg-green-900/30 text-green-500 text-lg">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800 dark:text-white text-sm">Inventario Estable</h4>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-snug">
+                                <b>${productosOptimos.length} producto(s)</b> fluyen óptimamente sin riesgo detectado.
+                            </p>
+                        </div>
+                    </div>
+                    <button onclick="filtrarPorEstadoQuick('Óptimo')" class="w-full py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-xs font-bold text-gray-700 dark:text-gray-200 transition-colors flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-filter"></i> Ver productos
+                    </button>
+                </div>
+            `;
+        }
+
+        accionesContainerGrid.innerHTML = summaryCardsHtml || `
+            <div class="card p-6 text-center text-gray-500 text-xs w-full col-span-full border border-dashed border-gray-200 dark:border-gray-700">
+                <i class="fa-solid fa-circle-check text-4xl mb-3 text-green-500 opacity-80"></i>
+                <p class="font-medium text-gray-700 dark:text-gray-300 text-lg">Todo está bajo control.</p>
+                <p class="mt-1 text-sm">No hay acciones urgentes pendientes.</p>
+            </div>
+        `;
+    }
+}
+
+async function refreshAllData(shouldHighlight = false) {
+    await refreshGlobalKPIs(true);
+    await fetchAndRenderData(shouldHighlight);
+}
+
 // Renderizador principal de tabla
-async function fetchAndRenderData() {
+async function fetchAndRenderData(shouldHighlight = false) {
     elTableLoading.classList.remove('hidden');
     elTableEmpty.classList.add('hidden');
     
@@ -131,9 +296,10 @@ async function fetchAndRenderData() {
     try {
         const data = await ApiClient.get('/inventario/data', params);
         
-        // 1. Renderizar Filas y recopilar acciones
         elTableBody.innerHTML = '';
-        const accionesRecomendadas = [];
+        const productosEnSolicitud = [];
+        const productosQuiebre = [];
+        const productosOptimos = [];
         
         window.dashboardInsights = [];
         window.inventoryDataMap = {};
@@ -155,9 +321,9 @@ async function fetchAndRenderData() {
 
                 const tr = document.createElement('tr');
                 tr.id = `fila-prod-${prod.idProducto}`;
-                tr.className = "hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer";
+                tr.className = "hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer border-b border-gray-100 dark:border-gray-800";
                 tr.onclick = (e) => {
-                    if (e.target.closest('button')) return;
+                    if (e.target.closest('button') || e.target.closest('.context-menu-container')) return;
                     openOffCanvas(prod.idProducto);
                 };
                 
@@ -165,9 +331,9 @@ async function fetchAndRenderData() {
                     tr.classList.add('bg-red-50/20', 'dark:bg-red-900/10');
                 }
                 
-                // Mapear Tipos de Badge y Tooltips para UX Filosófico
+                // Mapear Tipos de Estado Operacional
                 let badgeEstado = 'optimo';
-                let labelEstado = "Flujo Constante";
+                let labelEstado = "Óptimo";
                 let ttEstado = "El inventario fluye saludablemente sin riesgo inminente de agotarse.";
                 if (prod.estado_fisico === 'Crítico') {
                     badgeEstado = 'critico';
@@ -178,138 +344,94 @@ async function fetchAndRenderData() {
                     labelEstado = "Vigilar";
                     ttEstado = "El nivel de inventario está disminuyendo. Prepara una orden de compra.";
                 }
-                
-                let badgeRiesgo = 'optimo';
-                let labelRiesgo = "Demanda Cubierta";
-                let ttRiesgo = "El stock disponible cubrirá de sobra las compras estimadas para esta semana.";
-                if (prod.riesgo === 'Riesgo Alto') {
-                    badgeRiesgo = 'critico';
-                    labelRiesgo = "Quiebre Futuro";
-                    ttRiesgo = "Aunque aún hay stock físico, no alcanzará para cubrir la demanda esperada de los próximos 7 días.";
-                } else if (prod.riesgo === 'Riesgo Medio') {
-                    badgeRiesgo = 'bajo';
-                    labelRiesgo = "Stock Ajustado";
-                    ttRiesgo = "El stock cubre la demanda estimada, pero podrías agotarlo si hay un pico de ventas inesperado.";
-                }
 
-                if (prod.tiene_solicitud_pendiente && accionesRecomendadas.length < 6) {
-                    accionesRecomendadas.push({
-                        id: prod.idProducto,
-                        idSolicitud: prod.id_solicitud_pendiente,
-                        rawAccion: 'EnProceso',
-                        icon: 'fa-clock',
-                        borderColor: 'border-amber-500',
-                        iconBg: 'bg-amber-100 dark:bg-amber-900/30',
-                        iconColor: 'text-amber-500',
-                        btnBg: 'bg-amber-600 hover:bg-amber-700',
-                        btnText: 'Revisar solicitud',
-                        title: 'Solicitud en Proceso',
-                        desc: `<b>${prod.nombre}</b> ya cuenta con una solicitud de reposición activa.`
-                    });
-                } else if (prod.accion === 'Reponer' && accionesRecomendadas.length < 6) {
-                    accionesRecomendadas.push({
-                        id: prod.idProducto, rawAccion: 'Reponer',
-                        icon: 'fa-truck-ramp-box', borderColor: 'border-red-500', iconBg: 'bg-red-100 dark:bg-red-900/30', iconColor: 'text-red-500', btnBg: 'bg-red-600',
-                        btnText: 'Resolver',
-                        title: 'Quiebre de Stock',
-                        desc: `<b>${prod.nombre}</b> se agotará en ${prod.dias_quiebre || 0} días.`
-                    });
-                } else if (prod.accion === 'Liquidar' && accionesRecomendadas.length < 6) {
-                    accionesRecomendadas.push({
-                        id: prod.idProducto, rawAccion: 'Liquidar',
-                        icon: 'fa-tag', borderColor: 'border-orange-500', iconBg: 'bg-orange-100 dark:bg-orange-900/30', iconColor: 'text-orange-500', btnBg: 'bg-orange-500',
-                        btnText: 'Resolver',
-                        title: 'Stock Inmovilizado',
-                        desc: `<b>${prod.nombre}</b> no tiene rotación reciente.`
-                    });
-                }
-                
-                const diasRestantesHTML = prod.dias_quiebre ? 
-                    `<div class="relative group cursor-help inline-block">
-                        <div class="text-base font-bold ${prod.dias_quiebre < 7 ? 'text-red-500' : (prod.dias_quiebre < 15 ? 'text-orange-500' : 'text-gray-700 dark:text-gray-300')}">${prod.dias_quiebre} d</div>
-                        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-56 p-2 bg-gray-800 dark:bg-gray-700 text-white text-xs rounded shadow-xl z-50 text-center whitespace-normal font-normal">
-                            Te quedan ${prod.dias_quiebre} días de inventario a tu ritmo de ventas actual.
-                            <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800 dark:border-t-gray-700"></div>
-                        </div>
-                    </div>` 
-                    : `<div class="text-sm text-gray-400" title="No hay suficiente historial de ventas para predecir">-</div>`;
-
-                let accionBtn = "";
-                if (prod.accion === "Reponer") {
-                    if (prod.tiene_solicitud_pendiente) {
-                        accionBtn = `<div class="relative group cursor-help w-full"><button disabled class="w-full text-xs font-bold text-gray-500 bg-gray-100 dark:bg-slate-800 dark:text-gray-400 py-1.5 px-2 rounded opacity-50 flex items-center justify-center gap-1.5 shadow-sm cursor-not-allowed">⏳ En proceso</button><div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-56 p-2 bg-gray-800 dark:bg-gray-700 text-white text-xs rounded shadow-xl z-50 text-center whitespace-normal font-normal">Ya existe una solicitud de reposición activa para este producto.<div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800 dark:border-t-gray-700"></div></div></div>`;
-                    } else {
-                        accionBtn = `<div class="relative group cursor-help w-full"><button onclick="event.stopPropagation(); openActionModal(${prod.idProducto}, 'Reponer')" class="w-full text-xs font-bold text-red-600 bg-red-100 dark:bg-red-900/40 dark:text-red-300 py-1.5 px-2 rounded transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-sm">🔴 Reponer</button><div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-56 p-2 bg-gray-800 dark:bg-gray-700 text-white text-xs rounded shadow-xl z-50 text-center whitespace-normal font-normal">No tienes stock suficiente para terminar la semana.<div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800 dark:border-t-gray-700"></div></div></div>`;
-                    }
-                } else if (prod.accion === "Liquidar") {
-                    accionBtn = `<div class="relative group cursor-help w-full"><button onclick="event.stopPropagation(); openActionModal(${prod.idProducto}, 'Liquidar')" class="w-full text-xs font-bold text-orange-600 bg-orange-100 dark:bg-orange-900/40 dark:text-orange-300 py-1.5 px-2 rounded transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-sm">🟠 Liquidar</button><div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-56 p-2 bg-gray-800 dark:bg-gray-700 text-white text-xs rounded shadow-xl z-50 text-center whitespace-normal font-normal">Este producto no se vende. Aprovecha su margen para hacer una oferta.<div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800 dark:border-t-gray-700"></div></div></div>`;
+                // Definir Acción Principal (Badges clickeables)
+                let accionPrincipalHtml = "";
+                if (prod.tiene_solicitud_pendiente) {
+                    accionPrincipalHtml = `
+                        <button onclick="event.stopPropagation(); window.location.href='/compras?tab=planificacion${prod.id_solicitud_pendiente ? '&hl_req=' + prod.id_solicitud_pendiente : ''}'" class="w-full max-w-[130px] text-xs font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-300 py-1.5 px-2.5 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all" title="Ver solicitud activa en Compras">
+                            ⏳ En proceso
+                        </button>`;
+                } else if (prod.accion === 'Reponer' || prod.estado_fisico === 'Crítico') {
+                    accionPrincipalHtml = `
+                        <button onclick="event.stopPropagation(); openSolicitudManualModal(${prod.idProducto})" class="w-full max-w-[130px] text-xs font-bold text-red-700 bg-red-100 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300 py-1.5 px-2.5 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all" title="Crear solicitud de compra rápida">
+                            🔴 Reponer
+                        </button>`;
+                } else if (prod.estado_fisico === 'Bajo') {
+                    accionPrincipalHtml = `
+                        <button onclick="event.stopPropagation(); openSolicitudManualModal(${prod.idProducto})" class="w-full max-w-[130px] text-xs font-bold text-orange-700 bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/40 dark:text-orange-300 py-1.5 px-2.5 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all" title="Preparar reposición de stock">
+                            🟠 Atención
+                        </button>`;
                 } else {
-                    accionBtn = `<div class="relative group cursor-help w-full"><button onclick="event.stopPropagation(); openActionModal(${prod.idProducto}, 'Mantener')" class="w-full text-xs font-bold text-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 py-1.5 px-2 rounded transition-colors flex items-center justify-center gap-1.5 cursor-pointer">🟢 Mantener</button><div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-56 p-2 bg-gray-800 dark:bg-gray-700 text-white text-xs rounded shadow-xl z-50 text-center whitespace-normal font-normal">Tienes la cantidad ideal. No es necesario comprar más.<div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800 dark:border-t-gray-700"></div></div></div>`;
+                    accionPrincipalHtml = `
+                        <button onclick="event.stopPropagation(); openOffCanvas(${prod.idProducto})" class="w-full max-w-[130px] text-xs font-bold text-green-700 bg-green-100 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300 py-1.5 px-2.5 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-all" title="Inventario saludable. Ver detalle en Off-Canvas">
+                            🟢 Mantener
+                        </button>`;
                 }
 
-                let registrarBtn = `<button onclick="event.stopPropagation(); openSolicitudManualModal(${prod.idProducto})" class="w-full text-[11px] font-bold text-gray-700 bg-gray-100 hover:bg-blue-50 hover:text-blue-700 dark:bg-slate-800 dark:text-gray-300 dark:hover:bg-slate-700 dark:hover:text-blue-300 py-1 px-2 rounded transition-colors flex items-center justify-center gap-1 border border-gray-200 dark:border-gray-700 shadow-sm mt-1" title="Registrar solicitud manual para este producto">
-                    <i class="fa-solid fa-plus text-[10px]"></i> Registrar solicitud
-                </button>`;
-
-                // Construir especificaciones sutiles (Talla, Color, Marca) para evitar sobrecarga visual
+                // Construcción de Especificaciones secundarias (Talla, Color, Marca)
                 let specs = [];
-                if (prod.marca) specs.push(`<span class="text-[10px] text-gray-500 bg-gray-50 dark:bg-gray-900 px-1.5 py-0.5 rounded border border-gray-200/60 dark:border-gray-700/60 font-semibold">🏷️ ${prod.marca}</span>`);
-                if (prod.talla) specs.push(`<span class="text-[10px] text-gray-500 bg-gray-50 dark:bg-gray-900 px-1.5 py-0.5 rounded border border-gray-200/60 dark:border-gray-700/60 font-semibold">📏 Talla: ${prod.talla}</span>`);
-                if (prod.color) specs.push(`<span class="text-[10px] text-gray-500 bg-gray-50 dark:bg-gray-900 px-1.5 py-0.5 rounded border border-gray-200/60 dark:border-gray-700/60 font-semibold">🎨 ${prod.color}</span>`);
+                if (prod.marca) specs.push(`<span class="text-[10px] text-gray-500 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-200/60 dark:border-gray-700/60 font-semibold">🏷️ ${prod.marca}</span>`);
+                if (prod.talla) specs.push(`<span class="text-[10px] text-gray-500 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-200/60 dark:border-gray-700/60 font-semibold">📏 ${prod.talla}</span>`);
+                if (prod.color) specs.push(`<span class="text-[10px] text-gray-500 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-200/60 dark:border-gray-700/60 font-semibold">🎨 ${prod.color}</span>`);
                 let specsHtml = specs.length > 0 ? `<div class="flex gap-1 flex-wrap mt-1">${specs.join('')}</div>` : '';
 
+                // Construcción de Fila en exactamente 7 Columnas
                 tr.innerHTML = `
-                    <td class="py-4 px-4 font-mono font-bold text-xs">
-                        <span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded border border-gray-200 dark:border-gray-700 select-all inline-block">
-                            <i class="fa-solid fa-barcode mr-1 text-gray-400"></i>${prod.codigoBarras || '-'}
-                        </span>
-                    </td>
-                    <td class="py-4 px-4">
+                    <td class="py-3.5 px-4">
                         <div class="flex flex-col gap-1">
-                            <span class="text-base font-bold text-gray-900 dark:text-white leading-tight">${prod.nombre}</span>
-                            <div class="flex items-center gap-1.5 text-xs flex-wrap font-medium">
-                                <span class="text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-gray-200 dark:border-slate-700">${prod.categoria}</span>
-                                <span class="px-2 py-0.5 rounded bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-100 dark:border-purple-900/50 font-bold">${prod.contexto_producto}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-gray-900 dark:text-white leading-tight">${prod.nombre}</span>
+                                <span class="font-mono text-[11px] text-gray-500 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700">
+                                    ${prod.codigoBarras || '-'}
+                                </span>
                             </div>
                             ${specsHtml}
-                            <span class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium flex items-center gap-1.5" title="Este artículo ayuda a vender otros artículos de la tienda">
-                                <i class="fa-solid fa-diagram-project text-purple-500 dark:text-purple-400"></i>
-                                <span>${prod.reglas_vinculadas_texto}</span>
-                            </span>
+                            ${prod.reglas_vinculadas_texto ? `
+                                <span class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 font-medium flex items-center gap-1">
+                                    <i class="fa-solid fa-diagram-project text-purple-500 text-[10px]"></i>
+                                    <span>${prod.reglas_vinculadas_texto}</span>
+                                </span>` : ''}
                         </div>
                     </td>
-                    <td class="py-4 px-4 whitespace-nowrap text-center">
+                    <td class="py-3.5 px-4 whitespace-nowrap text-center">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-700">
+                            ${prod.categoria}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 whitespace-nowrap text-center">
                         ${generateAbcBadge(prod.abc, prod.ingresos_generados)}
                     </td>
-                    <td class="py-4 px-4 whitespace-nowrap text-center">
-                        <div class="relative group cursor-help inline-block">
-                            <div class="text-sm font-bold text-gray-800 dark:text-gray-200">${prod.margen}%</div>
-                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-56 p-2 bg-gray-800 dark:bg-gray-700 text-white text-xs rounded shadow-xl z-50 text-center whitespace-normal font-normal">
-                                Retorno: Por cada unidad vendida, ganas un ${prod.margen}% tras descontar el costo.
-                                <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800 dark:border-t-gray-700"></div>
+                    <td class="py-3.5 px-4 whitespace-nowrap text-center">
+                        <div class="text-base font-extrabold ${prod.stock <= 5 ? 'text-red-500' : 'text-gray-800 dark:text-gray-200'}">
+                            ${prod.stock} <span class="text-xs font-normal text-gray-400">uds</span>
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-4 whitespace-nowrap text-center max-w-[130px]">
+                        ${generateBadgeHtml(labelEstado, badgeEstado, ttEstado)}
+                    </td>
+                    <td class="py-3.5 px-4 whitespace-nowrap text-center">
+                        <div class="flex justify-center">
+                            ${accionPrincipalHtml}
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-4 whitespace-nowrap text-center">
+                        <div class="relative inline-block text-left context-menu-container">
+                            <button onclick="toggleContextMenu(${prod.idProducto}, event)" class="w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/60 text-gray-500 flex items-center justify-center transition-colors">
+                                <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
+                            </button>
+                            <div id="context-menu-${prod.idProducto}" class="hidden context-menu-dropdown absolute right-0 mt-1 w-48 rounded-xl bg-white dark:bg-gray-800 shadow-xl border border-gray-100 dark:border-gray-700 z-50 py-1 font-medium text-xs">
+                                <button onclick="event.stopPropagation(); closeAllDropdowns(); openSolicitudManualModal(${prod.idProducto})" class="w-full text-left px-4 py-2 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-gray-700/60 text-gray-700 dark:text-gray-200 flex items-center gap-2">
+                                    <i class="fa-solid fa-clipboard-question text-blue-500 w-4"></i> Registrar solicitud
+                                </button>
+                                <button onclick="event.stopPropagation(); closeAllDropdowns(); openEditProductModal(${prod.idProducto})" class="w-full text-left px-4 py-2 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-gray-700/60 text-gray-700 dark:text-gray-200 flex items-center gap-2">
+                                    <i class="fa-solid fa-pen-to-square text-amber-500 w-4"></i> Editar
+                                </button>
+                                <button onclick="event.stopPropagation(); closeAllDropdowns(); openOffCanvas(${prod.idProducto})" class="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/60 text-gray-700 dark:text-gray-200 flex items-center gap-2 border-t border-gray-100 dark:border-gray-700/50">
+                                    <i class="fa-solid fa-eye text-gray-400 w-4"></i> Ver detalle
+                                </button>
                             </div>
                         </div>
-                    </td>
-                    <td class="py-4 px-4 whitespace-nowrap text-center">
-                        <div class="text-lg font-bold ${prod.stock <= 5 ? 'text-red-500' : 'text-gray-700 dark:text-gray-300'}">${prod.stock}</div>
-                    </td>
-                    <td class="py-4 px-4 whitespace-nowrap text-center">
-                        ${diasRestantesHTML}
-                    </td>
-                    <td class="py-4 px-4 whitespace-nowrap text-center space-y-1.5 flex flex-col items-center max-w-[140px] mx-auto">
-                        ${generateBadgeHtml(labelEstado, badgeEstado, ttEstado)}
-                        ${generateBadgeHtml(labelRiesgo, badgeRiesgo, ttRiesgo)}
-                    </td>
-                    <td class="py-4 px-4 whitespace-nowrap text-center">
-                        <div class="flex flex-col gap-1 items-center max-w-[140px] mx-auto">
-                            ${accionBtn}
-                            ${registrarBtn}
-                        </div>
-                    </td>
-                    <td class="py-4 px-4 whitespace-nowrap text-center">
-                        <button onclick="event.stopPropagation(); openEditProductModal(${prod.idProducto})" class="px-2.5 py-1 text-xs font-semibold rounded text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors inline-flex items-center gap-1" title="Editar producto">
-                            <i class="fa-solid fa-pen-to-square"></i> Editar
-                        </button>
                     </td>
                 `;
                 
@@ -317,84 +439,17 @@ async function fetchAndRenderData() {
             });
         }
 
-        // 2. Actualizar Salud de Stock
-        const total = data.kpis.productos_activos;
-        const criticos = data.kpis.riesgo_alto_critico;
-        const healthScore = total > 0 ? Math.max(0, Math.round(((total - criticos) / total) * 100)) : 0;
-        kpiHealthScore.textContent = healthScore;
-        const kpiHealthSubtitle = document.getElementById('kpi-health-subtitle');
-        
-        if (healthScore >= 90) {
-            kpiHealthStatus.textContent = "Excelente";
-            kpiHealthStatus.className = "text-xs font-bold px-2 py-0.5 rounded text-green-700 bg-green-50 dark:bg-green-900/30 dark:text-green-300";
-            if (kpiHealthSubtitle) kpiHealthSubtitle.textContent = `Significa que el ${healthScore}% de tu catálogo fluye sin riesgo de quiebre.`;
-        } else if (healthScore >= 70) {
-            kpiHealthStatus.textContent = "Estable";
-            kpiHealthStatus.className = "text-xs font-bold px-2 py-0.5 rounded text-blue-700 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300";
-            if (kpiHealthSubtitle) kpiHealthSubtitle.textContent = `El inventario está controlado, pero hay un ${100 - healthScore}% de artículos que requieren vigilancia.`;
-        } else if (healthScore >= 50) {
-            kpiHealthStatus.textContent = "Requiere Atención";
-            kpiHealthStatus.className = "text-xs font-bold px-2 py-0.5 rounded text-orange-700 bg-orange-50 dark:bg-orange-900/30 dark:text-orange-300";
-            if (kpiHealthSubtitle) kpiHealthSubtitle.textContent = `Advertencia: El ${100 - healthScore}% de tu catálogo podría agotarse si no realizas reposiciones.`;
-        } else {
-            kpiHealthStatus.textContent = "Crítico";
-            kpiHealthStatus.className = "text-xs font-bold px-2 py-0.5 rounded text-red-700 bg-red-50 dark:bg-red-900/30 dark:text-red-300";
-            if (kpiHealthSubtitle) kpiHealthSubtitle.textContent = `¡Peligro! El ${100 - healthScore}% de tus productos están agotándose y perdiendo ventas potenciales.`;
+        // Actualizar indicador visual de filtro activo
+        updateActiveFilterBadge();
+
+        // Aplicar animación suave de resaltado de filas (2 segundos)
+        if (shouldHighlight) {
+            const rows = elTableBody.querySelectorAll('tr');
+            rows.forEach(r => r.classList.add('bg-amber-100/70', 'dark:bg-amber-900/30', 'transition-colors', 'duration-500'));
+            setTimeout(() => {
+                rows.forEach(r => r.classList.remove('bg-amber-100/70', 'dark:bg-amber-900/30'));
+            }, 2000);
         }
-
-        // 3. Renderizar Acciones Prioritarias (Grid en Tab Decisiones)
-        const accionesContainerGrid = document.getElementById('acciones-container-grid');
-        if (accionesContainerGrid) {
-            if (accionesRecomendadas.length > 0) {
-                accionesContainerGrid.innerHTML = accionesRecomendadas.map(a => `
-                    <div class="card p-5 border-l-4 ${a.borderColor} flex flex-col justify-between h-full hover:shadow-md transition-shadow">
-                        <div class="flex items-start gap-3 mb-4">
-                            <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${a.iconBg} ${a.iconColor} text-lg">
-                                <i class="fa-solid ${a.icon}"></i>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-gray-800 dark:text-white text-sm">${a.title}</h4>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-snug">${a.desc}</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-2 mt-auto">
-                            <button onclick="goToProduct(${a.id})" class="flex-1 py-1.5 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-xs font-semibold text-gray-700 dark:text-gray-300 transition-colors">Ver</button>
-                            ${a.rawAccion === 'EnProceso' ? 
-                                `<button onclick="window.location.href='/compras?tab=planificacion${a.idSolicitud ? '&hl_req=' + a.idSolicitud : ''}'" class="flex-[2] py-1.5 rounded ${a.btnBg} hover:opacity-90 text-xs font-semibold text-white transition-opacity shadow-sm flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-right-to-bracket"></i> ${a.btnText}</button>` :
-                                `<button onclick="openActionModal(${a.id}, '${a.rawAccion}')" class="flex-[2] py-1.5 rounded ${a.btnBg} hover:opacity-90 text-xs font-semibold text-white transition-opacity shadow-sm">${a.btnText || 'Resolver'}</button>`
-                            }
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                accionesContainerGrid.innerHTML = `
-                    <div class="card p-6 text-center text-gray-500 text-xs w-full col-span-full border border-dashed border-gray-200 dark:border-gray-700">
-                        <i class="fa-solid fa-circle-check text-4xl mb-3 text-green-500 opacity-80"></i>
-                        <p class="font-medium text-gray-700 dark:text-gray-300 text-lg">Todo está bajo control.</p>
-                        <p class="mt-1 text-sm">No hay acciones urgentes pendientes.</p>
-                    </div>
-                `;
-            }
-        }
-
-        // 4. Renderizar Insights Carrusel
-        insightTrack.innerHTML = '';
-        const insights = [];
-        if (data.kpis.stock_total > 0) insights.push({ icon: 'fa-boxes-stacked', color: 'text-blue-500', bg: 'bg-blue-100', text: `Stock total valorizado disponible para la venta.` });
-        if (criticos > 0) insights.push({ icon: 'fa-triangle-exclamation', color: 'text-red-500', bg: 'bg-red-100', text: `${criticos} productos requieren reposición inminente.` });
-        insights.push({ icon: 'fa-hand-holding-dollar', color: 'text-green-500', bg: 'bg-green-100', text: `Clasificación Pareto (ABC) aplicada al ${total} productos.` });
-
-        insights.forEach((ins, idx) => {
-            const el = document.createElement('div');
-            el.className = `w-full shrink-0 flex items-center gap-4 insight-slide absolute inset-0 transition-opacity duration-500 ${idx === 0 ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`;
-            el.innerHTML = `
-                <div class="h-10 w-10 rounded-full ${ins.bg} dark:bg-gray-700 ${ins.color} flex items-center justify-center text-lg shrink-0">
-                    <i class="fa-solid ${ins.icon}"></i>
-                </div>
-                <p class="text-gray-700 dark:text-gray-200 font-medium text-sm md:text-base leading-tight">${ins.text}</p>
-            `;
-            insightTrack.appendChild(el);
-        });
 
     } catch (e) {
         console.error("Error obteniendo datos del inventario", e);
@@ -404,37 +459,7 @@ async function fetchAndRenderData() {
     }
 }
 
-// Variables globales para el carrusel
-let currentInsightIndex = 0;
 
-function showInsight(index) {
-    const slides = document.querySelectorAll('.insight-slide');
-    if (slides.length === 0) return;
-    
-    if (index >= slides.length) currentInsightIndex = 0;
-    else if (index < 0) currentInsightIndex = slides.length - 1;
-    else currentInsightIndex = index;
-
-    slides.forEach((slide, i) => {
-        if (i === currentInsightIndex) {
-            slide.classList.replace('opacity-0', 'opacity-100');
-            slide.classList.replace('z-0', 'z-10');
-            slide.classList.remove('pointer-events-none');
-        } else {
-            slide.classList.replace('opacity-100', 'opacity-0');
-            slide.classList.replace('z-10', 'z-0');
-            slide.classList.add('pointer-events-none');
-        }
-    });
-}
-
-function nextInsight() {
-    showInsight(currentInsightIndex + 1);
-}
-
-function prevInsight() {
-    showInsight(currentInsightIndex - 1);
-}
 
 // NUEVAS FUNCIONES DE INTERACTIVIDAD (MODALES, TOASTS Y OFFCANVAS)
 
@@ -449,125 +474,7 @@ function scrollToProduct(id) {
     }
 }
 
-let currentActionContext = null;
 
-function openActionModal(id, accion) {
-    const prod = window.inventoryDataMap[id];
-    if (!prod) return;
-    
-    currentActionContext = { id, accion, prod };
-    
-    const modal = document.getElementById('action-modal');
-    const title = document.getElementById('action-modal-title');
-    const subtitle = document.getElementById('action-modal-subtitle');
-    const body = document.getElementById('action-modal-body');
-    const icon = document.getElementById('action-modal-icon');
-    const iconBg = document.getElementById('action-modal-icon-bg');
-    const btn = document.getElementById('action-modal-btn');
-    
-    title.textContent = accion === 'Reponer' ? 'Orden de Compra' : (accion === 'Liquidar' ? 'Crear Promoción' : 'Mantener Inventario');
-    subtitle.textContent = prod.nombre;
-    
-    if (accion === 'Reponer') {
-        icon.className = "fa-solid fa-truck-ramp-box text-lg text-red-600";
-        iconBg.className = "w-10 h-10 rounded-full flex items-center justify-center bg-red-100 dark:bg-red-900/50";
-        btn.className = "px-4 py-2 rounded text-sm font-bold text-white shadow-sm transition-colors bg-red-600 hover:bg-red-700";
-        btn.textContent = "Generar Orden (Stub)";
-        
-        body.innerHTML = `
-            <div class="space-y-3 text-sm">
-                <div class="flex justify-between border-b pb-2 border-gray-200 dark:border-gray-700">
-                    <span class="text-gray-500">Stock Actual</span>
-                    <span class="font-bold">${prod.stock} uds</span>
-                </div>
-                <div class="flex justify-between border-b pb-2 border-gray-200 dark:border-gray-700">
-                    <span class="text-gray-500">Días para Quiebre</span>
-                    <span class="font-bold text-red-500">${prod.dias_quiebre || 0} días</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-500">Sugerencia de Compra</span>
-                    <span class="font-bold text-blue-600">+${Math.max(10, Math.round(prod.stock * 1.5))} uds</span>
-                </div>
-            </div>
-        `;
-    } else if (accion === 'Liquidar') {
-        icon.className = "fa-solid fa-tag text-lg text-orange-600";
-        iconBg.className = "w-10 h-10 rounded-full flex items-center justify-center bg-orange-100 dark:bg-orange-900/50";
-        btn.className = "px-4 py-2 rounded text-sm font-bold text-white shadow-sm transition-colors bg-orange-500 hover:bg-orange-600";
-        btn.textContent = "Aplicar Descuento (Stub)";
-        
-        body.innerHTML = `
-            <div class="space-y-3 text-sm">
-                <div class="flex justify-between border-b pb-2 border-gray-200 dark:border-gray-700">
-                    <span class="text-gray-500">Stock Inmovilizado</span>
-                    <span class="font-bold">${prod.stock} uds</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-500">Margen Actual</span>
-                    <span class="font-bold text-green-600">${prod.margen}%</span>
-                </div>
-            </div>
-        `;
-    } else {
-        icon.className = "fa-solid fa-circle-check text-lg text-green-600";
-        iconBg.className = "w-10 h-10 rounded-full flex items-center justify-center bg-green-100 dark:bg-green-900/50";
-        btn.className = "px-4 py-2 rounded text-sm font-bold text-white shadow-sm transition-colors bg-green-600 hover:bg-green-700";
-        btn.textContent = "Aceptar";
-        
-        body.innerHTML = `
-            <div class="space-y-3 text-sm text-center">
-                <p class="text-gray-600 dark:text-gray-300">El inventario de este producto está en estado óptimo.</p>
-            </div>
-        `;
-    }
-    
-    modal.classList.remove('hidden');
-    // slight delay for transition
-    setTimeout(() => modal.classList.remove('opacity-0'), 10);
-}
-
-function closeActionModal() {
-    const modal = document.getElementById('action-modal');
-    modal.classList.add('opacity-0');
-    setTimeout(() => modal.classList.add('hidden'), 300);
-}
-
-async function executeStubAction() {
-    if (!currentActionContext) return;
-    
-    if (currentActionContext.accion === 'Reponer') {
-        const btn = document.getElementById('action-modal-btn');
-        btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando...`;
-        btn.disabled = true;
-        
-        try {
-            const sugCompra = Math.max(10, Math.round(currentActionContext.prod.stock * 1.5));
-            const payload = {
-                idProducto: currentActionContext.prod.idProducto,
-                cantidad_sugerida: sugCompra,
-                motivo: "Reposición manual desde Inventario"
-            };
-            
-            const res = await ApiClient.post('/compras/solicitud', payload);
-            showToast(`Solicitud enviada, redirigiendo a Compras...`, 'success');
-            
-            setTimeout(() => {
-                window.location.href = `/compras?tab=planificacion&hl_req=${res.idSolicitud}`;
-            }, 800);
-            
-        } catch (e) {
-            showToast("Error creando solicitud: " + e.message, 'error');
-        } finally {
-            closeActionModal();
-            closeOffCanvas();
-        }
-        return;
-    }
-    
-    showToast(`Próximamente: Integración de ${currentActionContext.accion} para ${currentActionContext.prod.nombre}`, 'info');
-    closeActionModal();
-    closeOffCanvas();
-}
 
 function showToast(message, type='info') {
     const container = document.getElementById('toast-container');
@@ -587,6 +494,7 @@ function showToast(message, type='info') {
     }, 3000);
 }
 
+// PANEL LATERAL OFFCANVAS ENRIQUECIDO
 function openOffCanvas(id) {
     const prod = window.inventoryDataMap[id];
     if (!prod) return;
@@ -597,67 +505,94 @@ function openOffCanvas(id) {
     
     title.textContent = prod.nombre;
     
+    // Especificaciones
+    let specs = [];
+    if (prod.marca) specs.push(`<span class="text-xs font-semibold text-gray-600 bg-gray-100 dark:bg-gray-800 dark:text-gray-300 px-2 py-0.5 rounded">🏷️ Marca: ${prod.marca}</span>`);
+    if (prod.talla) specs.push(`<span class="text-xs font-semibold text-gray-600 bg-gray-100 dark:bg-gray-800 dark:text-gray-300 px-2 py-0.5 rounded">📏 Talla: ${prod.talla}</span>`);
+    if (prod.color) specs.push(`<span class="text-xs font-semibold text-gray-600 bg-gray-100 dark:bg-gray-800 dark:text-gray-300 px-2 py-0.5 rounded">🎨 Color: ${prod.color}</span>`);
+
     content.innerHTML = `
         <div class="space-y-6">
-            <div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                <h4 class="text-xs font-bold text-gray-500 uppercase mb-3">Resumen de Negocio</h4>
+            <!-- Header con código barras -->
+            <div class="flex items-center justify-between">
+                <span class="font-mono text-xs font-bold text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 select-all">
+                    <i class="fa-solid fa-barcode mr-1"></i>${prod.codigoBarras || 'Sin SKU'}
+                </span>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                    Cat: ${prod.categoria}
+                </span>
+            </div>
+
+            ${specs.length > 0 ? `<div class="flex gap-2 flex-wrap">${specs.join('')}</div>` : ''}
+
+            <!-- Resumen de Negocio (Métricas clave movidas de la tabla) -->
+            <div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700/60">
+                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Métricas Financieras y Rotación</h4>
                 <div class="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                        <span class="block text-gray-500 text-xs">Stock Físico</span>
-                        <span class="font-bold text-lg">${prod.stock}</span>
+                        <span class="block text-gray-500 text-xs">Stock Disponible</span>
+                        <span class="font-black text-lg ${prod.stock <= 5 ? 'text-red-500' : 'text-gray-800 dark:text-white'}">${prod.stock} uds</span>
                     </div>
                     <div>
-                        <span class="block text-gray-500 text-xs">Margen</span>
-                        <span class="font-bold text-lg text-green-600">${prod.margen}%</span>
+                        <span class="block text-gray-500 text-xs">Margen de Ganancia</span>
+                        <span class="font-black text-lg text-green-600 dark:text-green-400">${prod.margen}%</span>
                     </div>
                     <div>
-                        <span class="block text-gray-500 text-xs">Días Restantes</span>
-                        <span class="font-bold text-lg ${prod.dias_quiebre < 7 ? 'text-red-500' : ''}">${prod.dias_quiebre || '-'}</span>
+                        <span class="block text-gray-500 text-xs">Días para Quiebre</span>
+                        <span class="font-bold text-base ${prod.dias_quiebre < 7 ? 'text-red-500' : 'text-gray-700 dark:text-gray-300'}">${prod.dias_quiebre ? prod.dias_quiebre + ' días' : 'Sin datos'}</span>
                     </div>
                     <div>
-                        <span class="block text-gray-500 text-xs">Rotación ABC</span>
-                        <span class="font-bold text-lg">${prod.abc}</span>
+                        <span class="block text-gray-500 text-xs">Clasificación ABC</span>
+                        <span class="font-bold text-base text-blue-600 dark:text-blue-400">Clase ${prod.abc}</span>
                     </div>
                 </div>
             </div>
             
+            <!-- Diagnóstico Operacional -->
             <div>
-                <h4 class="text-xs font-bold text-gray-500 uppercase mb-3">Diagnóstico Operacional</h4>
-                <div class="space-y-3">
-                    <div class="p-3 border border-gray-100 dark:border-gray-700 rounded flex gap-3 items-center">
-                        <i class="fa-solid fa-heart-pulse text-gray-400"></i>
+                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Diagnóstico Operacional</h4>
+                <div class="space-y-2.5">
+                    <div class="p-3 border border-gray-100 dark:border-gray-700 rounded-lg flex gap-3 items-center bg-white dark:bg-gray-800/40">
+                        <i class="fa-solid fa-heart-pulse text-blue-500"></i>
                         <div>
-                            <span class="block font-medium text-sm">Estado Físico</span>
+                            <span class="block font-semibold text-xs text-gray-800 dark:text-gray-200">Estado Físico</span>
                             <span class="text-xs text-gray-500">${prod.estado_fisico}</span>
                         </div>
                     </div>
-                    <div class="p-3 border border-gray-100 dark:border-gray-700 rounded flex gap-3 items-center">
-                        <i class="fa-solid fa-chart-line text-gray-400"></i>
+                    <div class="p-3 border border-gray-100 dark:border-gray-700 rounded-lg flex gap-3 items-center bg-white dark:bg-gray-800/40">
+                        <i class="fa-solid fa-chart-line text-purple-500"></i>
                         <div>
-                            <span class="block font-medium text-sm">Riesgo Futuro</span>
+                            <span class="block font-semibold text-xs text-gray-800 dark:text-gray-200">Riesgo Futuro</span>
                             <span class="text-xs text-gray-500">${prod.riesgo}</span>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Venta Cruzada (Reglas) -->
+            <div>
+                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Venta Cruzada</h4>
+                <div class="p-3 rounded-lg bg-purple-50/60 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/50 text-xs text-purple-800 dark:text-purple-300 font-medium">
+                    <i class="fa-solid fa-diagram-project mr-1 text-purple-600"></i>
+                    ${prod.reglas_vinculadas_texto || 'Sin patrones de compra combinada registrados.'}
+                </div>
+            </div>
             
-            <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
-                ${prod.accion === 'Reponer' && prod.tiene_solicitud_pendiente ? `
-                    <button disabled class="w-full bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-500 py-2.5 text-sm shadow cursor-not-allowed font-bold rounded flex items-center justify-center gap-1.5 border border-gray-200 dark:border-slate-700">
-                        ⏳ Reposición en Proceso
-                    </button>
-                ` : `
-                    <button onclick="openActionModal(${prod.idProducto}, '${prod.accion}')" class="w-full btn-primary py-2 text-sm shadow">
-                        Ejecutar ${prod.accion}
-                    </button>
-                `}
+            <!-- Botones de Acción Directa -->
+            <div class="pt-4 border-t border-gray-100 dark:border-gray-700 flex gap-3">
+                <button onclick="closeOffCanvas(); openSolicitudManualModal(${prod.idProducto})" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-3 rounded-lg text-xs shadow transition-colors flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-clipboard-question"></i> Registrar solicitud
+                </button>
+                <button onclick="closeOffCanvas(); openEditProductModal(${prod.idProducto})" class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-xs font-bold transition-colors">
+                    Editar
+                </button>
             </div>
         </div>
     `;
     
     panel.classList.remove('translate-x-full');
     
-    // Fetch and render historial
+    // Cargar historial de abastecimiento
     cargarHistorialAbastecimiento(prod.idProducto);
 }
 
@@ -665,14 +600,12 @@ async function cargarHistorialAbastecimiento(idProducto) {
     const containerId = 'historial-abastecimiento-container';
     const content = document.getElementById('offcanvas-content');
     
-    // Create container if it doesn't exist
     let histContainer = document.getElementById(containerId);
     if (!histContainer) {
         histContainer = document.createElement('div');
         histContainer.id = containerId;
         histContainer.className = "mt-6";
         
-        // Insert before the action button
         const actionBtnDiv = content.querySelector('.pt-4.border-t');
         if (actionBtnDiv) {
             content.querySelector('.space-y-6').insertBefore(histContainer, actionBtnDiv);
@@ -681,14 +614,14 @@ async function cargarHistorialAbastecimiento(idProducto) {
         }
     }
     
-    histContainer.innerHTML = `<h4 class="text-xs font-bold text-gray-500 uppercase mb-3"><i class="fa-solid fa-truck-fast"></i> Historial de Abastecimiento</h4><div class="text-center text-xs text-gray-400 py-2">Consultando historial...</div>`;
+    histContainer.innerHTML = `<h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3"><i class="fa-solid fa-truck-fast"></i> Historial de Abastecimiento</h4><div class="text-center text-xs text-gray-400 py-2">Consultando historial...</div>`;
     
     try {
         const res = await ApiClient.get(`/compras/historial/${idProducto}`);
         const historial = res.historial || [];
         
         if (historial.length === 0) {
-            histContainer.innerHTML = `<h4 class="text-xs font-bold text-gray-500 uppercase mb-3"><i class="fa-solid fa-truck-fast"></i> Historial de Abastecimiento</h4><div class="p-3 border border-gray-100 dark:border-gray-700 rounded text-center text-xs text-gray-500">No hay registros de compras para este producto.</div>`;
+            histContainer.innerHTML = `<h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3"><i class="fa-solid fa-truck-fast"></i> Historial de Abastecimiento</h4><div class="p-3 border border-gray-100 dark:border-gray-700 rounded-lg text-center text-xs text-gray-500">No hay registros de compras para este producto.</div>`;
             return;
         }
         
@@ -697,7 +630,7 @@ async function cargarHistorialAbastecimiento(idProducto) {
             let estadoClass = h.estado === 'Completada' ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300';
             
             return `
-            <div class="p-3 border-b border-gray-100 dark:border-gray-700 last:border-0 flex justify-between items-center bg-white dark:bg-gray-800 rounded mb-2 shadow-sm">
+            <div class="p-3 border-b border-gray-100 dark:border-gray-700 last:border-0 flex justify-between items-center bg-white dark:bg-gray-800 rounded-lg mb-2 shadow-sm">
                 <div>
                     <div class="text-xs font-bold text-gray-800 dark:text-gray-200">${h.proveedor}</div>
                     <div class="text-[10px] text-gray-500">${fechaFormateada} • ${h.cantidad} uds</div>
@@ -706,11 +639,11 @@ async function cargarHistorialAbastecimiento(idProducto) {
             </div>`;
         }).join('');
         
-        histContainer.innerHTML = `<h4 class="text-xs font-bold text-gray-500 uppercase mb-3"><i class="fa-solid fa-truck-fast"></i> Historial de Abastecimiento</h4><div>${historyHTML}</div>`;
+        histContainer.innerHTML = `<h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3"><i class="fa-solid fa-truck-fast"></i> Historial de Abastecimiento</h4><div>${historyHTML}</div>`;
         
     } catch (e) {
         console.error("Error cargando historial", e);
-        histContainer.innerHTML = `<h4 class="text-xs font-bold text-gray-500 uppercase mb-3"><i class="fa-solid fa-truck-fast"></i> Historial de Abastecimiento</h4><div class="text-center text-xs text-red-500 py-2">Error cargando historial</div>`;
+        histContainer.innerHTML = `<h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3"><i class="fa-solid fa-truck-fast"></i> Historial de Abastecimiento</h4><div class="text-center text-xs text-red-500 py-2">Error cargando historial</div>`;
     }
 }
 
@@ -719,9 +652,9 @@ function closeOffCanvas() {
     panel.classList.add('translate-x-full');
 }
 
-// Event Listeners
+// Event Listeners principales
 document.addEventListener('DOMContentLoaded', () => {
-    loadCategorias().then(() => fetchAndRenderData());
+    loadCategorias().then(() => refreshAllData());
     
     const debouncedSearch = debounce(() => {
         fetchAndRenderData();
@@ -730,48 +663,46 @@ document.addEventListener('DOMContentLoaded', () => {
     elSearchInput.addEventListener('input', debouncedSearch);
     elFilterCategoria.addEventListener('change', fetchAndRenderData);
     elFilterEstado.addEventListener('change', fetchAndRenderData);
-
-    // Rotación automática del carrusel cada 5 segundos
-    setInterval(nextInsight, 5000);
 });
 
-// CONTROLADOR DE ESTADO VISUAL (PESTAÑAS)
-function switchTab(tabId) {
-    const tabProductos = document.getElementById('tab-productos');
-    const tabDecisiones = document.getElementById('tab-decisiones');
-    const btnProductos = document.getElementById('btn-tab-productos');
-    const btnDecisiones = document.getElementById('btn-tab-decisiones');
-    
-    if (!tabProductos || !tabDecisiones) return;
-    
-    if (tabId === 'productos') {
-        tabProductos.classList.remove('hidden');
-        tabDecisiones.classList.add('hidden');
-        
-        btnProductos.className = "px-6 py-3 font-semibold text-amber-500 border-b-2 border-amber-500 transition-colors flex items-center gap-2";
-        btnDecisiones.className = "px-6 py-3 font-semibold text-gray-400 hover:text-gray-700 dark:hover:text-white border-b-2 border-transparent transition-colors flex items-center gap-2";
-    } else {
-        tabProductos.classList.add('hidden');
-        tabDecisiones.classList.remove('hidden');
-        
-        btnDecisiones.className = "px-6 py-3 font-semibold text-amber-500 border-b-2 border-amber-500 transition-colors flex items-center gap-2";
-        btnProductos.className = "px-6 py-3 font-semibold text-gray-400 hover:text-gray-700 dark:hover:text-white border-b-2 border-transparent transition-colors flex items-center gap-2";
-    }
-}
-
 function goToProduct(id) {
-    switchTab('productos');
-    setTimeout(() => {
-        scrollToProduct(id);
-    }, 50);
+    scrollToProduct(id);
 }
 
 // FUNCIONES DE FILTROS Y NUEVO PRODUCTO EN BD
+
+function filtrarPorEstadoQuick(estado) {
+    elSearchInput.value = '';
+    elFilterCategoria.value = '';
+    elFilterEstado.value = estado;
+    fetchAndRenderData(true);
+}
+
+function updateActiveFilterBadge() {
+    const container = document.getElementById('active-filter-badge-container');
+    const textEl = document.getElementById('active-filter-badge-text');
+    if (!container || !textEl) return;
+
+    if (elFilterEstado.value) {
+        textEl.textContent = `Estado ${elFilterEstado.value.toLowerCase()}`;
+        container.classList.remove('hidden');
+    } else if (elFilterCategoria.value && elFilterCategoria.options[elFilterCategoria.selectedIndex]) {
+        textEl.textContent = `Categoría: ${elFilterCategoria.options[elFilterCategoria.selectedIndex].text}`;
+        container.classList.remove('hidden');
+    } else if (elSearchInput.value.trim()) {
+        textEl.textContent = `Búsqueda: "${elSearchInput.value.trim()}"`;
+        container.classList.remove('hidden');
+    } else {
+        container.classList.add('hidden');
+    }
+}
 
 function clearFilters() {
     elSearchInput.value = '';
     elFilterCategoria.value = '';
     elFilterEstado.value = '';
+    const badgeContainer = document.getElementById('active-filter-badge-container');
+    if (badgeContainer) badgeContainer.classList.add('hidden');
     fetchAndRenderData();
 }
 
@@ -880,9 +811,9 @@ async function saveNewProduct(e) {
         };
 
         const res = await ApiClient.post('/inventario/producto', payload);
-        showToast(`✅ ${res.message || 'Producto registrado correctamente.'}`, 'success');
+        showToast('✅ Producto registrado correctamente.', 'success');
         closeNewProductModal();
-        fetchAndRenderData();
+        await refreshAllData();
     } catch (err) {
         console.error("Error registrando producto", err);
         showToast(`❌ ${err.message || 'Error guardando producto en la BD'}`, 'info');
@@ -954,9 +885,9 @@ async function saveEditProduct(e) {
         };
 
         const res = await ApiClient.put(`/inventario/producto/${idProduct}`, payload);
-        showToast(`✅ ${res.message || 'Producto actualizado en la BD.'}`, 'success');
+        showToast('✅ Producto actualizado correctamente.', 'success');
         closeEditProductModal();
-        fetchAndRenderData();
+        await refreshAllData();
     } catch (err) {
         console.error("Error editando producto", err);
         showToast(`❌ ${err.message || 'No se pudo actualizar el producto'}`, 'info');
@@ -983,10 +914,14 @@ function openSolicitudManualModal(idProduct) {
     if (!modal) return;
 
     document.getElementById('sol-prod-id').value = prod.idProducto;
-    document.getElementById('sol-prod-nombre-display').textContent = `${prod.nombre} (${prod.codigoBarras !== '-' ? prod.codigoBarras : 'Sin SKU'})`;
+    document.getElementById('sol-prod-nombre-display').textContent = `${prod.nombre} (${prod.codigoBarras && prod.codigoBarras !== '-' ? prod.codigoBarras : 'Sin SKU'})`;
 
-    // Cantidad sugerida por defecto
-    const sugVal = prod.accion === 'Reponer' ? Math.max(1, Math.round(prod.stock * 1.5) || 1) : 1;
+    const sugVal = prod.stock <= 5 ? Math.max(10, Math.round((prod.stock || 1) * 1.5)) : 10;
+    const elSugDisplay = document.getElementById('sol-cantidad-sugerida-display');
+    if (elSugDisplay) {
+        elSugDisplay.innerHTML = `<i class="fa-solid fa-calculator text-xs"></i> <span>${sugVal} uds (basado en demanda)</span>`;
+    }
+    
     document.getElementById('sol-cantidad').value = sugVal;
 
     const selectMotivo = document.getElementById('sol-motivo');
@@ -997,6 +932,12 @@ function openSolicitudManualModal(idProduct) {
 
     const inputOtro = document.getElementById('sol-motivo-otro');
     if (inputOtro) inputOtro.value = "";
+
+    const elProv = document.getElementById('sol-proveedor');
+    if (elProv) elProv.value = "";
+
+    const elObs = document.getElementById('sol-observaciones');
+    if (elObs) elObs.value = "";
 
     modal.classList.remove('hidden');
     setTimeout(() => modal.classList.remove('opacity-0'), 10);
@@ -1014,6 +955,8 @@ async function saveSolicitudManual(e) {
     const idProducto = parseInt(document.getElementById('sol-prod-id').value);
     const cantidad = parseInt(document.getElementById('sol-cantidad').value);
     const selectMotivo = document.getElementById('sol-motivo').value;
+    const proveedor = document.getElementById('sol-proveedor')?.value.trim() || '';
+    const observaciones = document.getElementById('sol-observaciones')?.value.trim() || '';
 
     let motivoFinal = selectMotivo;
     if (selectMotivo === '__OTRO__') {
@@ -1023,6 +966,13 @@ async function saveSolicitudManual(e) {
             showToast('Por favor especifica el motivo de la solicitud', 'info');
             return;
         }
+    }
+
+    if (proveedor) {
+        motivoFinal += ` [Proveedor: ${proveedor}]`;
+    }
+    if (observaciones) {
+        motivoFinal += ` - Obs: ${observaciones}`;
     }
 
     if (isNaN(idProducto) || isNaN(cantidad) || cantidad <= 0) {
@@ -1039,9 +989,9 @@ async function saveSolicitudManual(e) {
         };
 
         const res = await ApiClient.post('/compras/solicitud', payload);
-        showToast(`✅ Solicitud de compra creada (Origen: Manual)`, 'success');
+        showToast('✅ Solicitud de compra creada correctamente', 'success');
         closeSolicitudManualModal();
-        fetchAndRenderData();
+        await refreshAllData();
     } catch (err) {
         console.error("Error registrando solicitud manual", err);
         showToast(`❌ ${err.message || 'No se pudo guardar la solicitud'}`, 'info');
