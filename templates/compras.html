@@ -34,13 +34,13 @@
             <div class="lg:col-span-7 flex flex-col gap-4 h-full overflow-hidden">
                 
                 <!-- Tarjeta Buscador Catálogo -->
-                <div class="card flex flex-col shrink-0 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                <div class="card flex flex-col shrink-0 max-w-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
                     <div class="p-3 shrink-0">
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <i class="fa-solid fa-magnifying-glass text-gray-400 dark:text-gray-400"></i>
                             </div>
-                            <input type="text" id="search-input" placeholder="Buscar cualquier producto del catálogo para agregar..." 
+                            <input type="text" id="search-input" placeholder="Buscar producto del catálogo..." 
                                 class="input-base w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-800">
                         </div>
                     </div>
@@ -52,14 +52,13 @@
                 <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto custom-scrollbar pr-1">
                     
                     <!-- COLUMNA IZQUIERDA: Solicitudes Manuales -->
-                    <div class="card flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm h-full">
+                    <div class="card flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm h-auto">
                         <div class="p-3 border-b border-gray-200 dark:border-gray-700 bg-blue-50/60 dark:bg-blue-950/30 shrink-0 flex items-center gap-2">
                             <div class="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs shrink-0 font-bold">
                                 <i class="fa-solid fa-user-pen"></i>
                             </div>
                             <div>
                                 <h2 class="font-bold text-gray-800 dark:text-gray-100 text-xs">Solicitudes Manuales</h2>
-                                <p class="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Creadas manualmente desde Inventario</p>
                             </div>
                         </div>
                         <div class="p-3 flex flex-col gap-3 flex-1 overflow-y-auto" id="solicitudes-manuales-chips">
@@ -68,14 +67,13 @@
                     </div>
 
                     <!-- COLUMNA DERECHA: Sugerencias IA -->
-                    <div class="card flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm h-full">
+                    <div class="card flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm h-auto">
                         <div class="p-3 border-b border-gray-200 dark:border-gray-700 bg-indigo-50/60 dark:bg-indigo-950/30 shrink-0 flex items-center gap-2">
                             <div class="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs shrink-0 font-bold">
                                 <i class="fa-solid fa-robot"></i>
                             </div>
                             <div>
                                 <h2 class="font-bold text-gray-800 dark:text-gray-100 text-xs">Sugerencias del Sistema</h2>
-                                <p class="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Alertas de quiebre e Inteligencia Activa</p>
                             </div>
                         </div>
                         <div class="p-3 flex flex-col gap-3 flex-1 overflow-y-auto" id="sugerencias-ia-chips">
@@ -91,14 +89,6 @@
                 <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/90 shrink-0">
                     <div>
                         <h2 class="font-bold text-gray-800 dark:text-gray-100 text-base">Manifiesto Activo</h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium" id="fecha-actual">Borrador</p>
-                    </div>
-                    <div class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
-                        <span class="relative flex h-2 w-2 mr-2 inline-block">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                        </span>
-                        EN BORRADOR
                     </div>
                 </div>
 
@@ -131,12 +121,8 @@
                         </tbody>
                     </table>
                     
-                    <div id="cart-empty" class="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-white dark:bg-gray-800 z-0">
-                        <div class="w-20 h-20 bg-gray-100 dark:bg-gray-700/50 rounded-full flex items-center justify-center mb-3">
-                            <i class="fa-solid fa-file-invoice text-3xl text-gray-400 dark:text-gray-500"></i>
-                        </div>
-                        <h3 class="text-gray-700 dark:text-gray-200 font-bold text-base mb-1">Borrador Vacío</h3>
-                        <p class="text-gray-500 dark:text-gray-400 text-sm max-w-xs leading-relaxed">Añade productos desde el catálogo para iniciar la planificación.</p>
+                    <div id="cart-empty" class="p-8 text-center bg-white dark:bg-gray-800">
+                        <p class="text-xs text-gray-400 dark:text-gray-500 italic">Borrador vacío. Busca un producto o agrega una solicitud.</p>
                     </div>
                 </div>
 
@@ -228,21 +214,56 @@
     </div>
 </div>
 
-<!-- OFF-CANVAS HISTORIAL (Read-Only) -->
-<div id="offcanvas-historial" class="fixed inset-y-0 right-0 w-96 max-w-full bg-white dark:bg-gray-800 shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col border-l border-gray-200 dark:border-gray-700">
-    <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center shrink-0">
-        <h2 id="oc-historial-title" class="font-bold text-gray-800 dark:text-white">Orden #---</h2>
-        <button onclick="closeOffCanvasHistorial()" class="text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 transition-colors w-8 h-8 rounded-full hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center justify-center">
-            <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-    </div>
-    <div id="oc-historial-content" class="p-4 flex-1 overflow-y-auto">
-        <!-- JS renderiza el contenido de sólo lectura aquí -->
+<!-- MODAL 1: DETALLES DE ORDEN / HISTORIAL -->
+<div id="modal-detalle-orden" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden transform scale-95 transition-transform duration-200 border border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center shrink-0">
+            <h3 id="modal-detalle-title" class="font-bold text-gray-800 dark:text-white text-base">Orden #---</h3>
+            <button onclick="cerrarModalDetalleOrden()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors w-8 h-8 rounded-full flex items-center justify-center">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        <div id="modal-detalle-content" class="p-6 overflow-y-auto flex-1">
+            <!-- JS renderiza detalles aquí -->
+        </div>
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-end shrink-0">
+            <button onclick="cerrarModalDetalleOrden()" class="px-5 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold text-xs rounded-xl transition-colors">
+                Cerrar
+            </button>
+        </div>
     </div>
 </div>
 
-<!-- Overlay oscuro para Off-Canvas -->
-<div id="offcanvas-overlay" onclick="closeOffCanvasHistorial()" class="fixed inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm z-40 hidden transition-opacity opacity-0"></div>
+<!-- MODAL 2: RECEPCIÓN FÍSICA DE MERCADERÍA -->
+<div id="modal-recepcion-fisica" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden transform scale-95 transition-transform duration-200 border border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-green-50/60 dark:bg-green-950/30 flex justify-between items-center shrink-0">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 flex items-center justify-center text-sm font-bold">
+                    <i class="fa-solid fa-boxes-packing"></i>
+                </div>
+                <div>
+                    <h3 id="modal-recepcion-title" class="font-bold text-gray-800 dark:text-white text-base">Recibir Orden #---</h3>
+                    <p id="modal-recepcion-subtitle" class="text-xs text-gray-500 dark:text-gray-400"></p>
+                </div>
+            </div>
+            <button onclick="cerrarModalRecepcionFisica()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors w-8 h-8 rounded-full flex items-center justify-center">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        <div id="modal-recepcion-body" class="p-6 overflow-y-auto flex-1 space-y-4">
+            <!-- JS renderiza el formulario de recepción aquí -->
+        </div>
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3 shrink-0">
+            <button onclick="cerrarModalRecepcionFisica()" class="px-5 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold text-xs rounded-xl transition-colors">
+                Cancelar
+            </button>
+            <button id="btn-confirmar-recepcion" onclick="confirmarRecepcionFisica()" class="px-5 py-2 bg-green-600 hover:bg-green-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2">
+                <i class="fa-solid fa-circle-check"></i> Confirmar Recepción
+            </button>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 

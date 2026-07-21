@@ -212,16 +212,35 @@ if(searchInput) {
     searchInput.addEventListener('input', debounce(performSearch, 300));
 }
 
+let sugerenciasAnaliticasIA = [];
+
 // -------------------------------------------------------------
 // SOLICITUDES SEPARADAS (MANUALES VS IA)
 // -------------------------------------------------------------
 async function cargarSolicitudesPendientes() {
     try {
-        const res = await ApiClient.get('/compras/solicitudes/pendientes');
-        solicitudesOriginales = res.solicitudes || [];
+        const [resSol, resSug] = await Promise.allSettled([
+            ApiClient.get('/compras/solicitudes/pendientes'),
+            ApiClient.get('/compras/sugerencias')
+        ]);
+
+        if (resSol.status === 'fulfilled') {
+            solicitudesOriginales = resSol.value.solicitudes || [];
+        }
+
+        if (resSug.status === 'fulfilled') {
+            const dataSug = resSug.value;
+            sugerenciasAnaliticasIA = dataSug.sugerencias || [];
+            
+            // Sugerir proveedor principal si no hay uno seleccionado
+            if (dataSug.proveedorSugerido && selProveedor && (!selProveedor.value || selProveedor.value === "")) {
+                selProveedor.value = dataSug.proveedorSugerido;
+            }
+        }
+
         renderSolicitudes();
     } catch (e) {
-        console.error("Error cargando solicitudes", e);
+        console.error("Error cargando solicitudes y sugerencias IA", e);
     }
 }
 
@@ -249,13 +268,36 @@ function renderSolicitudesCard(s) {
     `;
 }
 
+function renderSugerenciaIACard(s) {
+    const itemEnOrden = orderItems.find(i => i.idProducto === s.idProducto);
+    let actionBtn = "";
+    
+    if (itemEnOrden) {
+        actionBtn = `<button class="w-full py-2 mt-2 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-bold text-xs rounded-lg flex items-center justify-center gap-2 cursor-not-allowed border border-green-200 dark:border-green-800" disabled><i class="fa-solid fa-circle-check"></i> En Borrador</button>`;
+    } else {
+        actionBtn = `<button onclick='addToOrder({idProducto: ${s.idProducto}, nombre: "${s.nombre}", codigoBarras: "${s.codigoBarras}", stock: ${s.stockActual}, costoUnitario: ${s.costo}, precioLista: ${s.precioLista}}, ${s.sugerencia});' class="w-full py-2 mt-2 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white dark:bg-indigo-900/30 dark:hover:bg-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors font-bold text-xs rounded-lg flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-robot"></i> Añadir ${s.sugerencia} u. (IA)</button>`;
+    }
+
+    return `
+    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-indigo-100 dark:border-indigo-900/50 hover:shadow-md transition-all">
+        <div class="flex justify-between items-start mb-1">
+            <div class="font-bold text-gray-900 dark:text-gray-100 text-sm leading-tight">${s.nombre}</div>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">${s.velocidadDiaria} u/día</span>
+        </div>
+        <div class="text-[10px] text-gray-400 font-mono mb-2">${s.codigoBarras} • Stock actual: ${s.stockActual}</div>
+        <div class="text-xs text-indigo-600 dark:text-indigo-400 italic mb-2">"${s.contexto}"</div>
+        ${actionBtn}
+    </div>
+    `;
+}
+
 function renderSolicitudes() {
     const containerManual = document.getElementById('solicitudes-manuales-chips');
     const containerIa = document.getElementById('sugerencias-ia-chips');
     if (!containerManual || !containerIa) return;
 
     const manuales = solicitudesOriginales.filter(s => (s.origen || '').toLowerCase() === 'manual');
-    const ias = solicitudesOriginales.filter(s => (s.origen || '').toLowerCase() !== 'manual');
+    const iasPendientes = solicitudesOriginales.filter(s => (s.origen || '').toLowerCase() !== 'manual');
 
     if (manuales.length === 0) {
         containerManual.innerHTML = `
@@ -266,13 +308,15 @@ function renderSolicitudes() {
         containerManual.innerHTML = manuales.map(renderSolicitudesCard).join('');
     }
 
-    if (ias.length === 0) {
+    if (sugerenciasAnaliticasIA.length > 0) {
+        containerIa.innerHTML = sugerenciasAnaliticasIA.map(renderSugerenciaIACard).join('');
+    } else if (iasPendientes.length > 0) {
+        containerIa.innerHTML = iasPendientes.map(renderSolicitudesCard).join('');
+    } else {
         containerIa.innerHTML = `
             <div class="p-4 text-center text-gray-400 text-xs italic">
                 El inventario está estable. No hay sugerencias de la IA.
             </div>`;
-    } else {
-        containerIa.innerHTML = ias.map(renderSolicitudesCard).join('');
     }
 }
 
@@ -471,6 +515,8 @@ if(btnProcesar) {
     });
 }
 
+let ordenRecepcionActivaId = null;
+
 // -------------------------------------------------------------
 // ÓRDENES ACTIVAS
 // -------------------------------------------------------------
@@ -511,27 +557,16 @@ function renderOrdenesActivas(ordenes) {
             </td>
             <td class="py-3 px-4 text-right">
                 <div class="flex justify-end gap-2">
-                    <button onclick="abrirOffCanvasHistorial(${o.idCompra})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-bold text-xs bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-lg transition-colors active:scale-95">
+                    <button onclick="abrirModalDetalleOrden(${o.idCompra})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-bold text-xs bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-lg transition-colors active:scale-95">
                         Ver Detalles
                     </button>
-                    <button onclick="recibirOrden(${o.idCompra})" class="text-white bg-green-600 hover:bg-green-700 font-bold text-xs px-3 py-1.5 rounded-lg shadow-sm transition-colors active:scale-95 flex items-center gap-1.5">
+                    <button onclick="abrirModalRecepcionFisica(${o.idCompra})" class="text-white bg-green-600 hover:bg-green-700 font-bold text-xs px-3 py-1.5 rounded-lg shadow-sm transition-colors active:scale-95 flex items-center gap-1.5">
                         <i class="fa-solid fa-boxes-packing"></i> Recibir Física
                     </button>
                 </div>
             </td>
         </tr>
     `).join('');
-}
-
-async function recibirOrden(idCompra) {
-    if(!confirm(`¿Confirmas la recepción física de la Orden #${idCompra}? Esto ingresará el stock al inventario.`)) return;
-    try {
-        await ApiClient.put(`/compras/compra/${idCompra}/estado`, { estado: "Completada" });
-        showToast("Mercadería recibida. Stock físico actualizado correctamente.");
-        await cargarOrdenesActivas();
-    } catch(e) {
-        showToast("Error al recibir orden: " + e.message, true);
-    }
 }
 
 // -------------------------------------------------------------
@@ -573,7 +608,7 @@ function renderHistorialGlobal(historial) {
                 </span>
             </td>
             <td class="py-3 px-4 text-right">
-                <button onclick="abrirOffCanvasHistorial(${h.idCompra})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-bold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded transition-colors active:scale-95">
+                <button onclick="abrirModalDetalleOrden(${h.idCompra})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-bold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded transition-colors active:scale-95">
                     Ver Detalles
                 </button>
             </td>
@@ -581,63 +616,179 @@ function renderHistorialGlobal(historial) {
     `).join('');
 }
 
-async function abrirOffCanvasHistorial(idCompra) {
-    const oc = document.getElementById('offcanvas-historial');
-    const overlay = document.getElementById('offcanvas-overlay');
-    const title = document.getElementById('oc-historial-title');
-    const content = document.getElementById('oc-historial-content');
+// -------------------------------------------------------------
+// MODAL 1: DETALLES DE ORDEN / HISTORIAL
+// -------------------------------------------------------------
+async function abrirModalDetalleOrden(idCompra) {
+    const modal = document.getElementById('modal-detalle-orden');
+    const title = document.getElementById('modal-detalle-title');
+    const content = document.getElementById('modal-detalle-content');
     
-    if(!oc || !overlay || !title || !content) return;
+    if(!modal || !title || !content) return;
     
     title.textContent = `Orden #${idCompra}`;
     content.innerHTML = `<div class="flex justify-center p-8"><i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-600"></i></div>`;
     
-    overlay.classList.remove('hidden');
-    void overlay.offsetWidth;
-    overlay.classList.remove('opacity-0');
-    oc.classList.remove('translate-x-full');
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        const card = modal.querySelector('div');
+        if(card) card.classList.remove('scale-95');
+    }, 10);
 
     try {
         const data = await ApiClient.get(`/compras/historial/${idCompra}/detalles`);
         const detallesHTML = data.detalles.map(d => `
-            <div class="flex justify-between items-start py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+            <div class="flex justify-between items-start py-2.5 border-b border-gray-100 dark:border-gray-700 last:border-0 text-sm">
                 <div class="flex-1 pr-4">
-                    <div class="text-sm font-bold text-gray-800 dark:text-gray-200">${d.producto}</div>
-                    <div class="text-[10px] text-gray-500 font-mono">${d.codigo}</div>
+                    <div class="font-bold text-gray-800 dark:text-gray-200">${d.producto}</div>
+                    <div class="text-[10px] text-gray-400 font-mono">${d.codigo}</div>
                 </div>
                 <div class="text-right shrink-0">
-                    <div class="text-sm font-bold text-gray-800 dark:text-gray-200">${d.cantidad} x ${fmt(d.costoUnitario)}</div>
+                    <div class="font-bold text-gray-800 dark:text-gray-200">${d.cantidad} u. x ${fmt(d.costoUnitario)}</div>
                     <div class="text-xs font-mono font-bold text-gray-500 dark:text-gray-400">${fmt(d.subtotal)}</div>
                 </div>
             </div>
         `).join('');
         
         content.innerHTML = `
-            <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
-                <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Proveedor</div>
-                <div class="font-bold text-gray-800 dark:text-gray-200 mb-3">${data.proveedor}</div>
-                <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Fecha de Ingreso</div>
-                <div class="font-bold text-gray-800 dark:text-gray-200 mb-3">${parseLocalDate(data.fecha).toLocaleString('es-PE')}</div>
-                <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Pagado</div>
-                <div class="font-mono text-xl font-black text-gray-900 dark:text-white">${fmt(data.montoTotal)}</div>
+            <div class="grid grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div>
+                    <div class="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Proveedor</div>
+                    <div class="font-bold text-gray-800 dark:text-gray-200 text-sm">${data.proveedor}</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Fecha de Orden</div>
+                    <div class="font-bold text-gray-800 dark:text-gray-200 text-sm">${parseLocalDate(data.fecha).toLocaleString('es-PE')}</div>
+                </div>
+                <div class="col-span-2 pt-2 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <span class="text-xs text-gray-400 uppercase font-bold tracking-wider">Costo Total</span>
+                    <span class="font-mono text-xl font-black text-gray-900 dark:text-white">${fmt(data.montoTotal)}</span>
+                </div>
             </div>
-            <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-3">Detalles de Artículos</h3>
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2 shadow-sm">
+            
+            <h4 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Artículos Incluidos</h4>
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-1 shadow-sm">
                 ${detallesHTML}
             </div>
         `;
     } catch(e) {
-        content.innerHTML = `<div class="p-4 text-center text-red-500">Error al cargar detalles.</div>`;
+        content.innerHTML = `<div class="p-4 text-center text-red-500 font-bold">Error al cargar detalles de la orden.</div>`;
     }
 }
 
-function closeOffCanvasHistorial() {
-    const oc = document.getElementById('offcanvas-historial');
-    const overlay = document.getElementById('offcanvas-overlay');
-    if(!oc || !overlay) return;
-    oc.classList.add('translate-x-full');
-    overlay.classList.add('opacity-0');
-    setTimeout(() => { overlay.classList.add('hidden'); }, 300);
+function cerrarModalDetalleOrden() {
+    const modal = document.getElementById('modal-detalle-orden');
+    if(!modal) return;
+    const card = modal.querySelector('div');
+    if(card) card.classList.add('scale-95');
+    modal.classList.add('opacity-0');
+    setTimeout(() => { modal.classList.add('hidden'); }, 200);
+}
+
+// -------------------------------------------------------------
+// MODAL 2: RECEPCIÓN FÍSICA DE MERCADERÍA
+// -------------------------------------------------------------
+async function abrirModalRecepcionFisica(idCompra) {
+    ordenRecepcionActivaId = idCompra;
+    const modal = document.getElementById('modal-recepcion-fisica');
+    const title = document.getElementById('modal-recepcion-title');
+    const subtitle = document.getElementById('modal-recepcion-subtitle');
+    const body = document.getElementById('modal-recepcion-body');
+    const btn = document.getElementById('btn-confirmar-recepcion');
+    
+    if(!modal || !title || !body) return;
+    
+    title.textContent = `Recibir Orden #${idCompra}`;
+    if(subtitle) subtitle.textContent = "Cargando datos...";
+    body.innerHTML = `<div class="flex justify-center p-8"><i class="fa-solid fa-circle-notch fa-spin text-2xl text-green-600"></i></div>`;
+    if(btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-circle-check"></i> Confirmar Recepción`;
+    }
+
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        const card = modal.querySelector('div');
+        if(card) card.classList.remove('scale-95');
+    }, 10);
+
+    try {
+        const data = await ApiClient.get(`/compras/historial/${idCompra}/detalles`);
+        if(subtitle) subtitle.textContent = `${data.proveedor} • ${parseLocalDate(data.fecha).toLocaleDateString('es-PE')}`;
+        
+        const itemsRows = data.detalles.map((d, index) => `
+            <div class="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-0 text-sm">
+                <div class="flex-1 pr-4">
+                    <div class="font-bold text-gray-800 dark:text-gray-200">${d.producto}</div>
+                    <div class="text-[10px] text-gray-400 font-mono">Solicitados: ${d.cantidad} u.</div>
+                </div>
+                <div class="w-32 text-right">
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cant. Recibida</label>
+                    <input type="number" min="1" value="${d.cantidad}" class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 rounded font-bold text-center text-sm focus:bg-white dark:focus:bg-gray-800">
+                </div>
+            </div>
+        `).join('');
+
+        body.innerHTML = `
+            <div>
+                <h4 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Verificación de Mercadería</h4>
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-1 shadow-sm mb-4">
+                    ${itemsRows}
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">Observaciones de Recepción</label>
+                <textarea id="recepcion-observaciones" placeholder="Ingrese notas o discrepancias físicas (opcional)..." class="input-base w-full p-2.5 text-sm bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 rounded-xl h-20 resize-none"></textarea>
+            </div>
+        `;
+        
+        if(btn) btn.disabled = false;
+        
+    } catch(e) {
+        body.innerHTML = `<div class="p-4 text-center text-red-500 font-bold">Error al preparar recepción de la orden.</div>`;
+    }
+}
+
+function cerrarModalRecepcionFisica() {
+    const modal = document.getElementById('modal-recepcion-fisica');
+    if(!modal) return;
+    const card = modal.querySelector('div');
+    if(card) card.classList.add('scale-95');
+    modal.classList.add('opacity-0');
+    setTimeout(() => { modal.classList.add('hidden'); }, 200);
+}
+
+async function confirmarRecepcionFisica() {
+    if(!ordenRecepcionActivaId) return;
+    
+    const btn = document.getElementById('btn-confirmar-recepcion');
+    if(btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando...`;
+    }
+
+    try {
+        const res = await ApiClient.put(`/compras/compra/${ordenRecepcionActivaId}/estado`, { estado: "Completada" });
+        
+        let msgToast = "Mercadería recibida. Stock físico actualizado correctamente.";
+        if (res.stock_actualizado && res.stock_actualizado.length > 0) {
+            const resumenStock = res.stock_actualizado.map(s => `${s.producto}: ${s.nuevo_stock} u.`).join(' | ');
+            msgToast = `Stock actualizado -> ${resumenStock}`;
+        }
+        
+        showToast(msgToast);
+        cerrarModalRecepcionFisica();
+        await cargarOrdenesActivas();
+        await cargarHistorialGlobal();
+    } catch(e) {
+        showToast("Error al recibir orden: " + e.message, true);
+        if(btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-circle-check"></i> Confirmar Recepción`;
+        }
+    }
 }
 
 document.addEventListener('DOMContentLoaded', init);

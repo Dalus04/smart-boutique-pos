@@ -121,12 +121,10 @@ class RegistrarCompraPayload(BaseModel):
     estado: str = "Borrador"
 
 @router.post("/registrar")
-def registrar_compra(payload: RegistrarCompraPayload, db: Session = Depends(get_db_session)):
+def registrar_compra(payload: RegistrarCompraPayload, id_usuario: int = 1, db: Session = Depends(get_db_session)):
     if not payload.items:
         raise HTTPException(status_code=400, detail="La orden de compra no puede estar vacía")
         
-    id_usuario = 1 # Hardcodeado temporalmente
-    
     try:
         # Solo creamos la orden, NO actualizamos el stock físico aquí
         compra = Compra(
@@ -167,6 +165,8 @@ def cambiar_estado_compra(id_compra: int, payload: EstadoCompraPayload, db: Sess
     if payload.estado not in estados_validos:
         raise HTTPException(status_code=400, detail="Estado inválido")
         
+    stock_actualizado = []
+    
     # Transición a Completada: mutación aditiva atómica del stock físico
     if payload.estado == "Completada" and compra.estado != "Completada":
         try:
@@ -177,8 +177,8 @@ def cambiar_estado_compra(id_compra: int, payload: EstadoCompraPayload, db: Sess
                     if inventario:
                         inventario.cantidadDisponible += detalle.cantidad
                     else:
-                        nuevo_inv = Inventario(idProducto=detalle.idProducto, cantidadDisponible=detalle.cantidad)
-                        db.add(nuevo_inv)
+                        inventario = Inventario(idProducto=detalle.idProducto, cantidadDisponible=detalle.cantidad)
+                        db.add(inventario)
                     
                     # Actualizar costo del producto
                     producto = db.query(Producto).filter(Producto.idProducto == detalle.idProducto).first()
@@ -193,13 +193,24 @@ def cambiar_estado_compra(id_compra: int, payload: EstadoCompraPayload, db: Sess
                     for sol in solicitudes:
                         sol.estado = "Agregada"
 
+                    prod_nombre = producto.nombre if producto else f"Producto #{detalle.idProducto}"
+                    stock_actualizado.append({
+                        "producto": prod_nombre,
+                        "nuevo_stock": inventario.cantidadDisponible
+                    })
+
         except Exception as e:
             db.rollback()
             raise HTTPException(status_code=500, detail=f"Error en transacción atómica: {str(e)}")
 
     compra.estado = payload.estado
     db.commit()
-    return {"status": "success", "nuevo_estado": compra.estado}
+    return {
+        "status": "success", 
+        "nuevo_estado": compra.estado,
+        "mensaje": "Mercadería recibida y stock actualizado",
+        "stock_actualizado": stock_actualizado
+    }
 
 # TODO PENDIENTE: Integrar canal de despacho automatizado (WhatsApp/Email PDF)
 def despachar_orden_proveedor(id_compra: int):
@@ -216,8 +227,7 @@ class SyncBorradorPayload(BaseModel):
     montoTotal: float
 
 @router.get("/planificacion/borrador")
-def obtener_borrador_activo(db: Session = Depends(get_db_session)):
-    id_usuario = 1 # Hardcodeado temporalmente
+def obtener_borrador_activo(id_usuario: int = 1, db: Session = Depends(get_db_session)):
     borrador = db.query(Compra).filter(Compra.estado == "Borrador", Compra.idUsuario == id_usuario).first()
     
     if not borrador:
@@ -249,8 +259,7 @@ def obtener_borrador_activo(db: Session = Depends(get_db_session)):
     }
 
 @router.put("/planificacion/borrador")
-def sincronizar_borrador(payload: SyncBorradorPayload, db: Session = Depends(get_db_session)):
-    id_usuario = 1
+def sincronizar_borrador(payload: SyncBorradorPayload, id_usuario: int = 1, db: Session = Depends(get_db_session)):
     borrador = db.query(Compra).filter(Compra.estado == "Borrador", Compra.idUsuario == id_usuario).first()
     
     # Validar o asignar proveedor válido si idProveedor es 0
