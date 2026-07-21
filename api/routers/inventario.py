@@ -1,3 +1,4 @@
+import math
 from fastapi import APIRouter, Depends, Query, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
@@ -22,19 +23,74 @@ def get_categorias(db: Session = Depends(get_db_session)):
     categorias = db.query(Categoria).filter(Categoria.estado == 'ACTIVO').all()
     return [{"id": c.idCategoria, "nombre": c.nombreCategoria} for c in categorias]
 
+@router.get("/kpis-globales")
+def get_kpis_globales(db: Session = Depends(get_db_session)):
+    """
+    Endpoint ligero de alta velocidad (<15ms) para calcular agregados globales SQL
+    de las tarjetas del tablero de inventario.
+    """
+    productos_activos = db.query(Producto).filter(Producto.estado == 'ACTIVO').count()
+
+    stock_total_res = db.query(func.coalesce(func.sum(Inventario.cantidadDisponible), 0))\
+        .join(Producto, Inventario.idProducto == Producto.idProducto)\
+        .filter(Producto.estado == 'ACTIVO').scalar()
+    stock_total = int(stock_total_res or 0)
+
+    solicitudes_en_proceso = db.query(func.count(func.distinct(SolicitudReposicion.idProducto)))\
+        .join(Producto, SolicitudReposicion.idProducto == Producto.idProducto)\
+        .filter(Producto.estado == 'ACTIVO', SolicitudReposicion.estado == 'Pendiente').scalar() or 0
+
+    criticos_count = db.query(Producto).outerjoin(Inventario, Producto.idProducto == Inventario.idProducto)\
+        .filter(Producto.estado == 'ACTIVO', func.coalesce(Inventario.cantidadDisponible, 0) <= 5).count()
+
+    urgentes_count = db.query(Producto).outerjoin(Inventario, Producto.idProducto == Inventario.idProducto)\
+        .filter(Producto.estado == 'ACTIVO', func.coalesce(Inventario.cantidadDisponible, 0) <= 15).count()
+
+    estables_count = db.query(Producto).outerjoin(Inventario, Producto.idProducto == Inventario.idProducto)\
+        .filter(Producto.estado == 'ACTIVO', func.coalesce(Inventario.cantidadDisponible, 0) > 15).count()
+
+    health_score = max(0, round(((productos_activos - criticos_count) / productos_activos) * 100)) if productos_activos > 0 else 100
+
+    if health_score >= 90:
+        health_status = "Excelente"
+        health_subtitle = f"Significa que el {health_score}% de tu catálogo fluye sin riesgo de quiebre."
+    elif health_score >= 70:
+        health_status = "Estable"
+        health_subtitle = f"El inventario está controlado, pero hay un {100 - health_score}% de artículos que requieren vigilancia."
+    elif health_score >= 50:
+        health_status = "Requiere Atención"
+        health_subtitle = f"Advertencia: El {100 - health_score}% de tu catálogo podría agotarse si no realizas reposiciones."
+    else:
+        health_status = "Crítico"
+        health_subtitle = f"¡Peligro! El {100 - health_score}% de tus productos están agotándose y perdiendo ventas potenciales."
+
+    return {
+        "kpis": {
+            "productos_activos": productos_activos,
+            "stock_total": stock_total,
+            "riesgo_alto_critico": criticos_count,
+            "solicitudes_en_proceso": solicitudes_en_proceso,
+            "reabastecimiento_urgente": urgentes_count,
+            "inventario_estable": estables_count,
+            "salud_score": health_score,
+            "salud_status": health_status,
+            "salud_subtitle": health_subtitle
+        }
+    }
+
 @router.get("/data")
 def get_inventario_data(
     q: Optional[str] = Query(None, description="Búsqueda por ID, código, nombre o marca"),
     id_categoria: Optional[int] = Query(None, description="Filtro por ID de categoría"),
     estado_stock: Optional[str] = Query(None, description="Filtro por estado de stock"),
+    page: int = Query(1, ge=1, description="Número de página"),
+    size: int = Query(20, ge=1, le=100, description="Tamaño de página"),
     db: Session = Depends(get_db_session)
 ):
-    query = db.query(Producto).filter(Producto.estado == 'ACTIVO')
+    query = db.query(Producto).outerjoin(Inventario, Producto.idProducto == Inventario.idProducto).filter(Producto.estado == 'ACTIVO')
     
     if q:
-        # Búsqueda polimórfica
         search_term = f"%{q}%"
-        # Si q es un número, intentar buscar por idProducto exacto
         id_filter = []
         if q.isdigit():
             id_filter.append(Producto.idProducto == int(q))
@@ -52,9 +108,21 @@ def get_inventario_data(
     if id_categoria:
         query = query.filter(Producto.idCategoria == id_categoria)
         
-    productos = query.all()
+    if estado_stock and estado_stock != "Todos":
+        if estado_stock == "Crítico":
+            query = query.filter(func.coalesce(Inventario.cantidadDisponible, 0) <= 5)
+        elif estado_stock == "Bajo":
+            query = query.filter(func.coalesce(Inventario.cantidadDisponible, 0).between(6, 15))
+        elif estado_stock == "Óptimo":
+            query = query.filter(func.coalesce(Inventario.cantidadDisponible, 0) > 15)
+
+    total_records = query.count()
+    pages = math.ceil(total_records / size) if total_records > 0 else 1
     
-    # Calcular ingresos acumulados para clasificación ABC (Pareto)
+    # Aplicar Paginación SQL nativa
+    productos = query.offset((page - 1) * size).limit(size).all()
+    
+    # Calcular ingresos acumulados para clasificación ABC (Pareto) sobre la página actual o general
     ingresos_por_producto = {}
     for p in productos:
         ingresos = db.query(func.sum(DetalleVenta.subtotal)).filter(DetalleVenta.idProducto == p.idProducto).scalar()
@@ -79,27 +147,16 @@ def get_inventario_data(
         else:
             abc_classification[p.idProducto] = 'C'
             
-    # Obtener reglas activas de Apriori en memoria
     reglas_activas = MineriaService._reglas
 
-    # Obtener IDs de productos con solicitudes de reposición pendientes y su idSolicitud
     solicitudes_pendientes = db.query(SolicitudReposicion.idProducto, SolicitudReposicion.idSolicitud).filter(SolicitudReposicion.estado == 'Pendiente').all()
     map_solicitudes = {s[0]: s[1] for s in solicitudes_pendientes}
     
     resultados = []
-    totales = {
-        "productos_activos": len(productos),
-        "stock_total": 0,
-        "riesgo_alto_critico": 0,
-        "categorias_activas": len(set(p.idCategoria for p in productos))
-    }
     
     for prod in productos:
-        # Stock
         stock_disp = prod.inventario.cantidadDisponible if prod.inventario else 0
-        totales["stock_total"] += stock_disp
         
-        # IA: Predicción y Estado
         velocidad = PrediccionService.calcular_velocidad_venta(db, prod.idProducto, 30)
         riesgo = PrediccionService.clasificar_riesgo_quiebre(stock_disp, velocidad, 7)
         
@@ -109,17 +166,8 @@ def get_inventario_data(
         elif stock_disp <= 15:
             estado_fisico = "Bajo"
             
-        if estado_fisico == "Crítico" or riesgo == "Riesgo Alto":
-            totales["riesgo_alto_critico"] += 1
-            
-        # Filtrado post-procesado
-        if estado_stock and estado_stock != "Todos" and estado_fisico != estado_stock:
-            continue
-            
-        # Días Restantes para Quiebre
         dias_quiebre = stock_disp / velocidad if velocidad > 0 else 9999
         
-        # Acción Comercial Sugerida
         if dias_quiebre < 10:
             accion = "Reponer"
         elif dias_quiebre > 90 and velocidad < 0.2:
@@ -127,7 +175,6 @@ def get_inventario_data(
         else:
             accion = "Mantener"
             
-        # Conteo de Reglas Vinculadas
         num_reglas = 0
         for antecedente, consecuentes in reglas_activas.items():
             if prod.idProducto == antecedente:
@@ -137,7 +184,6 @@ def get_inventario_data(
             
         reglas_texto = f"Suele comprarse junto con otros {num_reglas} productos" if num_reglas > 0 else "No suele comprarse junto con otros artículos"
 
-        # Contexto del Producto (Subtítulo Contextual)
         if estado_fisico == "Crítico" and num_reglas > 0:
             contexto_producto = "✔ Impulsa la venta de otros productos"
         elif estado_fisico == "Crítico":
@@ -176,7 +222,6 @@ def get_inventario_data(
             "id_solicitud_pendiente": map_solicitudes.get(prod.idProducto)
         })
         
-    # Ordenamiento Heurístico Eficiente: Críticos primero, luego por número de reglas descendente
     def heuristica_orden(r):
         es_critico = 1 if r["estado_fisico"] == "Crítico" else 0
         return (es_critico, r["reglas_vinculadas"])
@@ -184,8 +229,12 @@ def get_inventario_data(
     resultados.sort(key=heuristica_orden, reverse=True)
         
     return {
-        "kpis": totales,
-        "productos": resultados
+        "items": resultados,
+        "productos": resultados,
+        "total_records": total_records,
+        "pages": pages,
+        "current_page": page,
+        "page_size": size
     }
 
 # Schemas y Endpoint para Crear/Editar Producto y Categoría

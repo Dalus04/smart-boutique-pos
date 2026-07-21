@@ -24,6 +24,12 @@ window.inventoryDataMap = {};
 let activeDropdownId = null;
 let globalKPIsData = null;
 
+// Estado Global de Paginación
+let currentPage = 1;
+let pageSize = 20;
+let totalPages = 1;
+let totalRecords = 0;
+
 function toggleContextMenu(prodId, event) {
     if (event) event.stopPropagation();
     const targetMenu = document.getElementById(`context-menu-${prodId}`);
@@ -145,62 +151,41 @@ async function refreshGlobalKPIs(force = false) {
         return;
     }
     try {
-        const data = await ApiClient.get('/inventario/data');
-        globalKPIsData = data;
-        renderGlobalKPIs(data);
+        const res = await ApiClient.get('/inventario/kpis-globales');
+        globalKPIsData = res;
+        renderGlobalKPIs(res);
     } catch (e) {
         console.error("Error al cargar KPIs globales", e);
     }
 }
 
 function renderGlobalKPIs(data) {
-    const total = data.kpis.productos_activos;
-    const criticos = data.kpis.riesgo_alto_critico;
-    const healthScore = total > 0 ? Math.max(0, Math.round(((total - criticos) / total) * 100)) : 0;
+    const kpis = data.kpis || {};
+    const healthScore = kpis.salud_score || 0;
     
     if (kpiHealthScore) kpiHealthScore.textContent = healthScore;
     
     if (kpiHealthStatus) {
         const kpiHealthSubtitle = document.getElementById('kpi-health-subtitle');
+        kpiHealthStatus.textContent = kpis.salud_status || 'Analizando...';
+        
         if (healthScore >= 90) {
-            kpiHealthStatus.textContent = "Excelente";
             kpiHealthStatus.className = "text-xs font-bold px-2 py-0.5 rounded text-green-700 bg-green-50 dark:bg-green-900/30 dark:text-green-300";
-            if (kpiHealthSubtitle) kpiHealthSubtitle.textContent = `Significa que el ${healthScore}% de tu catálogo fluye sin riesgo de quiebre.`;
         } else if (healthScore >= 70) {
-            kpiHealthStatus.textContent = "Estable";
             kpiHealthStatus.className = "text-xs font-bold px-2 py-0.5 rounded text-blue-700 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300";
-            if (kpiHealthSubtitle) kpiHealthSubtitle.textContent = `El inventario está controlado, pero hay un ${100 - healthScore}% de artículos que requieren vigilancia.`;
         } else if (healthScore >= 50) {
-            kpiHealthStatus.textContent = "Requiere Atención";
             kpiHealthStatus.className = "text-xs font-bold px-2 py-0.5 rounded text-orange-700 bg-orange-50 dark:bg-orange-900/30 dark:text-orange-300";
-            if (kpiHealthSubtitle) kpiHealthSubtitle.textContent = `Advertencia: El ${100 - healthScore}% de tu catálogo podría agotarse si no realizas reposiciones.`;
         } else {
-            kpiHealthStatus.textContent = "Crítico";
             kpiHealthStatus.className = "text-xs font-bold px-2 py-0.5 rounded text-red-700 bg-red-50 dark:bg-red-900/30 dark:text-red-300";
-            if (kpiHealthSubtitle) kpiHealthSubtitle.textContent = `¡Peligro! El ${100 - healthScore}% de tus productos están agotándose y perdiendo ventas potenciales.`;
         }
+        if (kpiHealthSubtitle) kpiHealthSubtitle.textContent = kpis.salud_subtitle || '';
     }
-
-    // Clasificar todo el catálogo global
-    const productosEnSolicitud = [];
-    const productosQuiebre = [];
-    const productosOptimos = [];
-
-    data.productos.forEach(prod => {
-        if (prod.tiene_solicitud_pendiente) {
-            productosEnSolicitud.push(prod);
-        } else if (prod.accion === 'Reponer' || prod.estado_fisico === 'Crítico' || prod.estado_fisico === 'Bajo') {
-            productosQuiebre.push(prod);
-        } else {
-            productosOptimos.push(prod);
-        }
-    });
 
     const accionesContainerGrid = document.getElementById('acciones-container-grid');
     if (accionesContainerGrid) {
         let summaryCardsHtml = "";
 
-        if (productosEnSolicitud.length > 0) {
+        if (kpis.solicitudes_en_proceso > 0) {
             summaryCardsHtml += `
                 <div class="card p-5 border-l-4 border-amber-500 flex flex-col justify-between h-full hover:shadow-md transition-shadow">
                     <div class="flex items-start gap-3 mb-4">
@@ -210,7 +195,7 @@ function renderGlobalKPIs(data) {
                         <div>
                             <h4 class="font-bold text-gray-800 dark:text-white text-sm">Solicitudes en Proceso</h4>
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-snug">
-                                <b>${productosEnSolicitud.length} producto(s)</b> cuentan con orden de compra o reposición activa.
+                                <b>${kpis.solicitudes_en_proceso} producto(s)</b> cuentan con orden de compra o reposición activa.
                             </p>
                         </div>
                     </div>
@@ -221,7 +206,7 @@ function renderGlobalKPIs(data) {
             `;
         }
 
-        if (productosQuiebre.length > 0) {
+        if (kpis.reabastecimiento_urgente > 0) {
             summaryCardsHtml += `
                 <div class="card p-5 border-l-4 border-red-500 flex flex-col justify-between h-full hover:shadow-md transition-shadow">
                     <div class="flex items-start gap-3 mb-4">
@@ -231,7 +216,7 @@ function renderGlobalKPIs(data) {
                         <div>
                             <h4 class="font-bold text-gray-800 dark:text-white text-sm">Reabastecimiento Urgente</h4>
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-snug">
-                                <b>${productosQuiebre.length} producto(s)</b> están en stock bajo o riesgo de quiebre.
+                                <b>${kpis.reabastecimiento_urgente} producto(s)</b> están en stock bajo o riesgo de quiebre.
                             </p>
                         </div>
                     </div>
@@ -242,7 +227,7 @@ function renderGlobalKPIs(data) {
             `;
         }
 
-        if (productosOptimos.length > 0) {
+        if (kpis.inventario_estable > 0) {
             summaryCardsHtml += `
                 <div class="card p-5 border-l-4 border-green-500 flex flex-col justify-between h-full hover:shadow-md transition-shadow">
                     <div class="flex items-start gap-3 mb-4">
@@ -252,7 +237,7 @@ function renderGlobalKPIs(data) {
                         <div>
                             <h4 class="font-bold text-gray-800 dark:text-white text-sm">Inventario Estable</h4>
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-snug">
-                                <b>${productosOptimos.length} producto(s)</b> fluyen óptimamente sin riesgo detectado.
+                                <b>${kpis.inventario_estable} producto(s)</b> fluyen óptimamente sin riesgo detectado.
                             </p>
                         </div>
                     </div>
@@ -275,15 +260,20 @@ function renderGlobalKPIs(data) {
 
 async function refreshAllData(shouldHighlight = false) {
     await refreshGlobalKPIs(true);
-    await fetchAndRenderData(shouldHighlight);
+    await fetchAndRenderData(1, shouldHighlight);
 }
 
 // Renderizador principal de tabla
-async function fetchAndRenderData(shouldHighlight = false) {
+async function fetchAndRenderData(page = 1, shouldHighlight = false) {
+    currentPage = page;
     elTableLoading.classList.remove('hidden');
     elTableEmpty.classList.add('hidden');
     
-    const params = {};
+    const params = {
+        page: currentPage,
+        size: pageSize
+    };
+    
     const q = elSearchInput.value.trim();
     if (q) params.q = q;
     
@@ -296,20 +286,21 @@ async function fetchAndRenderData(shouldHighlight = false) {
     try {
         const data = await ApiClient.get('/inventario/data', params);
         
-        elTableBody.innerHTML = '';
-        const productosEnSolicitud = [];
-        const productosQuiebre = [];
-        const productosOptimos = [];
+        const productosList = data.items || data.productos || [];
+        totalRecords = data.total_records !== undefined ? data.total_records : productosList.length;
+        totalPages = data.pages || 1;
+        currentPage = data.current_page || page;
         
+        elTableBody.innerHTML = '';
         window.dashboardInsights = [];
         window.inventoryDataMap = {};
         
-        if (data.productos.length === 0) {
+        if (productosList.length === 0) {
             elTableEmpty.classList.remove('hidden');
             elTableEmpty.style.display = 'flex';
         } else {
             elTableEmpty.style.display = 'none';
-            data.productos.forEach(prod => {
+            productosList.forEach(prod => {
                 window.dashboardInsights.push({
                     id: prod.idProducto,
                     tipo: prod.categoria,
@@ -439,10 +430,9 @@ async function fetchAndRenderData(shouldHighlight = false) {
             });
         }
 
-        // Actualizar indicador visual de filtro activo
+        renderPaginationControls(data);
         updateActiveFilterBadge();
 
-        // Aplicar animación suave de resaltado de filas (2 segundos)
         if (shouldHighlight) {
             const rows = elTableBody.querySelectorAll('tr');
             rows.forEach(r => r.classList.add('bg-amber-100/70', 'dark:bg-amber-900/30', 'transition-colors', 'duration-500'));
@@ -457,6 +447,69 @@ async function fetchAndRenderData(shouldHighlight = false) {
     } finally {
         elTableLoading.classList.add('hidden');
     }
+}
+
+// RENDERIZADOR DE CONTROLES DE PAGINACIÓN DE TABLA
+function renderPaginationControls(data) {
+    const infoEl = document.getElementById('pagination-info');
+    const controlsEl = document.getElementById('pagination-controls');
+    if (!infoEl || !controlsEl) return;
+
+    const page = data.current_page || 1;
+    const totalP = data.pages || 1;
+    const totalR = data.total_records || 0;
+    const size = data.page_size || 20;
+
+    if (totalR === 0) {
+        infoEl.textContent = 'Mostrando 0 productos';
+        controlsEl.innerHTML = '';
+        return;
+    }
+
+    const start = (page - 1) * size + 1;
+    const end = Math.min(page * size, totalR);
+    infoEl.textContent = `Mostrando ${start} - ${end} de ${totalR} productos`;
+
+    let html = '';
+    
+    // Botón Anterior
+    const prevDisabled = page <= 1;
+    html += `
+        <button onclick="goToPage(${page - 1})" ${prevDisabled ? 'disabled' : ''} class="px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 font-bold ${prevDisabled ? 'opacity-40 cursor-not-allowed text-gray-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'} transition-colors">
+            <i class="fa-solid fa-chevron-left text-[10px]"></i>
+        </button>
+    `;
+
+    // Botones numéricos
+    let startPage = Math.max(1, page - 2);
+    let endPage = Math.min(totalP, startPage + 4);
+    if (endPage - startPage < 4) {
+        startPage = Math.max(1, endPage - 4);
+    }
+
+    for (let p = startPage; p <= endPage; p++) {
+        const isCurrent = p === page;
+        html += `
+            <button onclick="goToPage(${p})" class="px-3 py-1 rounded text-xs font-bold ${isCurrent ? 'bg-amber-500 text-white shadow-sm' : 'border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'} transition-colors">
+                ${p}
+            </button>
+        `;
+    }
+
+    // Botón Siguiente
+    const nextDisabled = page >= totalP;
+    html += `
+        <button onclick="goToPage(${page + 1})" ${nextDisabled ? 'disabled' : ''} class="px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 font-bold ${nextDisabled ? 'opacity-40 cursor-not-allowed text-gray-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'} transition-colors">
+            <i class="fa-solid fa-chevron-right text-[10px]"></i>
+        </button>
+    `;
+
+    controlsEl.innerHTML = html;
+}
+
+function goToPage(pageNum) {
+    if (pageNum < 1 || pageNum > totalPages) return;
+    fetchAndRenderData(pageNum);
 }
 
 
@@ -657,12 +710,12 @@ document.addEventListener('DOMContentLoaded', () => {
     loadCategorias().then(() => refreshAllData());
     
     const debouncedSearch = debounce(() => {
-        fetchAndRenderData();
+        fetchAndRenderData(1);
     }, 300);
     
     elSearchInput.addEventListener('input', debouncedSearch);
-    elFilterCategoria.addEventListener('change', fetchAndRenderData);
-    elFilterEstado.addEventListener('change', fetchAndRenderData);
+    elFilterCategoria.addEventListener('change', () => fetchAndRenderData(1));
+    elFilterEstado.addEventListener('change', () => fetchAndRenderData(1));
 });
 
 function goToProduct(id) {
@@ -675,7 +728,7 @@ function filtrarPorEstadoQuick(estado) {
     elSearchInput.value = '';
     elFilterCategoria.value = '';
     elFilterEstado.value = estado;
-    fetchAndRenderData(true);
+    fetchAndRenderData(1, true);
 }
 
 function updateActiveFilterBadge() {
