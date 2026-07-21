@@ -1,333 +1,347 @@
 /**
- * Dashboard Logic - Phase 1 Migration
+ * Dashboard Logic — Analytical Decoupling Edition
+ *
+ * Contract: ALL calculations (health score, regression, projections, variations)
+ * arrive pre-computed in the API payload. This file is a pure renderer.
  */
 
-// Global Chart Instances
+// ─── Global Chart Instances ────────────────────────────────────────────────
 let chartTendencia, chartCategorias, chartRanking;
 
-// Utility: Animar valores numéricos
+// ─── Global state snapshot (for modals) ───────────────────────────────────
+let _dashData   = null;
+let _dashPeriodo = '7_dias';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Animate a DOM element's numeric text from start to end over `duration` ms. */
 function animateValue(obj, start, end, duration, formatFn) {
     let startTimestamp = null;
     const step = (timestamp) => {
         if (!startTimestamp) startTimestamp = timestamp;
         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        const currentVal = progress * (end - start) + start;
-        obj.innerHTML = formatFn(currentVal);
-        if (progress < 1) {
-            window.requestAnimationFrame(step);
-        } else {
-            obj.innerHTML = formatFn(end);
-        }
+        obj.innerHTML = formatFn(progress * (end - start) + start);
+        if (progress < 1) window.requestAnimationFrame(step);
+        else obj.innerHTML = formatFn(end);
     };
     window.requestAnimationFrame(step);
 }
 
-// Utility: Regresión lineal simple
-function linearRegression(y) {
-    const n = y.length;
-    let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-    for (let i = 0; i < n; i++) {
-        sumX += i;
-        sumY += y[i];
-        sumXY += i * y[i];
-        sumXX += i * i;
-    }
-    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / n;
-    return y.map((_, i) => intercept + slope * i);
+/** Human-readable label for a period key. */
+function periodoLabel(periodo) {
+    return { hoy: 'Hoy', '7_dias': 'Últimos 7 días', mes: 'Último mes', anio: 'Último año' }[periodo] || periodo;
 }
 
+/** Approximate day count for a period key (used for KPI modal context). */
+function periodoDias(periodo) {
+    return { hoy: 1, '7_dias': 7, mes: 30, anio: 365 }[periodo] || 7;
+}
+
+// ─── Theme colours (reactive to dark-mode toggle) ─────────────────────────
 const themeColors = {
     get text() { return document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#374151'; },
     get grid() { return document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'; },
-    primary: '#2a82da',
-    secondary: '#27ae60'
+    get emptyText() { return document.documentElement.classList.contains('dark') ? '#6b7280' : '#9ca3af'; },
+    primary:   '#2a82da',
+    secondary: '#27ae60',
 };
 
-// Cargar y renderizar datos
+// ─── Currency formatter ────────────────────────────────────────────────────
+const fmtCurrency = (v, min = 2) =>
+    `S/ ${Number(v).toLocaleString('en-US', { minimumFractionDigits: min, maximumFractionDigits: min })}`;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EMPTY-STATE CHART PLUGIN
+// A Chart.js plugin that draws a centred watermark when there is no data.
+// ═══════════════════════════════════════════════════════════════════════════
+const emptyStatePlugin = {
+    id: 'emptyState',
+    afterDraw(chart) {
+        const isEmpty = chart.data.datasets.every(ds =>
+            !ds.data || ds.data.length === 0 || ds.data.every(v => v === 0 || v == null)
+        );
+        if (!isEmpty) return;
+
+        const { ctx, chartArea: { left, top, width, height } } = chart;
+        ctx.save();
+
+        // Background pill
+        const cx = left + width / 2;
+        const cy = top  + height / 2;
+        ctx.fillStyle = document.documentElement.classList.contains('dark')
+            ? 'rgba(55, 65, 81, 0.5)'
+            : 'rgba(243, 244, 246, 0.8)';
+        const pw = Math.min(width * 0.75, 280);
+        const ph = 52;
+        ctx.beginPath();
+        ctx.roundRect(cx - pw / 2, cy - ph / 2, pw, ph, 10);
+        ctx.fill();
+
+        // Icon
+        ctx.fillStyle = themeColors.emptyText;
+        ctx.font = '18px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('📭', cx, cy - 9);
+
+        // Text
+        ctx.font = '600 11px Inter, system-ui, sans-serif';
+        ctx.fillText('Sin transacciones en este período', cx, cy + 13);
+
+        ctx.restore();
+    }
+};
+Chart.register(emptyStatePlugin);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN LOAD FUNCTION
+// ═══════════════════════════════════════════════════════════════════════════
 async function loadDashboardData(period = '7_dias') {
-    // UI State: Loading
+    _dashPeriodo = period;
+
+    // Show loader, hide charts
     document.getElementById('chart-loading').classList.remove('hidden');
     document.getElementById('chart-container').classList.add('opacity-0');
     document.getElementById('chart-fallback').classList.add('hidden');
-    
+
     try {
         const data = await ApiClient.get('/dashboard/metrics', { periodo: period });
-        const { kpis, salud_inventario, proyeccion_mes, insights, charts } = data;
-        
-        // --- 1. Tarjetas KPI ---
-        animateValue(document.getElementById('kpi-ventas-val'), 0, kpis.ventas.valor, 500, val => `S/ ${val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`);
-        animateValue(document.getElementById('kpi-utilidad-val'), 0, kpis.utilidad.valor, 500, val => `S/ ${val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`);
-        animateValue(document.getElementById('kpi-margen-val'), 0, kpis.margen.valor, 500, val => `${val.toFixed(1)}%`);
-        animateValue(document.getElementById('kpi-clientes-val'), 0, kpis.clientes.valor, 500, val => Math.floor(val).toString());
-        animateValue(document.getElementById('kpi-proyeccion-val'), 0, proyeccion_mes, 500, val => `S/ ${val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`);
-        
-        const progProy = proyeccion_mes > 0 ? (kpis.ventas.valor / proyeccion_mes) * 100 : 0;
-        document.getElementById('kpi-proyeccion-bar').style.width = `${Math.min(progProy, 100)}%`;
+        _dashData = data;
 
-        const setVar = (elId, val, invert = false) => {
+        const { kpis, health, salud_inventario, proyeccion_mes, proyeccion_fin_mes, charts } = data;
+        const proy = proyeccion_fin_mes ?? proyeccion_mes ?? 0;
+
+        // ── 1. KPI Cards ─────────────────────────────────────────────────
+        animateValue(document.getElementById('kpi-ventas-val'),     0, kpis.ventas.valor,   500, v => fmtCurrency(v));
+        animateValue(document.getElementById('kpi-utilidad-val'),   0, kpis.utilidad.valor, 500, v => fmtCurrency(v));
+        animateValue(document.getElementById('kpi-margen-val'),     0, kpis.margen.valor,   500, v => `${v.toFixed(1)}%`);
+        animateValue(document.getElementById('kpi-clientes-val'),   0, kpis.clientes.valor, 500, v => Math.floor(v).toString());
+        animateValue(document.getElementById('kpi-proyeccion-val'), 0, proy,                500, v => fmtCurrency(v));
+
+        const progProy = proy > 0 ? Math.min((kpis.ventas.valor / proy) * 100, 100) : 0;
+        document.getElementById('kpi-proyeccion-bar').style.width = `${progProy}%`;
+
+        const setVar = (elId, val) => {
             const el = document.getElementById(elId);
             if (Math.abs(val) < 0.1) {
-                el.innerText = '≈ 0.00%';
-                el.className = 'text-xs text-gray-400 mt-1 font-medium';
+                el.innerText  = '≈ 0.00%';
+                el.className  = 'text-xs text-slate-400 dark:text-slate-500 mt-1 font-semibold';
             } else {
                 const isUp = val > 0;
-                let colorClass = isUp ? 'text-green-500' : 'text-red-500';
-                if (invert) colorClass = !isUp ? 'text-green-500' : 'text-red-500';
                 el.innerText = `${isUp ? '↑' : '↓'} ${Math.abs(val).toFixed(2)}% vs Anterior`;
-                el.className = `text-xs ${colorClass} mt-1 font-bold`;
+                el.className = `text-xs ${isUp ? 'text-green-500' : 'text-red-500'} mt-1 font-bold`;
             }
         };
+        setVar('kpi-ventas-var',     kpis.ventas.var);
+        setVar('kpi-utilidad-var',   kpis.utilidad.var);
+        setVar('kpi-margen-var',     kpis.margen.var);
+        setVar('kpi-clientes-var',   kpis.clientes.var);
+        // Proyección usa la variación de ventas como proxy
+        setVar('kpi-proyeccion-var', kpis.ventas.var);
 
-        setVar('kpi-ventas-var', kpis.ventas.var);
-        setVar('kpi-utilidad-var', kpis.utilidad.var);
-        setVar('kpi-margen-var', kpis.margen.var);
-        setVar('kpi-clientes-var', kpis.clientes.var);
-        setVar('kpi-proyeccion-var', kpis.proyeccion ? kpis.proyeccion.var : kpis.ventas.var);
+        // ── 2. Health Score — leer desde data.health ──────────────────────
+        const { score, estado: estadoTxt } = health;
 
-        // --- 2. Salud del Negocio ---
-        let score = 0;
-        if (kpis.utilidad.valor > 0) score += 30;
-        if (kpis.ventas.var >= 0) score += 30;
-        
-        const criticos = (salud_inventario['Crítico'] || {}).items || 0;
-        if (criticos === 0) score += 40;
-        else if (criticos <= 5) score += 20;
-
-        let estadoTxt = "Atención Requerida";
-        let estadoColor = "text-red-500";
-        if (score >= 80) { estadoTxt = "Excelente"; estadoColor = "text-green-500"; }
-        else if (score >= 50) { estadoTxt = "Regular"; estadoColor = "text-orange-500"; }
-        
+        const estadoColor = score >= 80 ? 'text-green-500' : score >= 50 ? 'text-orange-500' : 'text-red-500';
         const hEstado = document.getElementById('health-status');
         hEstado.innerText = estadoTxt;
-        hEstado.className = `font-bold ${estadoColor}`;
-        document.getElementById('health-bar').style.width = `${score}%`;
-        document.getElementById('health-score').innerText = `${score}/100`;
+        hEstado.className = `font-bold text-2xl ${estadoColor}`;
+        document.getElementById('health-bar').style.width  = `${score}%`;
+        document.getElementById('health-score').innerText  = `${score}/100`;
 
-        // --- 3. Insights Accionables ---
-        const container = document.getElementById('insights-container');
-        document.getElementById('insights-count').textContent = insights.length;
-        container.innerHTML = ''; // Limpiar
-        
-        insights.forEach(inv => {
-            const card = document.createElement('div');
-            
-            let bgClass = "bg-white dark:bg-gray-800";
-            let borderClass = "border-gray-200 dark:border-gray-700";
-            
-            if (inv.tipo === 'resumen') { bgClass = "bg-blue-50 dark:bg-blue-900/20"; borderClass = "border-blue-400"; }
-            else if (inv.tipo === 'oportunidad' || inv.tipo === 'oportunidad_apriori') { bgClass = "bg-green-50 dark:bg-green-900/20"; borderClass = "border-green-500"; }
-            else if (inv.tipo === 'riesgo') { bgClass = "bg-red-50 dark:bg-red-900/20"; borderClass = "border-red-500"; }
-            else if (inv.tipo === 'tarea') { bgClass = "bg-sky-50 dark:bg-sky-900/20"; borderClass = "border-sky-500"; }
+        // Snapshot para el modal (ya viene del servidor, no se recalcula)
+        window._healthSnapshot = health;
 
-            card.className = `${bgClass} border ${borderClass} rounded-lg p-3`;
-            
-            let btnHtml = '';
-            // Data to be attached for the modal
-            let insightDataStr = encodeURIComponent(JSON.stringify(inv));
+        // ── 3. Centro de Operaciones ──────────────────────────────────────
+        const criticos  = (salud_inventario['Crítico'] || {}).items || 0;
+        const compCount = data.compras_pendientes || 0;
+        const cliCount  = data.clientes_nuevos_mes || 0;
 
-            if (inv.accion_texto && inv.accion_target) {
-                btnHtml = `
-                    <div class="mt-3">
-                        <button onclick="event.stopPropagation(); resolveAction('${inv.accion_target}')" class="w-full text-xs font-bold text-white bg-gray-800 hover:bg-black dark:bg-gray-700 dark:hover:bg-gray-600 px-3 py-2 rounded-lg transition-colors flex items-center justify-between">
-                            <span>${inv.accion_texto}</span> <i class="fa-solid fa-arrow-right"></i>
-                        </button>
-                    </div>
-                `;
-            } else if (inv.tipo === 'oportunidad_apriori' && inv.apriori_data) {
-                btnHtml = `
-                    <div class="mt-3">
-                        <button onclick="event.stopPropagation(); openModal(${inv.apriori_data.soporte}, ${inv.apriori_data.confianza}, ${inv.apriori_data.lift})" class="w-full text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded-lg transition-colors flex items-center justify-between">
-                            <span>Ver Análisis IA</span> <i class="fa-solid fa-chart-simple"></i>
-                        </button>
-                    </div>
-                `;
+        document.getElementById('ops-inventario-count').textContent = criticos;
+        document.getElementById('ops-inventario-desc').textContent  =
+            criticos === 1 ? ' producto requiere reposición inmediata' : ' productos requieren reposición inmediata';
+
+        document.getElementById('ops-compras-count').textContent = compCount;
+        document.getElementById('ops-compras-desc').textContent  =
+            compCount === 1 ? ' orden espera confirmación o recepción' : ' órdenes esperan confirmación o recepción';
+
+        document.getElementById('ops-ventas-count').textContent = cliCount;
+        document.getElementById('ops-ventas-desc').textContent  =
+            cliCount === 1 ? ' cliente registrado este mes' : ' clientes registrados este mes';
+
+        // ── 4. Charts ─────────────────────────────────────────────────────
+        if (chartTendencia)  chartTendencia.destroy();
+        if (chartCategorias) chartCategorias.destroy();
+        if (chartRanking)    chartRanking.destroy();
+
+        // Always make the chart container visible — empty state handled by plugin
+        document.getElementById('chart-container').classList.remove('opacity-0');
+
+        // ── 4a. Tendencia — línea de regresión viene del servidor ─────────
+        const hasTendencia = charts.tendencia && charts.tendencia.length > 0;
+        const labels        = hasTendencia ? charts.tendencia.map(t => t.mes)          : [];
+        const dataVentas    = hasTendencia ? charts.tendencia.map(t => t.total_vendido) : [];
+        const dataTend      = hasTendencia ? (charts.tendencia_regresion || [])         : [];
+
+        chartTendencia = new Chart(document.getElementById('chartTendencia'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Ventas',
+                        data: dataVentas,
+                        borderColor: themeColors.primary,
+                        backgroundColor: 'rgba(42,130,218,0.08)',
+                        tension: 0.3,
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        fill: true,
+                    },
+                    {
+                        label: 'Tendencia',
+                        data: dataTend,
+                        borderColor: '#e74c3c',
+                        borderDash: [5, 5],
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        tension: 0,
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: themeColors.text, font: { size: 10 } } },
+                    y: { grid: { color: themeColors.grid }, ticks: { color: themeColors.text, font: { size: 10 } } }
+                },
+                plugins: {
+                    legend: { labels: { color: themeColors.text, font: { size: 10 }, boxWidth: 12 } },
+                    title:  { display: true, text: '📈 Recaudación y Tendencia', color: themeColors.text, font: { size: 12, weight: 'bold' }, padding: { bottom: 10 } },
+                }
             }
-
-            card.className = `${bgClass} border ${borderClass} rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow relative overflow-hidden group`;
-            card.setAttribute("onclick", `openInsightModal(decodeURIComponent('${insightDataStr}'))`);
-            
-            // Un pequeño indicador visual al hover
-            let hoverInd = `<div class="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400"><i class="fa-solid fa-chevron-right"></i></div>`;
-            if (inv.accion_target || inv.apriori_data) {
-                 hoverInd = ''; // Si tiene botón directo, no hace falta la flecha
-            }
-
-            card.innerHTML = `
-                <div class="flex gap-3">
-                    <div class="text-2xl mt-0.5">${inv.icono}</div>
-                    <div class="flex-1">
-                        <p class="text-sm ${inv.tipo === 'resumen' ? 'font-bold' : 'font-medium'} text-gray-800 dark:text-gray-200 leading-snug">${inv.mensaje}</p>
-                        ${btnHtml}
-                    </div>
-                </div>
-                ${hoverInd}
-            `;
-            container.appendChild(card);
         });
 
-        // --- 4. Gráficos (Chart.js) ---
-        if (chartTendencia) chartTendencia.destroy();
-        if (chartCategorias) chartCategorias.destroy();
-        if (chartRanking) chartRanking.destroy();
+        // ── 4b. Categorías (doughnut) ──────────────────────────────────────
+        const hasCat   = charts.categorias && charts.categorias.length > 0;
+        const catLabels = hasCat ? charts.categorias.map(c => c.categoria)   : [];
+        const catData   = hasCat ? charts.categorias.map(c => c.precio_total) : [];
 
-        if (charts.tendencia && charts.tendencia.length > 1) {
-            // Mostrar gráficos
-            document.getElementById('chart-container').classList.remove('opacity-0');
-            
-            // Tendencia
-            const labels = charts.tendencia.map(t => t.mes);
-            const dataVentas = charts.tendencia.map(t => t.total_vendido);
-            const dataTendencia = linearRegression(dataVentas);
-
-            chartTendencia = new Chart(document.getElementById('chartTendencia'), {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        { label: 'Ventas', data: dataVentas, borderColor: themeColors.primary, tension: 0.3, borderWidth: 2, pointRadius: 4 },
-                        { label: 'Tendencia', data: dataTendencia, borderColor: '#e74c3c', borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0 }
-                    ]
+        chartCategorias = new Chart(document.getElementById('chartCategorias'), {
+            type: 'doughnut',
+            data: {
+                labels: catLabels,
+                datasets: [{
+                    data: catData,
+                    backgroundColor: ['#2a82da', '#27ae60', '#f39c12', '#8e44ad', '#e74c3c', '#16a085']
+                }]
+            },
+            options: {
+                onClick: (e, elements) => {
+                    if (!hasCat || elements.length === 0) return;
+                    const cat = charts.categorias[elements[0].index];
+                    openCategoriaModal(cat.categoria, cat.precio_total, cat.margen_ponderado);
                 },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    scales: {
-                        x: { grid: { display: false }, ticks: { color: themeColors.text, font: {size: 10} } },
-                        y: { grid: { color: themeColors.grid }, ticks: { color: themeColors.text, font: {size: 10} } }
-                    },
-                    plugins: { 
-                        legend: { labels: { color: themeColors.text, font: {size: 10}, boxWidth: 12 } },
-                        title: { display: true, text: '📈 Proyección Tendencial', color: themeColors.text, font: {size: 12, weight: 'bold'}, padding: {bottom: 10} }
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: themeColors.text, font: { size: 10 }, boxWidth: 10 } }
+                }
+            }
+        });
+
+        // ── 4c. Top Productos (horizontal bar) ─────────────────────────────
+        const hasRanking   = charts.ranking && charts.ranking.length > 0;
+        const rankLabels   = hasRanking ? charts.ranking.map(r => r.nombre)           : [];
+        const rankData     = hasRanking ? charts.ranking.map(r => r.cantidad_vendida)  : [];
+
+        chartRanking = new Chart(document.getElementById('chartRanking'), {
+            type: 'bar',
+            data: {
+                labels: rankLabels,
+                datasets: [{
+                    label: 'Unidades Vendidas',
+                    data: rankData,
+                    backgroundColor: themeColors.secondary
+                }]
+            },
+            options: {
+                onClick: (e, elements) => {
+                    if (!hasRanking || elements.length === 0) return;
+                    const r = charts.ranking[elements[0].index];
+                    openTopProductoModal(r.nombre, r.cantidad_vendida, r.total_recaudado);
+                },
+                indexAxis: 'y',
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { color: themeColors.grid }, ticks: { color: themeColors.text, font: { size: 10 } } },
+                    y: { grid: { display: false }, ticks: { color: themeColors.text, font: { size: 10 } } }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label(context) {
+                                if (!hasRanking) return '';
+                                const r   = charts.ranking[context.dataIndex];
+                                const rec = fmtCurrency(r.total_recaudado);
+                                return ` Ingreso: ${rec} (${r.cantidad_vendida} unds)`;
+                            },
+                            labelColor() { return { borderColor: '#22c55e', backgroundColor: '#22c55e' }; }
+                        }
                     }
                 }
-            });
-
-            // Categorías (Doughnut)
-            if (charts.categorias.length > 0) {
-                chartCategorias = new Chart(document.getElementById('chartCategorias'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: charts.categorias.map(c => c.categoria),
-                        datasets: [{
-                            data: charts.categorias.map(c => c.precio_total),
-                            backgroundColor: ['#2a82da', '#27ae60', '#f39c12', '#8e44ad', '#e74c3c']
-                        }]
-                    },
-                    options: {
-                        onClick: (e, elements) => {
-                             if (elements.length > 0) {
-                                 const idx = elements[0].index;
-                                 const label = chartCategorias.data.labels[idx];
-                                 const val = chartCategorias.data.datasets[0].data[idx];
-                                 alert(`Categoría ${label}: S/ ${val.toLocaleString('en-US')}`);
-                             }
-                        },
-                        responsive: true, maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'bottom', labels: { color: themeColors.text, font: {size: 10}, boxWidth: 10 } }
-                        }
-                    }
-                });
             }
-
-            // Ranking (Bar Horizontal)
-            if (charts.ranking.length > 0) {
-                chartRanking = new Chart(document.getElementById('chartRanking'), {
-                    type: 'bar',
-                    data: {
-                        labels: charts.ranking.map(r => r.nombre),
-                        datasets: [{
-                            label: 'Unidades Vendidas',
-                            data: charts.ranking.map(r => r.cantidad_vendida),
-                            backgroundColor: themeColors.secondary
-                        }]
-                    },
-                    options: {
-                        onClick: (e, elements) => {
-                             if (elements.length > 0) {
-                                 const idx = elements[0].index;
-                                 const label = chartRanking.data.labels[idx];
-                                 const val = chartRanking.data.datasets[0].data[idx];
-                                 alert(`Producto Top: ${label} (${val} unidades)`);
-                             }
-                        },
-                        indexAxis: 'y',
-                        responsive: true, maintainAspectRatio: false,
-                        scales: {
-                            x: { grid: { color: themeColors.grid }, ticks: { color: themeColors.text, font: {size: 10} } },
-                            y: { grid: { display: false }, ticks: { color: themeColors.text, font: {size: 10} } }
-                        },
-                        plugins: { 
-                            legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        // Context dataIndex -> charts.ranking[dataIndex].total_recaudado
-                                        const r = charts.ranking[context.dataIndex];
-                                        const usd = Number(r.total_recaudado || 0).toLocaleString('en-US', {style:'currency', currency:'USD'});
-                                        return ` Ingreso: S/ {usd} (${r.cantidad_vendida} unds)`;
-                                    },
-                                    labelColor: function(context) {
-                                        return { borderColor: '#22c55e', backgroundColor: '#22c55e' }; // Verde para el tooltip
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-        } else {
-            // Mostrar Fallback
-            document.getElementById('chart-fallback').classList.remove('hidden');
-            document.getElementById('fallback-msg').innerText = `Ventas consolidadas en este periodo: S/ ${kpis.ventas.valor.toLocaleString('en-US')}. Salud actual: ${estadoTxt}.`;
-        }
+        });
 
     } catch (error) {
-        console.error("Error loading dashboard data:", error);
-        alert("Ocurrió un error al cargar las métricas. Revisa la consola.");
+        console.error('[Dashboard] Error loading metrics:', error);
+        // Show non-blocking inline error message
+        const fallback = document.getElementById('chart-fallback');
+        const msg      = document.getElementById('fallback-msg');
+        if (fallback && msg) {
+            msg.innerHTML = `<span class="text-red-500 font-bold">⚠ Error de red</span><br>
+                             <span class="text-sm">No se pudo conectar al servidor. Intenta recargar la página.</span>`;
+            fallback.classList.remove('hidden');
+        }
     } finally {
         document.getElementById('chart-loading').classList.add('hidden');
     }
 }
 
-// Filtros Event Listeners
+// ═══════════════════════════════════════════════════════════════════════════
+// FILTER BUTTONS
+// ═══════════════════════════════════════════════════════════════════════════
 document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        // Quitar estado activo
+    btn.addEventListener('click', e => {
         document.querySelectorAll('.filter-btn').forEach(b => {
             b.classList.remove('active', 'text-white', 'bg-primary');
-            b.classList.add('text-gray-600', 'dark:text-gray-300');
+            b.classList.add('text-slate-600', 'dark:text-slate-300');
         });
-        // Poner estado activo
         const target = e.currentTarget;
         target.classList.add('active', 'text-white', 'bg-primary');
-        target.classList.remove('text-gray-600', 'dark:text-gray-300');
-        
-        // Cargar
+        target.classList.remove('text-slate-600', 'dark:text-slate-300');
         loadDashboardData(target.dataset.period);
     });
 });
 
-// Reactividad al cambio de tema
+// Theme change → reload charts with correct colours
 window.addEventListener('themeChanged', () => {
-    // Recargar gráficos para aplicar colores del tema
     const activeBtn = document.querySelector('.filter-btn.active');
     if (activeBtn) loadDashboardData(activeBtn.dataset.period);
 });
 
-// Init
+// Init on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
     loadDashboardData('7_dias');
 });
 
-// Modal Logic
-function openModal(soporte, confianza, lift) {
-    document.getElementById('modal-soporte').innerText = (soporte * 100).toFixed(1) + '% de las ventas';
-    document.getElementById('modal-confianza').innerText = (confianza * 100).toFixed(0) + '% de clientes';
-    document.getElementById('modal-lift').innerText = lift.toFixed(1) + 'x más probable';
-    
-    const modal = document.getElementById('aprioriModal');
+// ═══════════════════════════════════════════════════════════════════════════
+// MODAL HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+function _openModal(id) {
+    const modal = document.getElementById(id);
     modal.classList.remove('hidden');
     setTimeout(() => {
         modal.classList.remove('opacity-0');
@@ -335,99 +349,184 @@ function openModal(soporte, confianza, lift) {
     }, 10);
 }
 
-function closeModal() {
-    const modal = document.getElementById('aprioriModal');
+function _closeModal(id) {
+    const modal = document.getElementById(id);
     modal.classList.add('opacity-0');
     modal.firstElementChild.classList.add('scale-95');
-    setTimeout(() => {
-        modal.classList.add('hidden');
-    }, 300);
+    setTimeout(() => modal.classList.add('hidden'), 300);
 }
 
-let currentTargetAction = '';
+// ─── Health Modal — datos ya vienen del servidor ──────────────────────────
+function openHealthModal() {
+    const snap = window._healthSnapshot;
+    if (!snap) return;
 
-function resolveAction(target) {
-    if (target) {
-        window.location.href = target;
+    const { score, estado, factores = [], contexto = [] } = snap;
+
+    document.getElementById('health-modal-score').innerHTML =
+        `${score}<span class="text-lg text-gray-400">/100</span>`;
+
+    const badge = document.getElementById('health-modal-badge');
+    badge.textContent = estado;
+    badge.className = 'px-4 py-2 rounded-xl text-sm font-bold text-white ' +
+        (score >= 80 ? 'bg-green-500' : score >= 50 ? 'bg-orange-500' : 'bg-red-500');
+
+    const ul = document.getElementById('health-modal-factors');
+
+    ul.innerHTML = factores.map(f => `
+        <li class="flex items-start justify-between gap-3">
+            <span class="flex items-center gap-2 ${f.ok ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">
+                <i class="fa-solid ${f.ok ? 'fa-circle-check' : 'fa-triangle-exclamation'} text-base shrink-0"></i>
+                <span class="text-sm">${f.label}</span>
+            </span>
+            <span class="text-xs font-mono font-bold shrink-0 ${f.ok ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}">${f.pts}</span>
+        </li>
+    `).join('');
+
+    if (contexto.length > 0) {
+        ul.innerHTML += '<li class="border-t border-gray-100 dark:border-gray-700 pt-2 mt-1 space-y-2">' +
+            contexto.map(c => `
+                <div class="flex items-center gap-2 ${c.warn ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'}">
+                    <i class="fa-solid ${c.warn ? 'fa-circle-exclamation' : 'fa-circle-check'} text-sm shrink-0"></i>
+                    <span class="text-xs">${c.label}</span>
+                </div>
+            `).join('') + '</li>';
     }
+
+    _openModal('HealthModal');
 }
+function closeHealthModal() { _closeModal('HealthModal'); }
 
-function openInsightModal(dataStr) {
-    try {
-        const inv = JSON.parse(dataStr);
-        document.getElementById('insight-modal-icon').innerText = inv.icono;
-        document.getElementById('insight-modal-msg').innerText = inv.mensaje;
-        
-        // Asignar descripción basada en tipo
-        let desc = "Revisar los detalles para tomar acción.";
-        if (inv.tipo === 'riesgo') desc = "Es necesario tomar acción inmediata para mitigar este riesgo operativo.";
-        if (inv.tipo === 'oportunidad' || inv.tipo === 'oportunidad_apriori') desc = "Aplicar esta sugerencia podría mejorar la utilidad o la experiencia del cliente.";
-        if (inv.tipo === 'resumen') desc = "Resumen automatizado del periodo analizado.";
-        document.getElementById('insight-modal-desc').innerText = desc;
-        
-        const extra = document.getElementById('insight-modal-extra');
-        extra.innerHTML = '';
-        extra.classList.add('hidden');
-        
-        if (inv.tipo === 'oportunidad_apriori' && inv.apriori_data) {
-             extra.classList.remove('hidden');
-             extra.innerHTML = `
-                 <div class="space-y-2.5">
-                     <h5 class="font-bold text-xs uppercase tracking-wider text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
-                         <i class="fa-solid fa-chart-line"></i> Diagnóstico de Venta Cruzada:
-                     </h5>
-                     <div class="space-y-2 text-xs">
-                         <div class="flex justify-between items-center bg-white dark:bg-gray-800 p-2.5 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
-                             <span class="text-gray-600 dark:text-gray-300">🎯 Certeza de compra en conjunto:</span>
-                             <strong class="text-blue-600 dark:text-blue-400 font-mono text-sm">${(inv.apriori_data.confianza * 100).toFixed(0)}%</strong>
-                         </div>
-                         <div class="flex justify-between items-center bg-white dark:bg-gray-800 p-2.5 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
-                             <span class="text-gray-600 dark:text-gray-300">🚀 Fuerza de la combinación:</span>
-                             <strong class="text-purple-600 dark:text-purple-400 font-mono text-sm">${inv.apriori_data.lift.toFixed(1)}x más probable</strong>
-                         </div>
-                         <div class="flex justify-between items-center bg-white dark:bg-gray-800 p-2.5 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
-                             <span class="text-gray-600 dark:text-gray-300">🛍️ Presencia en ventas globales:</span>
-                             <strong class="text-green-600 dark:text-green-400 font-mono text-sm">${(inv.apriori_data.soporte * 100).toFixed(1)}% de tickets</strong>
-                         </div>
-                     </div>
-                     <p class="text-[11px] text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 p-2.5 rounded-lg border border-purple-100 dark:border-purple-900/50 leading-tight">
-                         💡 <strong>Sugerencia Comercial:</strong> Ofrece estos productos juntos en el mostrador o promociona el combo en tus redes sociales.
-                     </p>
-                 </div>
-             `;
-        }
-
-        const btn = document.getElementById('insight-modal-action-btn');
-        if (inv.accion_target) {
-            btn.classList.remove('hidden');
-            currentTargetAction = inv.accion_target;
-        } else {
-            btn.classList.add('hidden');
-            currentTargetAction = '';
-        }
-
-        const modal = document.getElementById('insightDetailModal');
-        modal.classList.remove('hidden');
-        setTimeout(() => {
-            modal.classList.remove('opacity-0');
-            modal.firstElementChild.classList.remove('scale-95');
-        }, 10);
-    } catch(e) {
-        console.error("Error modal:", e);
+// ─── KPI Modal ────────────────────────────────────────────────────────────
+const KPI_CONFIG = {
+    ventas: {
+        title: 'Ventas del Período',
+        icon: 'fa-coins',
+        color: 'from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-800/80',
+        iconColor: 'text-blue-500',
+        mainLabel: 'Total Recaudado',
+        rows(d, periodo) {
+            const dias    = periodoDias(periodo);
+            const promDia = dias > 0 ? d.kpis.ventas.valor / dias : 0;
+            const varVal  = d.kpis.ventas.var;
+            return [
+                { label: 'Variación vs período anterior', value: `${varVal >= 0 ? '↑' : '↓'} ${Math.abs(varVal).toFixed(2)}%`, warn: varVal < 0 },
+                { label: 'Promedio diario estimado',      value: fmtCurrency(promDia) },
+                { label: 'Período analizado',             value: periodoLabel(periodo) },
+            ];
+        },
+        mainValue(d) { return fmtCurrency(d.kpis.ventas.valor); }
+    },
+    utilidad: {
+        title: 'Utilidad Bruta',
+        icon: 'fa-sack-dollar',
+        color: 'from-green-50 to-emerald-50 dark:from-gray-800 dark:to-gray-800/80',
+        iconColor: 'text-green-500',
+        mainLabel: 'Utilidad Total',
+        rows(d) {
+            const participacion = d.kpis.ventas.valor > 0
+                ? (d.kpis.utilidad.valor / d.kpis.ventas.valor * 100) : 0;
+            const varVal = d.kpis.utilidad.var;
+            return [
+                { label: 'Margen obtenido',              value: `${d.kpis.margen.valor.toFixed(1)}%` },
+                { label: 'Participación sobre ventas',   value: `${participacion.toFixed(1)}%` },
+                { label: 'Variación vs período anterior',value: `${varVal >= 0 ? '↑' : '↓'} ${Math.abs(varVal).toFixed(2)}%`, warn: varVal < 0 },
+            ];
+        },
+        mainValue(d) { return fmtCurrency(d.kpis.utilidad.valor); }
+    },
+    margen: {
+        title: 'Margen Bruto',
+        icon: 'fa-percent',
+        color: 'from-orange-50 to-amber-50 dark:from-gray-800 dark:to-gray-800/80',
+        iconColor: 'text-orange-500',
+        mainLabel: 'Margen del Período',
+        rows(d) {
+            const varVal = d.kpis.margen.var;
+            return [
+                { label: 'Variación en pp vs anterior', value: `${varVal >= 0 ? '+' : ''}${varVal.toFixed(2)} pp`, warn: varVal < 0 },
+                { label: 'Umbral de alerta',            value: '< 30%' },
+                { label: 'Estado',                      value: d.kpis.margen.valor >= 30 ? '✔ Saludable' : '⚠ Por debajo del umbral', warn: d.kpis.margen.valor < 30 },
+            ];
+        },
+        mainValue(d) { return `${d.kpis.margen.valor.toFixed(1)}%`; }
+    },
+    clientes: {
+        title: 'Nuevos Clientes',
+        icon: 'fa-users',
+        color: 'from-purple-50 to-violet-50 dark:from-gray-800 dark:to-gray-800/80',
+        iconColor: 'text-purple-500',
+        mainLabel: 'Clientes únicos atendidos',
+        rows(d, periodo) {
+            const varVal = d.kpis.clientes.var;
+            return [
+                { label: 'Período evaluado',              value: periodoLabel(periodo) },
+                { label: 'Variación vs período anterior', value: `${varVal >= 0 ? '↑' : '↓'} ${Math.abs(varVal).toFixed(2)}%`, warn: varVal < 0 },
+            ];
+        },
+        mainValue(d) { return String(d.kpis.clientes.valor); }
+    },
+    proyeccion: {
+        title: 'Proyección Mensual',
+        icon: 'fa-calendar-day',
+        color: 'from-teal-50 to-cyan-50 dark:from-gray-800 dark:to-gray-800/80',
+        iconColor: 'text-teal-500',
+        mainLabel: 'Proyección al cierre del mes',
+        rows(d) {
+            const ventas   = d.kpis.ventas.valor;
+            const proy     = d.proyeccion_fin_mes ?? d.proyeccion_mes ?? 0;
+            const progreso = proy > 0 ? Math.min((ventas / proy) * 100, 100) : 0;
+            return [
+                { label: 'Ventas acumuladas (mes actual)', value: fmtCurrency(ventas) },
+                { label: 'Progreso hacia la proyección',   value: `${progreso.toFixed(1)}%` },
+                { label: 'Método de cálculo',              value: 'Promedio diario × días del mes' },
+            ];
+        },
+        mainValue(d) { return fmtCurrency(d.proyeccion_fin_mes ?? d.proyeccion_mes ?? 0); }
     }
-}
+};
 
-function closeInsightModal() {
-    const modal = document.getElementById('insightDetailModal');
-    modal.classList.add('opacity-0');
-    modal.firstElementChild.classList.add('scale-95');
-    setTimeout(() => {
-        modal.classList.add('hidden');
-    }, 300);
-}
+function openKpiModal(kpi) {
+    if (!_dashData) return;
+    const cfg = KPI_CONFIG[kpi];
+    if (!cfg) return;
 
-function executeModalAction() {
-    if (currentTargetAction) {
-        resolveAction(currentTargetAction);
-    }
+    // Header gradient + icon
+    document.getElementById('kpi-modal-header').className =
+        `p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gradient-to-r ${cfg.color}`;
+    document.getElementById('kpi-modal-title').innerHTML =
+        `<i class="fa-solid ${cfg.icon} ${cfg.iconColor}"></i> ${cfg.title}`;
+
+    // Main value
+    document.getElementById('kpi-modal-main-label').textContent = cfg.mainLabel;
+    document.getElementById('kpi-modal-main-value').textContent = cfg.mainValue(_dashData);
+
+    // Detail rows
+    const rows = cfg.rows(_dashData, _dashPeriodo);
+    document.getElementById('kpi-modal-rows').innerHTML = rows.map(r => `
+        <div class="flex items-center justify-between py-2 border-b border-gray-50 dark:border-gray-800 last:border-0">
+            <span class="text-sm text-gray-600 dark:text-gray-400">${r.label}</span>
+            <span class="text-sm font-bold ${r.warn ? 'text-red-500' : 'text-gray-800 dark:text-white'}">${r.value}</span>
+        </div>
+    `).join('');
+
+    _openModal('KpiModal');
 }
+function closeKpiModal() { _closeModal('KpiModal'); }
+
+// ─── Chart Click Modals ────────────────────────────────────────────────────
+function openTopProductoModal(nombre, ventas, ingresos) {
+    document.getElementById('top-prod-nombre').innerText   = nombre;
+    document.getElementById('top-prod-ventas').innerText   = `${ventas} unidades`;
+    document.getElementById('top-prod-ingresos').innerText = fmtCurrency(ingresos);
+    _openModal('TopProductoModal');
+}
+function closeTopProductoModal() { _closeModal('TopProductoModal'); }
+
+function openCategoriaModal(nombre, ventas, margen) {
+    document.getElementById('cat-nombre').innerText = nombre;
+    document.getElementById('cat-ventas').innerText = fmtCurrency(ventas);
+    document.getElementById('cat-margen').innerText = `${Number(margen).toFixed(1)}%`;
+    _openModal('CategoriaModal');
+}
+function closeCategoriaModal() { _closeModal('CategoriaModal'); }

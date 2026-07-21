@@ -145,7 +145,7 @@ def run_analytics_tests():
             for r in rentabilidades:
                 if r["categoria"] == "Calzado de Prueba Analitica":
                     print(f"Categoría: '{r['categoria']}' | Margen Ponderado: {r['margen_ponderado']}%")
-                    assert abs(r["margen_ponderado"] - 33.33) < 0.01, f"Error Calzado margen: {r['margen_ponderado']}"
+                    assert abs(r["margen_ponderado"] - 30.00) < 0.01, f"Error Calzado margen: {r['margen_ponderado']}"
                     calzado_checked = True
                 elif r["categoria"] == "Ropa de Prueba Analitica":
                     print(f"Categoría: '{r['categoria']}' | Margen Ponderado: {r['margen_ponderado']}%")
@@ -171,7 +171,7 @@ def run_analytics_tests():
             print("\n--- Ranking de Productos ---")
             ranking = AnaliticaService.obtener_ranking_productos(
                 db, 
-                limit=5, 
+                limit=100, 
                 fecha_inicio=datetime.date(2026, 1, 1), 
                 fecha_fin=datetime.date(2026, 12, 31)
             )

@@ -12,11 +12,11 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#2a82da',
-                        secondary: '#27ae60',
-                        darkBg: '#0f172a',
-                        darkCard: '#1e293b',
-                        lightBg: '#f8fafc',
+                        primary: '#2563eb',
+                        secondary: '#10b981',
+                        darkBg: '#020617',
+                        darkCard: '#0f172a',
+                        lightBg: '#f1f5f9',
                         lightCard: '#ffffff'
                     }
                 }
@@ -26,19 +26,19 @@
     <style type="text/tailwindcss">
         @layer components {
             .card {
-                @apply bg-white dark:bg-darkCard rounded-xl shadow-sm border border-gray-100 dark:border-gray-700;
+                @apply bg-white dark:bg-darkCard rounded-xl shadow-sm border border-slate-200 dark:border-slate-800;
             }
             .btn-primary {
-                @apply bg-primary hover:bg-blue-600 text-white rounded-lg font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed;
+                @apply bg-primary hover:bg-blue-700 text-white rounded-lg font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed;
             }
             .btn-secondary {
-                @apply bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg font-bold transition-all shadow-sm flex items-center justify-center gap-2;
+                @apply bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-white rounded-lg font-bold transition-all shadow-sm flex items-center justify-center gap-2;
             }
             .btn-danger {
                 @apply bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-500 hover:text-red-700 rounded-lg font-bold transition-colors flex items-center justify-center gap-2;
             }
             .input-base {
-                @apply w-full border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-[#1a1a1a] text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all;
+                @apply w-full border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500;
             }
         }
     </style>
@@ -48,7 +48,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     {% block head %}{% endblock %}
 </head>
-<body class="bg-lightBg text-gray-800 dark:bg-darkBg dark:text-gray-200 transition-colors duration-200 font-sans h-screen flex overflow-hidden">
+<body class="bg-lightBg text-slate-800 dark:bg-darkBg dark:text-slate-200 transition-colors duration-200 font-sans h-screen flex overflow-hidden">
     
     <!-- Sidebar -->
     {% include 'components/sidebar.html' %}
@@ -57,7 +57,7 @@
     <main class="flex-1 flex flex-col h-full overflow-hidden relative">
         {% include 'components/topbar.html' %}
         
-        <div class="flex-1 overflow-auto p-8">
+        <div class="flex-1 overflow-auto p-8 bg-lightBg dark:bg-darkBg">
             {% block content %}{% endblock %}
         </div>
     </main>
