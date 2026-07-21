@@ -1,3 +1,4 @@
+import math
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
@@ -46,81 +47,15 @@ class ProveedorCreate(ProveedorBase):
 class ProveedorUpdate(ProveedorBase):
     pass
 
-# Helper para calcular la Acción Recomendada
-def calcular_accion(frecuencia: int, ultima_transaccion, es_cliente: bool) -> dict:
-    if not ultima_transaccion:
-        if es_cliente:
-            return {
-                "texto": "Enviar Catálogo de Bienvenida", 
-                "explicacion": "Cliente registrado sin compras anteriores. Presentar la colección actual facilitará su primera transacción.",
-                "badge_class": "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-            }
-        else:
-            return {
-                "texto": "Solicitar Lista de Precios", 
-                "explicacion": "Proveedor registrado sin pedidos previos. Solicitar catálogo para evaluar su oferta y condiciones comerciales.",
-                "badge_class": "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-            }
-
-    # Determinar fecha
-    if isinstance(ultima_transaccion, datetime):
-        ultima_date = ultima_transaccion.date()
-    elif isinstance(ultima_transaccion, str):
-        ultima_date = datetime.strptime(ultima_transaccion, "%Y-%m-%d").date()
-    else:
-        ultima_date = ultima_transaccion
-
-    dias = (date.today() - ultima_date).days
-    is_activo = dias <= 30
-    is_frecuente = frecuencia >= 3
-
-    if es_cliente:
-        if is_frecuente and is_activo:
-            return {
-                "texto": "Invitar al Programa VIP", 
-                "explicacion": "Este cliente compra con frecuencia y mantiene un ticket superior al promedio. Ofrecer beneficios exclusivos aumenta su fidelización.",
-                "badge_class": "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border border-emerald-700/50"
-            }
-        elif is_activo:
-            return {
-                "texto": "Sugerir Producto Complementario", 
-                "explicacion": "Cliente regular con actividad reciente. Enviar sugerencias o encuesta de satisfacción para elevar el ticket.",
-                "badge_class": "bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 border border-blue-700/50"
-            }
-        else:
-            return {
-                "texto": "Reactivar con Oferta Especial", 
-                "explicacion": "El cliente no ha realizado compras en más de 30 días. Enviar un cupón de descuento puede incentivar su retorno.",
-                "badge_class": "bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-700/50"
-            }
-    else:
-        if is_frecuente and is_activo:
-            return {
-                "texto": "Negociar Descuento por Volumen", 
-                "explicacion": "Suministrador recurrente clave. Coordinar compras por volumen permite optimizar los márgenes de ganancia.",
-                "badge_class": "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border border-emerald-700/50"
-            }
-        elif is_activo:
-            return {
-                "texto": "Programar Próximo Pedido", 
-                "explicacion": "Este proveedor abastece productos importantes para la tienda. Anticipar el pedido ayuda a evitar quiebres de stock.",
-                "badge_class": "bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 border border-blue-700/50"
-            }
-        else:
-            return {
-                "texto": "Solicitar Catálogo Actualizado", 
-                "explicacion": "No existen pedidos recientes. Solicitar el catálogo permitirá conocer nuevos productos y precios actualizados.",
-                "badge_class": "bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-700/50"
-            }
-
 # --- ENDPOINTS CLIENTES ---
 
 @router.get("/clientes")
 def get_clientes(
+    page: int = Query(1, ge=1, description="Número de página"),
+    limit: int = Query(20, ge=1, le=100, description="Registros por página"),
     q: Optional[str] = Query(None, description="Búsqueda por documento, nombres o apellidos"),
     db: Session = Depends(get_db_session)
 ):
-    # Subconsulta para obtener la categoría preferida del cliente
     subq_cat = (
         db.query(Categoria.nombreCategoria)
         .join(Producto, Categoria.idCategoria == Producto.idCategoria)
@@ -133,7 +68,7 @@ def get_clientes(
         .scalar_subquery()
     )
 
-    query = db.query(
+    base_query = db.query(
         Cliente, 
         func.count(Venta.idVenta).label("frecuencia"),
         func.max(Venta.fechaVenta).label("ultima_transaccion"),
@@ -145,15 +80,19 @@ def get_clientes(
 
     if q:
         search_term = f"%{q}%"
-        query = query.filter(or_(
+        base_query = base_query.filter(or_(
             Cliente.numeroDocumento.like(search_term),
             Cliente.nombres.like(search_term),
             Cliente.apellidos.like(search_term)
         ))
 
-    resultados = query.all()
+    total_records = base_query.count()
+    total_pages = math.ceil(total_records / limit) if total_records > 0 else 1
 
-    return [{
+    offset_val = (page - 1) * limit
+    resultados = base_query.offset(offset_val).limit(limit).all()
+
+    data = [{
         "idCliente": row.Cliente.idCliente,
         "tipoDocumento": row.Cliente.tipoDocumento,
         "numeroDocumento": row.Cliente.numeroDocumento,
@@ -164,9 +103,15 @@ def get_clientes(
         "frecuencia": row.frecuencia or 0,
         "ultima_transaccion": row.ultima_transaccion.isoformat() if row.ultima_transaccion else None,
         "ticket_promedio": float(row.ticket_promedio or 0),
-        "especialidad": row.especialidad or "Sin preferencia",
-        "accion_recomendada": calcular_accion(row.frecuencia or 0, row.ultima_transaccion, es_cliente=True)
+        "especialidad": row.especialidad or "Sin preferencia"
     } for row in resultados]
+
+    return {
+        "data": data,
+        "total_pages": total_pages,
+        "current_page": page,
+        "total_records": total_records
+    }
 
 @router.post("/clientes")
 def create_cliente(payload: ClienteCreate, db: Session = Depends(get_db_session)):
@@ -199,14 +144,24 @@ def update_cliente(id: int, payload: ClienteUpdate, db: Session = Depends(get_db
     db.commit()
     return {"status": "success"}
 
+@router.patch("/clientes/{id}/inactivar")
+def inactivar_cliente(id: int, db: Session = Depends(get_db_session)):
+    cliente = db.query(Cliente).filter(Cliente.idCliente == id).first()
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    cliente.estado = 'INACTIVO'
+    db.commit()
+    return {"status": "success", "message": "Cliente inactivado exitosamente", "idCliente": id}
+
 # --- ENDPOINTS PROVEEDORES ---
 
 @router.get("/proveedores")
 def get_proveedores(
+    page: int = Query(1, ge=1, description="Número de página"),
+    limit: int = Query(20, ge=1, le=100, description="Registros por página"),
     q: Optional[str] = Query(None, description="Búsqueda por RUC o Razón Social"),
     db: Session = Depends(get_db_session)
 ):
-    # Subconsulta para obtener la categoría principal suministrada por el proveedor
     subq_cat = (
         db.query(Categoria.nombreCategoria)
         .join(Producto, Categoria.idCategoria == Producto.idCategoria)
@@ -219,7 +174,7 @@ def get_proveedores(
         .scalar_subquery()
     )
 
-    query = db.query(
+    base_query = db.query(
         Proveedor,
         func.count(Compra.idCompra).label("frecuencia"),
         func.max(Compra.fechaCompra).label("ultima_transaccion"),
@@ -231,14 +186,18 @@ def get_proveedores(
 
     if q:
         search_term = f"%{q}%"
-        query = query.filter(or_(
+        base_query = base_query.filter(or_(
             Proveedor.numeroDocumento.like(search_term),
             Proveedor.nombreRazonSocial.like(search_term)
         ))
 
-    resultados = query.all()
+    total_records = base_query.count()
+    total_pages = math.ceil(total_records / limit) if total_records > 0 else 1
 
-    return [{
+    offset_val = (page - 1) * limit
+    resultados = base_query.offset(offset_val).limit(limit).all()
+
+    data = [{
         "idProveedor": row.Proveedor.idProveedor,
         "tipoDocumento": row.Proveedor.tipoDocumento,
         "numeroDocumento": row.Proveedor.numeroDocumento,
@@ -249,9 +208,15 @@ def get_proveedores(
         "frecuencia": row.frecuencia or 0,
         "ultima_transaccion": row.ultima_transaccion.isoformat() if row.ultima_transaccion else None,
         "ticket_promedio": float(row.ticket_promedio or 0),
-        "especialidad": row.especialidad or "Sin suministros",
-        "accion_recomendada": calcular_accion(row.frecuencia or 0, row.ultima_transaccion, es_cliente=False)
+        "especialidad": row.especialidad or "Sin suministros"
     } for row in resultados]
+
+    return {
+        "data": data,
+        "total_pages": total_pages,
+        "current_page": page,
+        "total_records": total_records
+    }
 
 @router.post("/proveedores")
 def create_proveedor(payload: ProveedorCreate, db: Session = Depends(get_db_session)):
@@ -283,3 +248,12 @@ def update_proveedor(id: int, payload: ProveedorUpdate, db: Session = Depends(ge
         
     db.commit()
     return {"status": "success"}
+
+@router.patch("/proveedores/{id}/inactivar")
+def inactivar_proveedor(id: int, db: Session = Depends(get_db_session)):
+    proveedor = db.query(Proveedor).filter(Proveedor.idProveedor == id).first()
+    if not proveedor:
+        raise HTTPException(status_code=404, detail="Proveedor no encontrado")
+    proveedor.estado = 'INACTIVO'
+    db.commit()
+    return {"status": "success", "message": "Proveedor inactivado exitosamente", "idProveedor": id}

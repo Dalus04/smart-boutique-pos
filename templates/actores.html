@@ -18,7 +18,7 @@
         </div>
         <div class="card p-4 flex items-center justify-between border-l-4 border-emerald-500">
             <div>
-                <p id="metric-activos-label" class="text-xs text-gray-500 uppercase font-bold tracking-wider">Clientes VIP</p>
+                <p id="metric-activos-label" class="text-xs text-gray-500 uppercase font-bold tracking-wider">Clientes Frecuentes</p>
                 <h3 class="text-2xl font-bold text-gray-800 dark:text-gray-100" id="metric-activos">0</h3>
             </div>
             <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-500">
@@ -78,6 +78,24 @@
             </table>
             <div id="table-empty" class="hidden p-8 text-center text-gray-500 dark:text-gray-400">
                 No hay registros disponibles.
+            </div>
+        </div>
+
+        <!-- Controles de Paginación Server-Side -->
+        <div id="pagination-controls" class="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shrink-0">
+            <div id="pagination-info" class="text-gray-500 font-medium">
+                Mostrando <span id="pag-start" class="font-bold text-gray-800 dark:text-gray-200">0</span> - <span id="pag-end" class="font-bold text-gray-800 dark:text-gray-200">0</span> de <span id="pag-total" class="font-bold text-gray-800 dark:text-gray-200">0</span> registros
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="btn-page-prev" onclick="changePage(-1)" disabled class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1">
+                    <i class="fa-solid fa-chevron-left text-[10px]"></i> Anterior
+                </button>
+                <span class="font-bold text-gray-600 dark:text-gray-300 px-2">
+                    Página <span id="pag-current">1</span> de <span id="pag-total-pages">1</span>
+                </span>
+                <button id="btn-page-next" onclick="changePage(1)" disabled class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1">
+                    Siguiente <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -158,81 +176,148 @@
     </div>
 </div>
 
-<!-- Panel Lateral (Off-Canvas) Analítico -->
+<!-- Panel Lateral (Off-Canvas) Reestructurado -->
 <div id="offcanvas-overlay" class="fixed inset-0 z-40 bg-gray-900/40 hidden backdrop-blur-sm transition-opacity duration-300 opacity-0" onclick="closeOffCanvas()"></div>
-<div id="offcanvas-panel" class="fixed inset-y-0 right-0 w-full md:w-[450px] bg-white dark:bg-gray-800 shadow-2xl transform translate-x-full transition-transform duration-300 z-50 border-l border-gray-200 dark:border-gray-700 flex flex-col">
+<div id="offcanvas-panel" class="fixed inset-y-0 right-0 w-full md:w-[480px] bg-white dark:bg-gray-800 shadow-2xl transform translate-x-full transition-transform duration-300 z-50 border-l border-gray-200 dark:border-gray-700 flex flex-col">
     <!-- Header -->
-    <div class="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-start bg-gray-50 dark:bg-gray-900/50">
-        <div>
-            <div id="offcanvas-badge-container" class="mb-2"></div>
-            <h2 id="offcanvas-title" class="text-xl font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wide">--</h2>
-            <p id="offcanvas-subtitle" class="text-sm text-gray-500 font-mono mt-1">--</p>
+    <div class="p-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+        <div class="flex justify-between items-start">
+            <div>
+                <span id="offcanvas-badge-container" class="inline-block mb-1.5"></span>
+                <h2 id="offcanvas-title" class="text-xl font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wide">--</h2>
+                <p id="offcanvas-subtitle" class="text-sm text-gray-500 font-mono mt-0.5">--</p>
+            </div>
+            <button onclick="closeOffCanvas()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
         </div>
-        <button onclick="closeOffCanvas()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
-            <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
+
+        <!-- Offcanvas Sub-Tabs -->
+        <div class="flex border-b border-gray-200 dark:border-gray-700 mt-4 -mb-5">
+            <button id="offcanvas-tab-info" onclick="switchOffcanvasTab('info')" class="flex-1 py-2 text-xs font-bold uppercase tracking-wider text-primary border-b-2 border-primary transition-colors">
+                <i class="fa-solid fa-address-card mr-1"></i> Información
+            </button>
+            <button id="offcanvas-tab-actividad" onclick="switchOffcanvasTab('actividad')" class="flex-1 py-2 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border-b-2 border-transparent transition-colors">
+                <i class="fa-solid fa-chart-line mr-1"></i> Actividad
+            </button>
+            <button id="offcanvas-tab-acciones" onclick="switchOffcanvasTab('acciones')" class="flex-1 py-2 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border-b-2 border-transparent transition-colors">
+                <i class="fa-solid fa-bolt mr-1"></i> Acciones
+            </button>
+        </div>
     </div>
 
-    <!-- Body -->
+    <!-- Body Content -->
     <div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-        <!-- Bloque de Info de Contacto -->
-        <div>
-            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Información de Contacto</h3>
-            <div class="space-y-3 text-sm">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500 shrink-0"><i class="fa-solid fa-phone"></i></div>
-                    <span id="offcanvas-phone" class="text-gray-700 dark:text-gray-300 font-medium">--</span>
+        <!-- TAB 1: INFORMACIÓN -->
+        <div id="offcanvas-sec-info" class="space-y-6">
+            <div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Datos de Identificación</h3>
+                <div class="bg-gray-50 dark:bg-gray-900/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700 space-y-2.5 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Tipo de Documento:</span>
+                        <span id="offcanvas-tipo-doc" class="font-bold font-mono text-gray-800 dark:text-gray-200">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Número de Documento:</span>
+                        <span id="offcanvas-num-doc" class="font-bold font-mono text-gray-800 dark:text-gray-200">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Estado del Registro:</span>
+                        <span id="offcanvas-estado-reg" class="font-semibold text-emerald-600 dark:text-emerald-400">ACTIVO</span>
+                    </div>
                 </div>
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-500 shrink-0"><i class="fa-solid fa-envelope"></i></div>
-                    <span id="offcanvas-email" class="text-gray-700 dark:text-gray-300 font-medium truncate">--</span>
-                </div>
-                <div class="flex items-center gap-3" id="offcanvas-address-row">
-                    <div class="w-8 h-8 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-500 shrink-0"><i class="fa-solid fa-location-dot"></i></div>
-                    <span id="offcanvas-address" class="text-gray-700 dark:text-gray-300 font-medium">--</span>
+            </div>
+
+            <div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Información de Contacto</h3>
+                <div class="space-y-3 text-sm">
+                    <div class="flex items-center gap-3 bg-gray-50 dark:bg-gray-900/40 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                        <div class="w-9 h-9 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-500 shrink-0"><i class="fa-solid fa-phone"></i></div>
+                        <div>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold">Teléfono</p>
+                            <span id="offcanvas-phone" class="text-gray-700 dark:text-gray-300 font-medium">--</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 bg-gray-50 dark:bg-gray-900/40 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                        <div class="w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-500 shrink-0"><i class="fa-solid fa-envelope"></i></div>
+                        <div class="overflow-hidden">
+                            <p class="text-[10px] text-gray-400 uppercase font-bold">Correo Electrónico</p>
+                            <span id="offcanvas-email" class="text-gray-700 dark:text-gray-300 font-medium truncate block">--</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 bg-gray-50 dark:bg-gray-900/40 p-3 rounded-xl border border-gray-100 dark:border-gray-700" id="offcanvas-address-row">
+                        <div class="w-9 h-9 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-purple-500 shrink-0"><i class="fa-solid fa-location-dot"></i></div>
+                        <div>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold">Dirección Fiscal / Entrega</p>
+                            <span id="offcanvas-address" class="text-gray-700 dark:text-gray-300 font-medium">--</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Métricas Comerciales -->
-        <div>
-            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Métricas de Negocio</h3>
-            <div class="grid grid-cols-2 gap-3">
-                <div class="bg-gray-50 dark:bg-gray-900/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center">
-                    <span id="offcanvas-metric-1-label" class="text-[10px] uppercase font-bold text-gray-500 mb-1">Transacciones</span>
-                    <span id="offcanvas-metric-1-value" class="text-xl font-bold text-gray-800 dark:text-gray-200">0</span>
-                </div>
-                <div class="bg-gray-50 dark:bg-gray-900/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center">
-                    <span id="offcanvas-metric-2-label" class="text-[10px] uppercase font-bold text-gray-500 mb-1">Ticket Promedio</span>
-                    <span id="offcanvas-metric-2-value" class="text-xl font-bold text-primary font-mono">S/ 0.00</span>
+        <!-- TAB 2: ACTIVIDAD -->
+        <div id="offcanvas-sec-actividad" class="space-y-6 hidden">
+            <div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Métricas Comerciales</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-gray-50 dark:bg-gray-900/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center">
+                        <span id="offcanvas-metric-1-label" class="text-[10px] uppercase font-bold text-gray-500 mb-1">Transacciones</span>
+                        <span id="offcanvas-metric-1-value" class="text-2xl font-bold text-gray-800 dark:text-gray-200">0</span>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-900/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center">
+                        <span id="offcanvas-metric-2-label" class="text-[10px] uppercase font-bold text-gray-500 mb-1">Ticket Promedio</span>
+                        <span id="offcanvas-metric-2-value" class="text-xl font-bold text-primary font-mono">S/ 0.00</span>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- Especialidad -->
-        <div>
-            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Top Categoría</h3>
-            <div class="flex items-center gap-3 bg-gray-50 dark:bg-gray-900/40 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                <i class="fa-solid fa-star text-amber-400 text-lg"></i>
-                <span id="offcanvas-especialidad" class="font-bold text-gray-700 dark:text-gray-300">--</span>
+
+            <div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Total Acumulado Registrado</h3>
+                <div class="bg-gray-50 dark:bg-gray-900/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-amber-500"><i class="fa-solid fa-coins text-lg"></i></div>
+                        <div>
+                            <p class="text-xs text-gray-500 font-medium">Volumen Total Operado</p>
+                            <h4 id="offcanvas-total-acumulado" class="text-xl font-bold font-mono text-gray-800 dark:text-gray-100">S/ 0.00</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Línea Principal / Categoría Top</h3>
+                <div class="flex items-center gap-3 bg-gray-50 dark:bg-gray-900/40 p-3.5 rounded-xl border border-gray-100 dark:border-gray-700">
+                    <i class="fa-solid fa-tag text-purple-500 text-lg"></i>
+                    <div>
+                        <p class="text-[10px] text-gray-400 uppercase font-bold">Categoría Predominante</p>
+                        <span id="offcanvas-especialidad" class="font-bold text-gray-800 dark:text-gray-200">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Última Actividad</h3>
+                <div class="bg-gray-50 dark:bg-gray-900/40 p-3.5 rounded-xl border border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                    <span class="text-xs text-gray-500">Fecha de Registro / Operación:</span>
+                    <span id="offcanvas-ultima-fecha" class="text-xs font-bold text-gray-700 dark:text-gray-300">--</span>
+                </div>
             </div>
         </div>
 
-        <!-- Acción Recomendada (AI) -->
-        <div>
-            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Sugerencia Comercial</h3>
-            <div id="offcanvas-accion" class="p-4 rounded-xl border">
-                <p id="offcanvas-accion-title" class="font-bold text-sm mb-1">--</p>
-                <p id="offcanvas-accion-desc" class="text-xs">--</p>
-            </div>
+        <!-- TAB 3: ACCIONES -->
+        <div id="offcanvas-sec-acciones" class="space-y-4 hidden">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Acciones Disponibles</h3>
+            <button id="offcanvas-btn-operacion" class="w-full btn-primary py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2">
+                <i class="fa-solid fa-cart-shopping"></i> <span id="offcanvas-action-text">Registrar Operación</span>
+            </button>
+            <button id="offcanvas-btn-editar" class="w-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 border border-gray-200 dark:border-gray-600">
+                <i class="fa-solid fa-pen-to-square text-blue-500"></i> <span>Editar Información</span>
+            </button>
+            <button id="offcanvas-btn-inactivar" class="w-full bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 text-red-600 dark:text-red-300 py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 border border-red-200 dark:border-red-800">
+                <i class="fa-solid fa-user-xmark"></i> <span>Inactivar Registro</span>
+            </button>
         </div>
-    </div>
-
-    <!-- Footer Action -->
-    <div class="p-5 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-center">
-        <button id="offcanvas-main-action" class="w-full btn-primary py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2">
-            <i class="fa-solid fa-bolt"></i> <span id="offcanvas-action-text">Cargando...</span>
-        </button>
     </div>
 </div>
 

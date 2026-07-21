@@ -772,14 +772,21 @@ async function confirmarRecepcionFisica() {
     try {
         const res = await ApiClient.put(`/compras/compra/${ordenRecepcionActivaId}/estado`, { estado: "Completada" });
         
-        let msgToast = "Mercadería recibida. Stock físico actualizado correctamente.";
-        if (res.stock_actualizado && res.stock_actualizado.length > 0) {
-            const resumenStock = res.stock_actualizado.map(s => `${s.producto}: ${s.nuevo_stock} u.`).join(' | ');
-            msgToast = `Stock actualizado -> ${resumenStock}`;
-        }
-        
-        showToast(msgToast);
         cerrarModalRecepcionFisica();
+
+        if (res.stock_actualizado && Array.isArray(res.stock_actualizado) && res.stock_actualizado.length > 0) {
+            res.stock_actualizado.forEach((item, idx) => {
+                setTimeout(() => {
+                    const prodNombre = item.producto || item.nombre || "Producto";
+                    const stockVal = item.stock !== undefined ? item.stock : item.nuevo_stock;
+                    const toastText = `✅ Recepción exitosa. Stock actual de ${prodNombre}: ${stockVal} unidades.`;
+                    showToast(toastText);
+                }, idx * 1200);
+            });
+        } else {
+            showToast("✅ Recepción exitosa. Stock actualizado.");
+        }
+
         await cargarOrdenesActivas();
         await cargarHistorialGlobal();
     } catch(e) {

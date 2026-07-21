@@ -1,10 +1,17 @@
 /**
- * Lógica Reactiva para Actores Comerciales (Catálogo Contextual e Inteligente)
+ * Lógica Reactiva para Actores Comerciales (Saneamiento e Inactivación - Fase 2)
  */
 
 let currentTab = 'clientes'; // 'clientes' o 'proveedores'
 let dataList = [];
 let editId = null;
+let currentOffcanvasTab = 'info';
+
+// Paginación Server-Side State
+let currentPage = 1;
+let pageSize = 20;
+let totalPages = 1;
+let totalRecords = 0;
 
 // DOM Elements
 const tableHead = document.getElementById('table-head');
@@ -41,15 +48,12 @@ const fCorreo = document.getElementById('form-correo');
 const camposDireccion = document.getElementById('campos-direccion');
 const fDireccion = document.getElementById('form-direccion');
 
-// Utils & Helpers
+// Helpers
 const fmt = (val) => `S/ ${Number(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`;
 
 function tiempoRelativo(isoString) {
     if (!isoString) return '<span class="text-gray-400 font-normal">Sin operaciones</span>';
     
-    // Dado que el backend almacena las fechas con datetime.utcnow() (sin timezone),
-    // debemos añadir 'Z' al final del ISO string para que JavaScript lo interprete como UTC
-    // y lo convierta a la hora local peruana (-05:00) correctamente.
     let dateStr = isoString;
     if (!isoString.includes('Z') && !/[+-]\d{2}:\d{2}$/.test(isoString)) {
         dateStr = isoString + 'Z';
@@ -68,19 +72,19 @@ function tiempoRelativo(isoString) {
     
     let textoRelativo = '';
     if (diffSegs < 60) {
-        textoRelativo = `Hace ${diffSegs} segundo${diffSegs !== 1 ? 's' : ''}`;
+        textoRelativo = `Hace ${diffSegs}s`;
     } else if (diffMins < 60) {
-        textoRelativo = `Hace ${diffMins} minuto${diffMins !== 1 ? 's' : ''}`;
+        textoRelativo = `Hace ${diffMins} min${diffMins !== 1 ? 's' : ''}`;
     } else if (diffHoras < 24) {
-        textoRelativo = `Hace ${diffHoras} hora${diffHoras !== 1 ? 's' : ''}`;
+        textoRelativo = `Hace ${diffHoras} h`;
     } else if (diffDias < 30) {
-        textoRelativo = `Hace ${diffDias} día${diffDias !== 1 ? 's' : ''}`;
+        textoRelativo = `Hace ${diffDias} d`;
     } else if (diffDias < 365) {
         const meses = Math.floor(diffDias / 30);
         textoRelativo = `Hace ${meses} mes${meses > 1 ? 'es' : ''}`;
     } else {
         const años = Math.floor(diffDias / 365);
-        textoRelativo = `Hace ${años} año${años !== 1 ? 's' : ''}`;
+        textoRelativo = `Hace ${años} a`;
     }
     
     return `<span class="cursor-help font-medium text-gray-700 dark:text-gray-300" title="Fecha exacta: ${fechaAbsoluta}">${textoRelativo}</span>`;
@@ -99,6 +103,7 @@ function debounce(func, delay = 350) {
 // -------------------------------------------------------------
 async function switchTab(tab) {
     currentTab = tab;
+    currentPage = 1;
     searchInput.value = '';
     
     const btnC = document.getElementById('tab-clientes');
@@ -109,17 +114,17 @@ async function switchTab(tab) {
         btnP.className = "flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800";
         btnNuevoTexto.textContent = "Nuevo Cliente";
         document.getElementById('metric-total-label').textContent = "Total Clientes";
-        document.getElementById('metric-activos-label').textContent = "Clientes VIP";
+        document.getElementById('metric-activos-label').textContent = "Clientes Frecuentes";
         document.getElementById('metric-ticket-label').textContent = "Ticket Promedio Global";
-        renderTableHeaders(['Documento', 'Cliente', 'Frecuencia de compra', 'Categorías favoritas', 'Última compra', 'Oportunidad comercial', 'Acciones']);
+        renderTableHeaders(['Documento', 'Cliente', 'Estado / Frecuencia', 'Categoría Preferida', 'Última Compra', 'Acciones']);
     } else {
         btnP.className = "flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors bg-primary text-white shadow-sm";
         btnC.className = "flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800";
         btnNuevoTexto.textContent = "Nuevo Proveedor";
         document.getElementById('metric-total-label').textContent = "Total Proveedores";
-        document.getElementById('metric-activos-label').textContent = "Órdenes en Tránsito";
-        document.getElementById('metric-ticket-label').textContent = "Compra Promedio";
-        renderTableHeaders(['RUC', 'Razón Social', 'Estado de la relación', 'Líneas que provee', 'Último pedido', 'Próxima acción', 'Acciones']);
+        document.getElementById('metric-activos-label').textContent = "Proveedores Activos";
+        document.getElementById('metric-ticket-label').textContent = "Compra Promedio Global";
+        renderTableHeaders(['RUC', 'Razón Social', 'Estado / Relación', 'Línea de Suministro', 'Último Pedido', 'Acciones']);
     }
     
     await fetchData();
@@ -131,56 +136,47 @@ function renderTableHeaders(headers) {
     ).join('');
 }
 
-function updateMetrics(list) {
-    mTotal.textContent = list.length;
+function updateMetrics(list, totalRecs) {
+    mTotal.textContent = totalRecs !== undefined ? totalRecs : list.length;
     
-    let activosCount = 0;
     let sumTicket = 0;
     let ticketCount = 0;
     
-    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    if (currentTab === 'clientes') {
+        const frecuentesCount = list.filter(item => (item.frecuencia || 0) >= 3).length;
+        mActivos.textContent = frecuentesCount;
+    } else {
+        mActivos.textContent = totalRecs !== undefined ? totalRecs : list.length;
+    }
 
     list.forEach(item => {
-        if (item.ultima_transaccion) {
-            const lastDate = new Date(item.ultima_transaccion).getTime();
-            if (lastDate >= thirtyDaysAgo) {
-                activosCount++;
-            }
-        }
         if (item.ticket_promedio > 0) {
             sumTicket += item.ticket_promedio;
             ticketCount++;
         }
     });
 
-    mActivos.textContent = activosCount;
     mTicket.textContent = ticketCount > 0 ? fmt(sumTicket / ticketCount) : 'S/ 0.00';
 }
 
-function getBadgeHtml(frecuencia, ultimaTransaccion, esCliente) {
+function getSubtleBadgeHtml(frecuencia, esCliente) {
     const isFrecuente = frecuencia >= 3;
-    const lastOpDate = ultimaTransaccion ? new Date(ultimaTransaccion).getTime() : null;
-    const isActivo = lastOpDate && (Date.now() - lastOpDate) < (30 * 24 * 60 * 60 * 1000);
     
     if (esCliente) {
-        if (isFrecuente && isActivo) {
-            return `<span class="cursor-help bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border border-emerald-700/50 text-xs px-2.5 py-1 rounded font-bold shadow-sm" title="Cliente recurrente con 3 o más compras registradas y actividad en el último mes"><i class="fa-solid fa-star mr-1 text-emerald-600 dark:text-emerald-400"></i> Frecuente</span>`;
-        } else if (isActivo) {
-            return `<span class="cursor-help bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 border border-blue-700/50 text-xs px-2.5 py-1 rounded font-bold shadow-sm" title="Cliente activo que ha realizado compras durante los últimos 30 días"><i class="fa-solid fa-check mr-1 text-blue-600 dark:text-blue-400"></i> Activo</span>`;
+        if (isFrecuente) {
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"><i class="fa-solid fa-star text-[9px] mr-1"></i> Frecuente (${frecuencia})</span>`;
         } else if (frecuencia > 0) {
-            return `<span class="cursor-help bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-700/50 text-xs px-2.5 py-1 rounded font-bold shadow-sm" title="Cliente registrado que no ha comprado en los últimos 30 días"><i class="fa-solid fa-clock-rotate-left mr-1 text-amber-600 dark:text-amber-400"></i> Esporádico</span>`;
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">Registrado (${frecuencia})</span>`;
         } else {
-            return `<span class="cursor-help bg-gray-100 text-gray-700 dark:bg-gray-700/80 dark:text-gray-200 border border-gray-600 text-xs px-2.5 py-1 rounded font-bold shadow-sm" title="Cliente registrado sin compras en el sistema"><i class="fa-solid fa-user-minus mr-1 text-gray-500 dark:text-gray-400"></i> Sin compras</span>`;
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">Sin compras</span>`;
         }
     } else {
-        if (isFrecuente && isActivo) {
-            return `<span class="cursor-help bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border border-emerald-700/50 text-xs px-2.5 py-1 rounded font-bold shadow-sm" title="Proveedor principal con pedidos continuos en el último mes"><i class="fa-solid fa-handshake mr-1 text-emerald-600 dark:text-emerald-400"></i> Proveedor Frecuente</span>`;
-        } else if (isActivo) {
-            return `<span class="cursor-help bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 border border-blue-700/50 text-xs px-2.5 py-1 rounded font-bold shadow-sm" title="Relación comercial activa con pedidos atendidos recientemente"><i class="fa-solid fa-check mr-1 text-blue-600 dark:text-blue-400"></i> Relación Activa</span>`;
+        if (isFrecuente) {
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"><i class="fa-solid fa-handshake text-[9px] mr-1"></i> Frecuente (${frecuencia})</span>`;
         } else if (frecuencia > 0) {
-            return `<span class="cursor-help bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-700/50 text-xs px-2.5 py-1 rounded font-bold shadow-sm" title="Sin pedidos de abastecimiento en los últimos 30 días"><i class="fa-solid fa-clock-rotate-left mr-1 text-amber-600 dark:text-amber-400"></i> Inactivo este mes</span>`;
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">Activo (${frecuencia})</span>`;
         } else {
-            return `<span class="cursor-help bg-gray-100 text-gray-700 dark:bg-gray-700/80 dark:text-gray-200 border border-gray-600 text-xs px-2.5 py-1 rounded font-bold shadow-sm" title="Proveedor registrado sin historial de abastecimiento"><i class="fa-solid fa-truck-ramp-box mr-1 text-gray-500 dark:text-gray-400"></i> Sin pedidos</span>`;
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">Sin pedidos</span>`;
         }
     }
 }
@@ -189,13 +185,29 @@ async function fetchData(query = '') {
     tableLoading.classList.remove('hidden');
     tableEmpty.classList.add('hidden');
     tableBody.innerHTML = '';
+    closeAllDropdowns();
     
     try {
         const endpoint = currentTab === 'clientes' ? '/actores/clientes' : '/actores/proveedores';
-        const params = query ? { q: query } : {};
-        dataList = await ApiClient.get(endpoint, params);
+        const params = { page: currentPage, limit: pageSize };
+        if (query) params.q = query;
         
-        if (!query) updateMetrics(dataList);
+        const response = await ApiClient.get(endpoint, params);
+        
+        if (response && response.data !== undefined) {
+            dataList = response.data || [];
+            totalPages = response.total_pages || 1;
+            currentPage = response.current_page || 1;
+            totalRecords = response.total_records || 0;
+        } else {
+            dataList = Array.isArray(response) ? response : [];
+            totalPages = 1;
+            currentPage = 1;
+            totalRecords = dataList.length;
+        }
+        
+        updateMetrics(dataList, totalRecords);
+        updatePaginationUI();
         
         if (dataList.length === 0) {
             tableEmpty.classList.remove('hidden');
@@ -203,48 +215,55 @@ async function fetchData(query = '') {
             dataList.forEach(item => {
                 const tr = document.createElement('tr');
                 const id = currentTab === 'clientes' ? item.idCliente : item.idProveedor;
-                tr.className = "hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-100 dark:border-gray-800/60 cursor-pointer";
+                tr.className = "hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-100 dark:border-gray-800/60 cursor-pointer relative";
                 tr.onclick = (e) => {
-                    if (e.target.closest('button')) return;
+                    if (e.target.closest('.context-menu-container')) return;
                     openOffCanvas(id);
                 };
                 
                 const esCliente = currentTab === 'clientes';
-                const badgeHtml = getBadgeHtml(item.frecuencia, item.ultima_transaccion, esCliente);
+                const badgeHtml = getSubtleBadgeHtml(item.frecuencia, esCliente);
                 const nombreMain = esCliente ? `${item.nombres} ${item.apellidos}` : item.nombreRazonSocial;
-                
-                const accion = item.accion_recomendada || { texto: 'Sin recomendación', explicacion: '', badge_class: 'bg-gray-100 text-gray-700' };
 
                 tr.innerHTML = `
                     <td class="py-3.5 px-4 whitespace-nowrap text-sm font-mono">
                         <span class="font-bold text-gray-900 dark:text-gray-100 text-sm">${item.numeroDocumento}</span> 
-                        <div class="text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase mt-0.5">${item.tipoDocumento}</div>
+                        <span class="text-[10px] text-gray-400 dark:text-gray-500 uppercase ml-1.5 font-semibold">${item.tipoDocumento}</span>
                     </td>
                     <td class="py-3.5 px-4">
                         <div class="font-bold text-gray-900 dark:text-gray-100 text-sm">${nombreMain}</div>
-                        <div class="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-3 mt-1 font-medium">
-                            <span><i class="fa-solid fa-phone text-xs mr-1 text-gray-400"></i>${item.telefono}</span>
-                            <span><i class="fa-solid fa-envelope text-xs mr-1 text-gray-400"></i>${item.correoElectronico}</span>
-                        </div>
                     </td>
                     <td class="py-3.5 px-4 whitespace-nowrap">${badgeHtml}</td>
-                    <td class="py-3.5 px-4 whitespace-nowrap text-sm">
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-200 border border-purple-700/50 shadow-sm">
-                            <i class="fa-solid fa-tag text-[10px] mr-1.5 text-purple-600 dark:text-purple-300"></i> ${item.especialidad}
-                        </span>
+                    <td class="py-3.5 px-4 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300 font-medium">
+                        ${item.especialidad || (esCliente ? 'Sin compras' : 'Sin pedidos')}
                     </td>
                     <td class="py-3.5 px-4 whitespace-nowrap text-sm">
                         ${tiempoRelativo(item.ultima_transaccion)}
                     </td>
-                    <td class="py-3.5 px-4 whitespace-nowrap">
-                        <span class="cursor-help inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold ${accion.badge_class} shadow-sm" title="${accion.explicacion}">
-                            <i class="fa-solid fa-lightbulb text-amber-500 dark:text-amber-400 mr-1.5"></i> ${accion.texto}
-                        </span>
-                    </td>
-                    <td class="py-3.5 px-4 whitespace-nowrap text-right text-sm">
-                        <button onclick="editActor(${id})" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-600 transition-colors px-3 py-1.5 rounded-lg font-bold shadow-sm text-xs flex items-center gap-1.5 ml-auto">
-                            <i class="fa-solid fa-pen-to-square text-blue-600 dark:text-blue-400"></i> Editar
-                        </button>
+                    <td class="py-3.5 px-4 whitespace-nowrap text-right text-sm context-menu-container">
+                        <div class="relative inline-block text-left">
+                            <button onclick="toggleDropdown(${id}, event)" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/80 transition-colors">
+                                <i class="fa-solid fa-ellipsis-vertical text-base"></i>
+                            </button>
+                            <div id="dropdown-${id}" class="hidden absolute right-0 mt-1 w-44 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 z-30 py-1.5 text-xs text-left">
+                                <button onclick="triggerAction(${id}, 'operacion', event)" class="w-full px-4 py-2 flex items-center gap-2.5 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 font-medium">
+                                    <i class="fa-solid fa-cart-shopping text-blue-500"></i> ${esCliente ? 'Registrar Venta' : 'Registrar Compra'}
+                                </button>
+                                <button onclick="triggerAction(${id}, 'editar', event)" class="w-full px-4 py-2 flex items-center gap-2.5 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 font-medium">
+                                    <i class="fa-solid fa-pen-to-square text-amber-500"></i> Editar
+                                </button>
+                                <button onclick="triggerAction(${id}, 'detalle', event)" class="w-full px-4 py-2 flex items-center gap-2.5 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 font-medium">
+                                    <i class="fa-solid fa-eye text-purple-500"></i> Ver Detalle
+                                </button>
+                                <button onclick="triggerAction(${id}, 'historial', event)" class="w-full px-4 py-2 flex items-center gap-2.5 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 font-medium">
+                                    <i class="fa-solid fa-clock-rotate-left text-emerald-500"></i> Historial
+                                </button>
+                                <div class="border-t border-gray-100 dark:border-gray-700/60 my-1"></div>
+                                <button onclick="inactivarActor(${id}, event)" class="w-full px-4 py-2 flex items-center gap-2.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 font-medium">
+                                    <i class="fa-solid fa-user-xmark text-red-500"></i> Inactivar
+                                </button>
+                            </div>
+                        </div>
                     </td>
                 `;
                 tableBody.appendChild(tr);
@@ -257,14 +276,143 @@ async function fetchData(query = '') {
     }
 }
 
+// -------------------------------------------------------------
+// CONTROL DE PAGINACIÓN SERVER-SIDE
+// -------------------------------------------------------------
+function updatePaginationUI() {
+    const start = totalRecords === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+    const end = Math.min(currentPage * pageSize, totalRecords);
+    
+    const elStart = document.getElementById('pag-start');
+    const elEnd = document.getElementById('pag-end');
+    const elTotal = document.getElementById('pag-total');
+    const elCurrent = document.getElementById('pag-current');
+    const elTotalPages = document.getElementById('pag-total-pages');
+    
+    if (elStart) elStart.textContent = start;
+    if (elEnd) elEnd.textContent = end;
+    if (elTotal) elTotal.textContent = totalRecords;
+    if (elCurrent) elCurrent.textContent = currentPage;
+    if (elTotalPages) elTotalPages.textContent = totalPages;
+    
+    const btnPrev = document.getElementById('btn-page-prev');
+    const btnNext = document.getElementById('btn-page-next');
+    
+    if (btnPrev) btnPrev.disabled = (currentPage <= 1);
+    if (btnNext) btnNext.disabled = (currentPage >= totalPages);
+}
+
+function changePage(delta) {
+    const newPage = currentPage + delta;
+    if (newPage >= 1 && newPage <= totalPages) {
+        currentPage = newPage;
+        fetchData(searchInput.value.trim());
+    }
+}
+
+// -------------------------------------------------------------
+// INACTIVACIÓN SEGURA (SOFT-DELETE)
+// -------------------------------------------------------------
+async function inactivarActor(id, event) {
+    if (event) event.stopPropagation();
+    closeAllDropdowns();
+    
+    const esCliente = currentTab === 'clientes';
+    const item = dataList.find(i => (esCliente ? i.idCliente : i.idProveedor) === id);
+    const nombre = item ? (esCliente ? `${item.nombres} ${item.apellidos}` : item.nombreRazonSocial) : `ID #${id}`;
+    
+    if (!confirm(`¿Estás seguro de que deseas inactivar a "${nombre}"?\nEl registro cambiará su estado a 'INACTIVO' y dejará de mostrarse en las listas activas.`)) {
+        return;
+    }
+    
+    const endpoint = esCliente ? `/actores/clientes/${id}/inactivar` : `/actores/proveedores/${id}/inactivar`;
+    
+    try {
+        await ApiClient.patch(endpoint);
+        closeOffCanvas();
+        await fetchData(searchInput.value.trim());
+    } catch (e) {
+        alert(e.message || "Error al inactivar el registro");
+    }
+}
+
+// -------------------------------------------------------------
+// MENÚ CONTEXTUAL (DROPDOWN)
+// -------------------------------------------------------------
+function toggleDropdown(id, event) {
+    if (event) event.stopPropagation();
+    
+    const dropdown = document.getElementById(`dropdown-${id}`);
+    const isHidden = dropdown.classList.contains('hidden');
+    
+    closeAllDropdowns();
+    
+    if (isHidden) {
+        dropdown.classList.remove('hidden');
+    }
+}
+
+function closeAllDropdowns() {
+    document.querySelectorAll('[id^="dropdown-"]').forEach(el => el.classList.add('hidden'));
+}
+
+document.addEventListener('click', () => {
+    closeAllDropdowns();
+});
+
+function triggerAction(id, action, event) {
+    if (event) event.stopPropagation();
+    closeAllDropdowns();
+    
+    const esCliente = currentTab === 'clientes';
+    
+    if (action === 'operacion') {
+        if (esCliente) {
+            window.location.href = `/pos?tab=venta&select_client_id=${id}`;
+        } else {
+            window.location.href = `/compras?tab=planificacion&select_supplier_id=${id}`;
+        }
+    } else if (action === 'editar') {
+        editActor(id);
+    } else if (action === 'detalle') {
+        openOffCanvas(id, 'info');
+    } else if (action === 'historial') {
+        openOffCanvas(id, 'actividad');
+    }
+}
+
 searchInput.addEventListener('input', debounce(() => {
+    currentPage = 1;
     fetchData(searchInput.value.trim());
 }, 350));
 
 // -------------------------------------------------------------
-// PANEL OFF-CANVAS ANALÍTICO
+// PANEL OFF-CANVAS AMBULATORIO Y REESTRUCTURADO
 // -------------------------------------------------------------
-function openOffCanvas(id) {
+function switchOffcanvasTab(tabName) {
+    currentOffcanvasTab = tabName;
+    
+    const btnInfo = document.getElementById('offcanvas-tab-info');
+    const btnAct = document.getElementById('offcanvas-tab-actividad');
+    const btnAcc = document.getElementById('offcanvas-tab-acciones');
+    
+    const secInfo = document.getElementById('offcanvas-sec-info');
+    const secAct = document.getElementById('offcanvas-sec-actividad');
+    const secAcc = document.getElementById('offcanvas-sec-acciones');
+    
+    const activeClass = "flex-1 py-2 text-xs font-bold uppercase tracking-wider text-primary border-b-2 border-primary transition-colors";
+    const inactiveClass = "flex-1 py-2 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border-b-2 border-transparent transition-colors";
+    
+    btnInfo.className = tabName === 'info' ? activeClass : inactiveClass;
+    btnAct.className = tabName === 'actividad' ? activeClass : inactiveClass;
+    btnAcc.className = tabName === 'acciones' ? activeClass : inactiveClass;
+    
+    secInfo.classList.toggle('hidden', tabName !== 'info');
+    secAct.classList.toggle('hidden', tabName !== 'actividad');
+    secAcc.classList.toggle('hidden', tabName !== 'acciones');
+}
+
+function openOffCanvas(id, initialTab = 'info') {
     const item = dataList.find(i => (currentTab === 'clientes' ? i.idCliente : i.idProveedor) === id);
     if (!item) return;
 
@@ -272,12 +420,14 @@ function openOffCanvas(id) {
     const panel = document.getElementById('offcanvas-panel');
     const esCliente = currentTab === 'clientes';
 
-    // Rellenar Header
-    document.getElementById('offcanvas-badge-container').innerHTML = getBadgeHtml(item.frecuencia, item.ultima_transaccion, esCliente);
+    // Header Info
+    document.getElementById('offcanvas-badge-container').innerHTML = getSubtleBadgeHtml(item.frecuencia, esCliente);
     document.getElementById('offcanvas-title').textContent = esCliente ? `${item.nombres} ${item.apellidos}` : item.nombreRazonSocial;
     document.getElementById('offcanvas-subtitle').textContent = `${item.tipoDocumento}: ${item.numeroDocumento}`;
 
-    // Rellenar Contacto
+    // Tab 1: Identificación y Contacto
+    document.getElementById('offcanvas-tipo-doc').textContent = item.tipoDocumento;
+    document.getElementById('offcanvas-num-doc').textContent = item.numeroDocumento;
     document.getElementById('offcanvas-phone').textContent = (item.telefono && item.telefono !== "-") ? item.telefono : 'Sin teléfono';
     document.getElementById('offcanvas-email').textContent = (item.correoElectronico && item.correoElectronico !== "-") ? item.correoElectronico : 'Sin correo electrónico';
     
@@ -289,32 +439,48 @@ function openOffCanvas(id) {
         addressRow.classList.add('hidden');
     }
 
-    // Rellenar Métricas
-    document.getElementById('offcanvas-metric-1-label').textContent = esCliente ? 'Compras' : 'Órdenes';
+    // Tab 2: Métricas de Negocio & Actividad
+    document.getElementById('offcanvas-metric-1-label').textContent = esCliente ? 'Transacciones' : 'Pedidos';
     document.getElementById('offcanvas-metric-1-value').textContent = item.frecuencia || 0;
     
     document.getElementById('offcanvas-metric-2-label').textContent = esCliente ? 'Ticket Promedio' : 'Compra Promedio';
     document.getElementById('offcanvas-metric-2-value').textContent = fmt(item.ticket_promedio || 0);
 
-    document.getElementById('offcanvas-especialidad').textContent = item.especialidad || 'Sin registro';
+    const totalAcumulado = (item.frecuencia || 0) * (item.ticket_promedio || 0);
+    document.getElementById('offcanvas-total-acumulado').textContent = fmt(totalAcumulado);
 
-    // Sugerencia
-    const accion = item.accion_recomendada || { texto: 'N/A', explicacion: 'Sin información suficiente' };
-    document.getElementById('offcanvas-accion-title').textContent = accion.texto;
-    document.getElementById('offcanvas-accion-desc').textContent = accion.explicacion;
-    document.getElementById('offcanvas-accion').className = `p-4 rounded-xl border ${accion.badge_class}`;
+    document.getElementById('offcanvas-especialidad').textContent = item.especialidad || (esCliente ? 'Sin compras' : 'Sin suministros');
 
-    // Footer Action (Deep Linking)
-    const btnAction = document.getElementById('offcanvas-main-action');
-    if (esCliente) {
-        document.getElementById('offcanvas-action-text').textContent = 'Registrar Venta';
-        btnAction.onclick = () => window.location.href = `/pos?tab=venta&select_client_id=${item.idCliente}`;
-    } else {
-        document.getElementById('offcanvas-action-text').textContent = 'Registrar Compra';
-        btnAction.onclick = () => window.location.href = `/compras?tab=planificacion&select_supplier_id=${item.idProveedor}`;
+    document.getElementById('offcanvas-ultima-fecha').innerHTML = item.ultima_transaccion 
+        ? tiempoRelativo(item.ultima_transaccion) 
+        : '<span class="text-gray-400">Sin historial</span>';
+
+    // Tab 3: Acciones
+    const btnOperacion = document.getElementById('offcanvas-btn-operacion');
+    const actionText = document.getElementById('offcanvas-action-text');
+    actionText.textContent = esCliente ? 'Registrar Venta' : 'Registrar Compra';
+    btnOperacion.onclick = () => {
+        closeOffCanvas();
+        triggerAction(id, 'operacion');
+    };
+
+    const btnEditar = document.getElementById('offcanvas-btn-editar');
+    btnEditar.onclick = () => {
+        closeOffCanvas();
+        editActor(id);
+    };
+
+    const btnInactivar = document.getElementById('offcanvas-btn-inactivar');
+    if (btnInactivar) {
+        btnInactivar.onclick = () => {
+            inactivarActor(id);
+        };
     }
 
-    // Mostrar
+    // Cambiar a la pestaña seleccionada
+    switchOffcanvasTab(initialTab);
+
+    // Mostrar modal lateral
     overlay.classList.remove('hidden');
     setTimeout(() => {
         overlay.classList.remove('opacity-0');
@@ -334,7 +500,7 @@ function closeOffCanvas() {
 }
 
 // -------------------------------------------------------------
-// GESTIÓN DEL MODAL
+// GESTIÓN DEL MODAL CREACIÓN / EDICIÓN
 // -------------------------------------------------------------
 function openModal(item = null) {
     docError.classList.add('hidden');
@@ -399,12 +565,13 @@ function closeModal() {
     modal.firstElementChild.classList.add('scale-95');
     setTimeout(() => {
         modal.classList.add('hidden');
+        editId = null;
     }, 300);
 }
 
 function editActor(id) {
-    const item = dataList.find(i => (currentTab==='clientes' ? i.idCliente : i.idProveedor) === id);
-    if(item) openModal(item);
+    const item = dataList.find(i => (currentTab === 'clientes' ? i.idCliente : i.idProveedor) === id);
+    if (item) openModal(item);
 }
 
 // -------------------------------------------------------------

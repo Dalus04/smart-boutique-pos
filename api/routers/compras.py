@@ -196,7 +196,7 @@ def cambiar_estado_compra(id_compra: int, payload: EstadoCompraPayload, db: Sess
                     prod_nombre = producto.nombre if producto else f"Producto #{detalle.idProducto}"
                     stock_actualizado.append({
                         "producto": prod_nombre,
-                        "nuevo_stock": inventario.cantidadDisponible
+                        "stock": inventario.cantidadDisponible
                     })
 
         except Exception as e:
@@ -208,7 +208,7 @@ def cambiar_estado_compra(id_compra: int, payload: EstadoCompraPayload, db: Sess
     return {
         "status": "success", 
         "nuevo_estado": compra.estado,
-        "mensaje": "Mercadería recibida y stock actualizado",
+        "message": "Orden recibida",
         "stock_actualizado": stock_actualizado
     }
 

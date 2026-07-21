@@ -6,7 +6,11 @@ const API_BASE = '/api/v1';
 class ApiClient {
     static async get(endpoint, params = {}) {
         const url = new URL(`${API_BASE}${endpoint}`, window.location.origin);
-        Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+        Object.keys(params).forEach(key => {
+            if (params[key] !== undefined && params[key] !== null) {
+                url.searchParams.append(key, params[key]);
+            }
+        });
         
         try {
             const response = await fetch(url);
@@ -58,6 +62,28 @@ class ApiClient {
             return await response.json();
         } catch (error) {
             console.error('API PUT Error:', error);
+            throw error;
+        }
+    }
+
+    static async patch(endpoint, body = {}) {
+        const url = new URL(`${API_BASE}${endpoint}`, window.location.origin);
+        
+        try {
+            const response = await fetch(url, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.detail || `HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('API PATCH Error:', error);
             throw error;
         }
     }
