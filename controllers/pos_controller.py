@@ -189,9 +189,6 @@ class POSController(QObject):
     def mostrar_feedback_agregado(self, nombre):
         NotificationToast(self.view.window(), f"✓ Agregado al carrito: {nombre}")
 
-    def _limpiar_feedback_si_igual(self, texto_esperado):
-        pass
-
     def limpiar_busqueda(self):
         # Bloquear señales en categorías para evitar recargas intermedias
         self.view.combo_categorias.blockSignals(True)
@@ -210,7 +207,7 @@ class POSController(QObject):
         try:
             MineriaService.entrenar_modelo(db, min_support=2, min_confidence=0.3)
         except Exception as e:
-            pass
+            print(f"[WARN] Error durante el entrenamiento del modelo de minería POS: {e}")
         finally:
             db.close()
 

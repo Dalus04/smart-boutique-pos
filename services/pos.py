@@ -22,6 +22,7 @@ class POSService:
         """
         
         # 1. Validar y descontar stock (Lógica estricta)
+        productos_afectados = []
         for item in carrito:
             prod = item["producto"]
             cant_requerida = item["cantidad"]
@@ -34,6 +35,11 @@ class POSService:
                 raise ValueError(f"Stock insuficiente para {prod.nombre}. Requerido: {cant_requerida}, Disponible: {stock_disponible}")
                 
             inv.cantidadDisponible -= cant_requerida
+            productos_afectados.append({
+                "id": prod.idProducto,
+                "nombre": prod.nombre,
+                "stock_actual": inv.cantidadDisponible
+            })
 
         # 2. Registrar Venta (Cabecera)
         nueva_venta = Venta(
@@ -72,4 +78,4 @@ class POSService:
         session.add(pago)
         
         # La transacción se completa y commitea en el controlador.
-        return nueva_venta.idVenta
+        return nueva_venta.idVenta, productos_afectados

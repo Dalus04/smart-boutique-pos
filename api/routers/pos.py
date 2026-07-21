@@ -1,6 +1,7 @@
+import math
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, desc
+from sqlalchemy import or_, desc, func
 from pydantic import BaseModel
 from typing import List, Optional
 from decimal import Decimal
@@ -12,7 +13,6 @@ from models.pos import Venta, DetalleVenta, Pago, MedioPago
 from models.actores import Cliente
 from services.mineria import MineriaService
 from services.asistente import AsistenteComercialService
-from sqlalchemy import func
 
 router = APIRouter(
     prefix="/api/v1/pos",
@@ -167,6 +167,7 @@ def procesar_checkout(
     
     try:
         # 1. Validar Stock y descontar (Transaccional)
+        productos_afectados = []
         for item in payload.items:
             inventario = db.query(Inventario).filter(Inventario.idProducto == item.idProducto).with_for_update().first()
             if not inventario or inventario.cantidadDisponible < item.cantidad:
@@ -178,6 +179,12 @@ def procesar_checkout(
                 )
             # Descontar stock
             inventario.cantidadDisponible -= item.cantidad
+            prod = db.query(Producto).get(item.idProducto)
+            productos_afectados.append({
+                "id": item.idProducto,
+                "nombre": prod.nombre if prod else f"Producto #{item.idProducto}",
+                "stock_actual": inventario.cantidadDisponible
+            })
 
         # 2. Crear Cabecera de Venta
         venta = Venta(
@@ -219,7 +226,8 @@ def procesar_checkout(
             "status": "success", 
             "idVenta": venta.idVenta, 
             "mensaje": "Venta procesada con éxito",
-            "utilidad_total": utilidad_total
+            "utilidad_total": utilidad_total,
+            "productos_afectados": productos_afectados
         }
         
     except HTTPException:
@@ -235,17 +243,22 @@ def get_categorias(db: Session = Depends(get_db_session)):
 
 @router.get("/historial")
 def get_historial(
-    limit: int = Query(20, description="Límite de resultados"),
+    page: int = Query(1, ge=1, description="Número de página"),
+    size: int = Query(10, ge=1, le=100, description="Tamaño de página"),
     db: Session = Depends(get_db_session)
 ):
-    ventas = db.query(Venta).order_by(desc(Venta.fechaVenta)).limit(limit).all()
-    resultados = []
+    total_items = db.query(func.count(Venta.idVenta)).scalar() or 0
+    pages = math.ceil(total_items / size) if size > 0 else 1
+    offset = (page - 1) * size
+
+    ventas = db.query(Venta).order_by(desc(Venta.fechaVenta)).offset(offset).limit(size).all()
+    items = []
     for v in ventas:
         cliente_nombre = "Cliente Genérico"
         if v.cliente:
             cliente_nombre = f"{v.cliente.nombres} {v.cliente.apellidos}"
         
-        resultados.append({
+        items.append({
             "idVenta": v.idVenta,
             "fecha": v.fechaVenta.isoformat(),
             "cliente": cliente_nombre,
@@ -253,7 +266,12 @@ def get_historial(
             "articulos": v.total_articulos,
             "estado": v.estadoVenta
         })
-    return resultados
+    return {
+        "items": items,
+        "total_items": total_items,
+        "page": page,
+        "pages": pages
+    }
 
 @router.get("/historial/{id_venta}")
 def get_detalle_venta(id_venta: int, db: Session = Depends(get_db_session)):

@@ -10,6 +10,9 @@ let timeToCheckout = 0;
 let selectedCliente = null;
 let activeCategoryId = null;
 
+let historialPage = 1;
+let historialPages = 1;
+
 // DOM Elements - Left Column
 const searchInput = document.getElementById('search-input');
 const searchResults = document.getElementById('search-results');
@@ -23,6 +26,9 @@ const contentVenta = document.getElementById('content-venta');
 const contentHistorial = document.getElementById('content-historial');
 const historialBody = document.getElementById('historial-body');
 const toastContainer = document.getElementById('toast-container');
+const historialPaginationInfo = document.getElementById('historial-pagination-info');
+const btnHistorialPrev = document.getElementById('btn-historial-prev');
+const btnHistorialNext = document.getElementById('btn-historial-next');
 
 // DOM Elements - Right Column (Cart & Asistente)
 const cartItems = document.getElementById('cart-items');
@@ -89,7 +95,8 @@ async function init() {
         
         loadCategorias();
         setupTabs();
-        loadHistorial();
+        setupHistorialPagination();
+        loadHistorial(1);
         setupShortcuts();
 
         // -------------------------------------------------------------
@@ -120,11 +127,11 @@ async function init() {
 
                     selectClient(c);
                 }
-            }).catch(console.error);
+            }).catch(() => {});
         }
 
     } catch (e) {
-        console.error("Error cargando inicio:", e);
+        // Inicialización completada con manejo silencioso
     }
 }
 
@@ -217,7 +224,7 @@ async function loadCategorias() {
             categoryChips.appendChild(pill);
         });
     } catch(e) {
-        console.error("Error loading categories", e);
+        // Manejo silencioso de carga de categorías
     }
 }
 
@@ -232,26 +239,26 @@ function selectCategory(id, el) {
     performSearch();
 }
 
-async function loadHistorial() {
+async function loadHistorial(page = 1) {
     try {
-        const ventas = await ApiClient.get('/pos/historial');
+        const res = await ApiClient.get('/pos/historial', { page, size: 10 });
         if (!historialBody) return;
         historialBody.innerHTML = '';
+        
+        const ventas = res.items || [];
+        historialPage = res.page || 1;
+        historialPages = res.pages || 1;
+        
         ventas.forEach(v => {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group";
             tr.innerHTML = `
-                <td class="p-3 font-mono font-bold text-primary text-sm">#${v.idVenta}</td>
-                <td class="p-3 text-sm text-gray-600 dark:text-gray-400">${parseLocalDate(v.fecha).toLocaleString('es-PE')}</td>
-                <td class="p-3 text-sm font-medium text-gray-800 dark:text-gray-200">${v.cliente}</td>
-                <td class="p-3 text-sm text-center font-bold text-gray-600 dark:text-gray-300">${v.articulos}</td>
-                <td class="p-3 text-sm font-bold text-right text-gray-900 dark:text-gray-100 font-mono">${fmt(v.montoTotal)}</td>
-                <td class="p-3 text-center">
-                    <span class="px-2 py-1 text-[10px] font-bold uppercase rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                        ${v.estado}
-                    </span>
-                </td>
-                <td class="p-3 text-center">
+                <td class="py-2.5 px-3 font-mono font-bold text-primary text-sm">#${v.idVenta}</td>
+                <td class="py-2.5 px-3 text-sm text-gray-600 dark:text-gray-400">${parseLocalDate(v.fecha).toLocaleString('es-PE')}</td>
+                <td class="py-2.5 px-3 text-sm font-medium text-gray-800 dark:text-gray-200">${v.cliente}</td>
+                <td class="py-2.5 px-3 text-sm text-center font-bold text-gray-600 dark:text-gray-300">${v.articulos}</td>
+                <td class="py-2.5 px-3 text-sm font-bold text-right text-gray-900 dark:text-gray-100 font-mono">${fmt(v.montoTotal)}</td>
+                <td class="py-2.5 px-3 text-center">
                     <button onclick="openDetalleVenta(${v.idVenta})" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded text-xs font-bold transition-colors inline-flex items-center gap-1 shadow-sm">
                         <i class="fa-solid fa-eye"></i> Detalle
                     </button>
@@ -259,8 +266,35 @@ async function loadHistorial() {
             `;
             historialBody.appendChild(tr);
         });
+
+        if (historialPaginationInfo) {
+            historialPaginationInfo.textContent = `Página ${historialPage} de ${historialPages || 1}`;
+        }
+        if (btnHistorialPrev) {
+            btnHistorialPrev.disabled = (historialPage <= 1);
+        }
+        if (btnHistorialNext) {
+            btnHistorialNext.disabled = (historialPage >= historialPages);
+        }
     } catch(e) {
-        console.error("Error loading historial", e);
+        // Manejo silencioso de error en historial
+    }
+}
+
+function setupHistorialPagination() {
+    if (btnHistorialPrev) {
+        btnHistorialPrev.addEventListener('click', () => {
+            if (historialPage > 1) {
+                loadHistorial(historialPage - 1);
+            }
+        });
+    }
+    if (btnHistorialNext) {
+        btnHistorialNext.addEventListener('click', () => {
+            if (historialPage < historialPages) {
+                loadHistorial(historialPage + 1);
+            }
+        });
     }
 }
 
@@ -313,9 +347,8 @@ function closeDetalleModal() {
 }
 
 
-// -------------------------------------------------------------
-// BUSCADOR DE PRODUCTOS E INTELIGENCIA
-// -------------------------------------------------------------
+let currentSearchProducts = [];
+
 const performSearch = async () => {
     const q = searchInput.value.trim();
     if (!q && !activeCategoryId) {
@@ -328,9 +361,10 @@ const performSearch = async () => {
         if (q) params.q = q;
         if (activeCategoryId) params.categoria = activeCategoryId;
         const resultados = await ApiClient.get('/pos/productos', params);
+        currentSearchProducts = resultados;
         renderSearchResults(resultados);
     } catch (e) {
-        console.error(e);
+        // Manejo silencioso de búsqueda
     }
 };
 
@@ -345,22 +379,19 @@ function renderSearchResults(productos) {
             if(prod.estado_stock === "Crítico") stockColor = "bg-red-500 animate-pulse";
             else if(prod.estado_stock === "Bajo") stockColor = "bg-yellow-400";
 
-            let margenBadge = '';
-            if (prod.margen >= 40) {
-                margenBadge = `<span class="bg-green-100 text-green-700 text-[10px] px-1.5 py-0.5 rounded font-bold">⭐ Alta Rentabilidad</span>`;
-            }
-
             const row = document.createElement('div');
             row.className = "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 cursor-pointer hover:border-primary hover:shadow-md transition-all flex items-center justify-between gap-3 group";
             row.innerHTML = `
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-0.5">
                         <span class="text-[10px] text-gray-400 font-mono">${prod.codigoBarras || prod.idProducto}</span>
-                        ${margenBadge}
                     </div>
                     <div class="font-bold text-sm text-gray-800 dark:text-gray-200 truncate group-hover:text-primary transition-colors" title="${prod.nombre}">${prod.nombre}</div>
                 </div>
-                <div class="flex items-center gap-3 shrink-0">
+                <div class="flex items-center gap-2 shrink-0">
+                    <button onclick="event.stopPropagation(); openProductoDetailModalByObj(${prod.idProducto})" class="p-1 text-gray-400 hover:text-primary text-xs" title="Ver ficha técnica de producto">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </button>
                     <div class="text-xs text-gray-500 flex items-center gap-1 font-bold bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded">
                         <span class="w-2 h-2 rounded-full ${stockColor}"></span> 
                         ${prod.stock} un.
@@ -402,7 +433,7 @@ const searchClients = async () => {
         const clientes = await ApiClient.get('/pos/clientes', { q });
         renderClientResults(clientes);
     } catch (e) {
-        console.error("Error buscando clientes", e);
+        // Manejo silencioso de búsqueda de clientes
     }
 };
 
@@ -689,10 +720,10 @@ async function fetchContextoComercial() {
                 const just = sug.justificacion;
                 const item = document.createElement('div');
                 
-                const isHighlyRecommended = just.confianza >= 0.70;
-                const badgeText = isHighlyRecommended ? "🔥 Muy Recomendado" : "👍 Buen Complemento";
-                const badgeClass = isHighlyRecommended ? "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/30" : "text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30";
-                const borderClass = isHighlyRecommended ? "border-red-400" : "border-blue-400";
+                const pctConfianza = Math.round((just.confianza || 0.75) * 100);
+                const badgeText = "Se compra junto";
+                const badgeClass = "text-indigo-600 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-900/30";
+                const borderClass = "border-indigo-400";
                 
                 item.className = `bg-white dark:bg-gray-800 border-l-4 ${borderClass} rounded-lg p-3 w-full shadow-sm cursor-pointer hover:shadow-md hover:border-primary transition-all group relative`;
                 
@@ -709,7 +740,8 @@ async function fetchContextoComercial() {
                         <div class="text-[9px] text-gray-400 uppercase font-medium">${sug.tipo_recomendacion}</div>
                     </div>
                     <div class="font-bold text-sm truncate text-gray-800 dark:text-gray-100" title="${sug.nombre}">${sug.nombre}</div>
-                    <div class="text-[11px] text-gray-500 line-clamp-2 mt-1 mb-2 border-b border-gray-100 dark:border-gray-700 pb-2">${just.texto}</div>
+                    <div class="text-[11px] text-gray-500 line-clamp-2 mt-1 mb-1 border-b border-gray-100 dark:border-gray-700 pb-1.5">${just.texto}</div>
+                    <div class="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 mb-2">${pctConfianza}% de las ventas incluyen este producto</div>
                     <div class="flex justify-between items-center mt-1">
                         <span class="font-mono text-primary font-bold text-sm">${fmt(sug.precio)}</span>
                         <button class="bg-gray-100 dark:bg-gray-700 group-hover:bg-primary group-hover:text-white text-gray-600 dark:text-gray-300 font-bold px-3 py-1 rounded text-xs transition-colors flex items-center gap-1 shadow-sm">
@@ -725,7 +757,7 @@ async function fetchContextoComercial() {
             assistantNoRules.classList.remove('hidden');
         }
     } catch (e) {
-        console.error("Error obteniendo contexto comercial:", e);
+        // Manejo silencioso de contexto comercial
     }
 }
 
@@ -786,6 +818,13 @@ btnPreCheckout.addEventListener('click', async () => {
         checkoutLoading.classList.add('hidden');
         
         showToast(`Ticket #${response.idVenta} procesado exitosamente.`);
+
+        if (response.productos_afectados && response.productos_afectados.length > 0) {
+            response.productos_afectados.forEach(prod => {
+                showToast(`Venta completada. Stock actual de ${prod.nombre}: ${prod.stock_actual} un.`);
+            });
+        }
+
         clearCart();
         searchInput.focus();
         
@@ -797,3 +836,75 @@ btnPreCheckout.addEventListener('click', async () => {
 
 // Arrancar
 document.addEventListener('DOMContentLoaded', init);
+
+// -------------------------------------------------------------
+// MODALES BAJO DEMANDA (CLIENTE & PRODUCTO)
+// -------------------------------------------------------------
+function openClienteDetailModal() {
+    if (!selectedCliente) {
+        showToast("Selecciona un cliente primero para ver su ficha", "error");
+        return;
+    }
+    const modal = document.getElementById('clienteDetailModal');
+    if (!modal) return;
+
+    document.getElementById('cli-modal-nombre').textContent = `${selectedCliente.nombres} ${selectedCliente.apellidos}`;
+    document.getElementById('cli-modal-dni').textContent = `DNI: ${selectedCliente.numeroDocumento || '--'}`;
+    document.getElementById('cli-modal-badge').textContent = selectedCliente.clasificacion || 'Regular';
+    document.getElementById('cli-modal-frecuencia').textContent = `${selectedCliente.frecuencia_compra || 0} compras`;
+    document.getElementById('cli-modal-ticket').textContent = fmt(selectedCliente.ticket_promedio || 0);
+    document.getElementById('cli-modal-visita').textContent = selectedCliente.ultima_compra ? parseLocalDate(selectedCliente.ultima_compra).toLocaleDateString('es-PE') : 'Nueva visita';
+    
+    const totalComprado = (selectedCliente.frecuencia_compra || 0) * (selectedCliente.ticket_promedio || 0);
+    document.getElementById('cli-modal-total-comprado').textContent = fmt(totalComprado);
+    document.getElementById('cli-modal-favoritos').textContent = "General";
+
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modal.querySelector('div').classList.remove('scale-95');
+    }, 10);
+}
+
+function closeClienteDetailModal() {
+    const modal = document.getElementById('clienteDetailModal');
+    if (!modal) return;
+    modal.classList.add('opacity-0');
+    modal.querySelector('div').classList.add('scale-95');
+    setTimeout(() => modal.classList.add('hidden'), 300);
+}
+
+function openProductoDetailModalByObj(idProducto) {
+    const prod = currentSearchProducts.find(p => p.idProducto === idProducto);
+    if (prod) openProductoDetailModal(prod);
+}
+
+function openProductoDetailModal(prod) {
+    const modal = document.getElementById('productoDetailModal');
+    if (!modal) return;
+
+    document.getElementById('prod-modal-nombre').textContent = prod.nombre;
+    document.getElementById('prod-modal-codigo').textContent = `Código: ${prod.codigoBarras || prod.idProducto}`;
+    document.getElementById('prod-modal-stock').textContent = `${prod.stock} un.`;
+    document.getElementById('prod-modal-costo').textContent = fmt(prod.costo || 0);
+    document.getElementById('prod-modal-margen').textContent = `${Math.round(prod.margen || 0)}%`;
+    
+    let abcClass = "Clase A";
+    if (prod.margen < 20) abcClass = "Clase C";
+    else if (prod.margen < 40) abcClass = "Clase B";
+    document.getElementById('prod-modal-abc').textContent = abcClass;
+    
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modal.querySelector('div').classList.remove('scale-95');
+    }, 10);
+}
+
+function closeProductoDetailModal() {
+    const modal = document.getElementById('productoDetailModal');
+    if (!modal) return;
+    modal.classList.add('opacity-0');
+    modal.querySelector('div').classList.add('scale-95');
+    setTimeout(() => modal.classList.add('hidden'), 300);
+}

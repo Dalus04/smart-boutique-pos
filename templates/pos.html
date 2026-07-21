@@ -143,7 +143,7 @@
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i class="fa-solid fa-user text-gray-400"></i>
                         </div>
-                        <input type="text" id="search-cliente" placeholder="Buscar DNI o Apellido (F4)..."
+                        <input type="text" id="search-cliente" placeholder="Buscar cliente..."
                             class="input-base pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-900/50">
                         <input type="hidden" id="selected-cliente-id">
                     </div>
@@ -154,7 +154,7 @@
                     </div>
 
                     <!-- Contexto Inteligente del Cliente -->
-                    <div id="cliente-context" class="mt-4 flex flex-col gap-3 text-xs hidden">
+                    <div id="cliente-context" onclick="openClienteDetailModal()" class="mt-4 flex flex-col gap-3 text-xs hidden cursor-pointer hover:opacity-90 transition-opacity" title="Haz clic para ver la ficha completa del cliente">
                         <div class="flex items-center justify-between bg-indigo-50 dark:bg-indigo-900/20 p-2.5 rounded-lg border border-indigo-100 dark:border-indigo-800/30">
                             <span class="text-indigo-800 dark:text-indigo-300 font-medium"><i class="fa-solid fa-money-bill-wave mr-2"></i> Ticket Promedio</span>
                             <span id="ctx-ticket" class="font-bold text-indigo-700 dark:text-indigo-200 font-mono text-sm">S/ 0.00</span>
@@ -217,19 +217,30 @@
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 text-xs uppercase tracking-wider sticky top-0 bg-white dark:bg-gray-800 z-10">
-                                <th class="p-3 font-bold border-b border-gray-200 dark:border-gray-700">Ticket #</th>
-                                <th class="p-3 font-bold border-b border-gray-200 dark:border-gray-700">Fecha</th>
-                                <th class="p-3 font-bold border-b border-gray-200 dark:border-gray-700">Cliente</th>
-                                <th class="p-3 font-bold border-b border-gray-200 dark:border-gray-700 text-center">Artículos</th>
-                                <th class="p-3 font-bold border-b border-gray-200 dark:border-gray-700 text-right">Total</th>
-                                <th class="p-3 font-bold border-b border-gray-200 dark:border-gray-700 text-center">Estado</th>
-                                <th class="p-3 font-bold border-b border-gray-200 dark:border-gray-700 text-center">Acciones</th>
+                                <th class="py-2.5 px-3 font-bold border-b border-gray-200 dark:border-gray-700">Ticket #</th>
+                                <th class="py-2.5 px-3 font-bold border-b border-gray-200 dark:border-gray-700">Fecha</th>
+                                <th class="py-2.5 px-3 font-bold border-b border-gray-200 dark:border-gray-700">Cliente</th>
+                                <th class="py-2.5 px-3 font-bold border-b border-gray-200 dark:border-gray-700 text-center">Artículos</th>
+                                <th class="py-2.5 px-3 font-bold border-b border-gray-200 dark:border-gray-700 text-right">Total</th>
+                                <th class="py-2.5 px-3 font-bold border-b border-gray-200 dark:border-gray-700 text-center">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="historial-body" class="divide-y divide-gray-100 dark:divide-gray-700">
                             <!-- Historial dinámico -->
                         </tbody>
                     </table>
+                </div>
+                <!-- Controles de Paginación -->
+                <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between shrink-0 text-xs">
+                    <span id="historial-pagination-info" class="text-gray-500 font-medium">Página 1 de 1</span>
+                    <div class="flex gap-2">
+                        <button id="btn-historial-prev" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1" disabled>
+                            <i class="fa-solid fa-chevron-left text-[10px]"></i> Anterior
+                        </button>
+                        <button id="btn-historial-next" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1" disabled>
+                            Siguiente <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -341,6 +352,110 @@
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Modal Detalle de Cliente (Bajo Demanda) -->
+<div id="clienteDetailModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 hidden opacity-0 transition-opacity duration-300 backdrop-blur-sm">
+    <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 transform scale-95 transition-transform duration-300 overflow-hidden">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-indigo-50/50 dark:bg-gray-900/50 flex justify-between items-center">
+            <h3 class="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 text-sm uppercase tracking-wider">
+                <i class="fa-solid fa-id-card text-indigo-500"></i> Ficha Comercial del Cliente
+            </h3>
+            <button onclick="closeClienteDetailModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div class="text-center pb-2 border-b border-gray-100 dark:border-gray-700">
+                <h4 id="cli-modal-nombre" class="text-lg font-bold text-gray-800 dark:text-gray-100">--</h4>
+                <p id="cli-modal-dni" class="text-xs text-gray-400 font-mono">DNI: --</p>
+                <span id="cli-modal-badge" class="inline-block mt-2 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">--</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3 text-xs">
+                <div class="bg-gray-50 dark:bg-gray-900/40 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                    <span class="text-gray-400 block font-medium mb-1"><i class="fa-solid fa-rotate-right mr-1"></i> Frecuencia</span>
+                    <span id="cli-modal-frecuencia" class="text-sm font-bold text-gray-800 dark:text-gray-200">0 compras</span>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-900/40 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                    <span class="text-gray-400 block font-medium mb-1"><i class="fa-solid fa-receipt mr-1"></i> Ticket Promedio</span>
+                    <span id="cli-modal-ticket" class="text-sm font-bold text-indigo-600 dark:text-indigo-400 font-mono">S/ 0.00</span>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-900/40 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                    <span class="text-gray-400 block font-medium mb-1"><i class="fa-solid fa-calendar mr-1"></i> Última Visita</span>
+                    <span id="cli-modal-visita" class="text-sm font-bold text-gray-800 dark:text-gray-200">--</span>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-900/40 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                    <span class="text-gray-400 block font-medium mb-1"><i class="fa-solid fa-coins mr-1"></i> Total Comprado</span>
+                    <span id="cli-modal-total-comprado" class="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono">S/ 0.00</span>
+                </div>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-900/40 p-3 rounded-xl border border-gray-100 dark:border-gray-700 text-xs">
+                <span class="text-gray-400 block font-medium mb-1"><i class="fa-solid fa-tags mr-1"></i> Categorías Favoritas</span>
+                <span id="cli-modal-favoritos" class="font-medium text-gray-700 dark:text-gray-300">General</span>
+            </div>
+        </div>
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
+            <button onclick="closeClienteDetailModal()" class="px-5 py-2 rounded-lg font-bold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detalle de Producto (Bajo Demanda) -->
+<div id="productoDetailModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 hidden opacity-0 transition-opacity duration-300 backdrop-blur-sm">
+    <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 transform scale-95 transition-transform duration-300 overflow-hidden">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-blue-50/50 dark:bg-gray-900/50 flex justify-between items-center">
+            <h3 class="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 text-sm uppercase tracking-wider">
+                <i class="fa-solid fa-box text-primary"></i> Ficha Técnica de Producto
+            </h3>
+            <button onclick="closeProductoDetailModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div class="pb-2 border-b border-gray-100 dark:border-gray-700">
+                <h4 id="prod-modal-nombre" class="text-lg font-bold text-gray-800 dark:text-gray-100">--</h4>
+                <div class="flex items-center gap-2 mt-1">
+                    <span id="prod-modal-codigo" class="text-xs text-gray-400 font-mono">Código: --</span>
+                    <span id="prod-modal-abc" class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Clase A</span>
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2 text-xs">
+                <div class="bg-gray-50 dark:bg-gray-900/40 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700 text-center">
+                    <span class="text-gray-400 block font-medium text-[11px]">Stock</span>
+                    <span id="prod-modal-stock" class="text-sm font-bold text-gray-800 dark:text-gray-200">0 un.</span>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-900/40 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700 text-center">
+                    <span class="text-gray-400 block font-medium text-[11px]">Costo</span>
+                    <span id="prod-modal-costo" class="text-sm font-bold text-gray-600 dark:text-gray-300 font-mono">S/ 0.00</span>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-900/40 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700 text-center">
+                    <span class="text-gray-400 block font-medium text-[11px]">Margen</span>
+                    <span id="prod-modal-margen" class="text-sm font-bold text-emerald-600 dark:text-emerald-400">0%</span>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 text-xs">
+                <div class="bg-gray-50 dark:bg-gray-900/40 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                    <span class="text-gray-400 block font-medium mb-1"><i class="fa-solid fa-folder mr-1"></i> Categoría</span>
+                    <span id="prod-modal-categoria" class="font-bold text-gray-800 dark:text-gray-200">General</span>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-900/40 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                    <span class="text-gray-400 block font-medium mb-1"><i class="fa-solid fa-truck mr-1"></i> Proveedor</span>
+                    <span id="prod-modal-proveedor" class="font-bold text-gray-800 dark:text-gray-200">Distribuidor Oficial</span>
+                </div>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-900/40 p-3 rounded-xl border border-gray-100 dark:border-gray-700 text-xs">
+                <span class="text-gray-400 block font-medium mb-1"><i class="fa-solid fa-cart-flatbed mr-1"></i> Comprados juntos habitualmente</span>
+                <span id="prod-modal-asociados" class="font-medium text-gray-700 dark:text-gray-300">Medias, Complementos</span>
+            </div>
+        </div>
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
+            <button onclick="closeProductoDetailModal()" class="px-5 py-2 rounded-lg font-bold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
+                Cerrar
+            </button>
+        </div>
     </div>
 </div>
 
