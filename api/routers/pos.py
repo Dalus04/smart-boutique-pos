@@ -7,6 +7,12 @@ from typing import List, Optional
 from decimal import Decimal
 
 from api.dependencies import get_db_session
+from api.schemas.pos import (
+    CartItem,
+    CheckoutPayload,
+    ContextoPayload,
+    QuickClientePayload,
+)
 from models.catalogo import Producto, Categoria
 from models.suministro import Inventario
 from models.pos import Venta, DetalleVenta, Pago, MedioPago
@@ -18,24 +24,6 @@ router = APIRouter(
     prefix="/api/v1/pos",
     tags=["POS"]
 )
-
-# Schemas
-class CartItem(BaseModel):
-    idProducto: int
-    cantidad: int
-    precioUnitario: float
-    costoUnitario: float
-    
-class CheckoutPayload(BaseModel):
-    items: List[CartItem]
-    idMedioPago: int
-    montoTotal: float
-    # idCliente es opcional (Ventas Rápidas)
-    idCliente: Optional[int] = None
-
-class ContextoPayload(BaseModel):
-    carrito_ids: List[int] = []
-    idCliente: Optional[int] = None
 
 @router.get("/productos")
 def buscar_productos(
@@ -72,10 +60,6 @@ def buscar_productos(
             
     return resultados
 
-class QuickClientePayload(BaseModel):
-    numeroDocumento: str
-    nombres: str
-    apellidos: str
 
 @router.get("/clientes")
 def buscar_clientes(

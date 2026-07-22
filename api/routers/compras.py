@@ -5,6 +5,14 @@ from typing import List, Optional
 from decimal import Decimal
 
 from api.dependencies import get_db_session
+from api.schemas.compras import (
+    SolicitudReposicionCreate,
+    CompraItem,
+    RegistrarCompraPayload,
+    EstadoCompraPayload,
+    SyncBorradorItem,
+    SyncBorradorPayload,
+)
 from models.suministro import Compra, DetalleCompra, Inventario, SolicitudReposicion
 from models.catalogo import Producto
 from models.actores import Proveedor
@@ -68,11 +76,6 @@ def obtener_sugerencias_compra(db: Session = Depends(get_db_session)):
     }
 
 
-class SolicitudReposicionCreate(BaseModel):
-    idProducto: int
-    cantidad_sugerida: int
-    motivo: str
-    origen: Optional[str] = "Manual" # IA, Manual
 
 @router.post("/solicitud")
 def crear_solicitud(payload: SolicitudReposicionCreate, db: Session = Depends(get_db_session)):
@@ -109,16 +112,6 @@ def obtener_solicitudes_pendientes(db: Session = Depends(get_db_session)):
         })
     return {"solicitudes": resultado}
 
-class CompraItem(BaseModel):
-    idProducto: int
-    cantidad: int
-    costoUnitario: float
-
-class RegistrarCompraPayload(BaseModel):
-    idProveedor: int
-    items: List[CompraItem]
-    montoTotal: float
-    estado: str = "Borrador"
 
 @router.post("/registrar")
 def registrar_compra(payload: RegistrarCompraPayload, id_usuario: int = 1, db: Session = Depends(get_db_session)):
@@ -152,8 +145,6 @@ def registrar_compra(payload: RegistrarCompraPayload, id_usuario: int = 1, db: S
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-class EstadoCompraPayload(BaseModel):
-    estado: str
 
 @router.put("/compra/{id_compra}/estado")
 def cambiar_estado_compra(id_compra: int, payload: EstadoCompraPayload, db: Session = Depends(get_db_session)):
@@ -216,15 +207,6 @@ def cambiar_estado_compra(id_compra: int, payload: EstadoCompraPayload, db: Sess
 def despachar_orden_proveedor(id_compra: int):
     pass
 
-class SyncBorradorItem(BaseModel):
-    idProducto: int
-    cantidad: int
-    costoUnitario: float
-
-class SyncBorradorPayload(BaseModel):
-    idProveedor: int
-    items: List[SyncBorradorItem]
-    montoTotal: float
 
 @router.get("/planificacion/borrador")
 def obtener_borrador_activo(id_usuario: int = 1, db: Session = Depends(get_db_session)):
