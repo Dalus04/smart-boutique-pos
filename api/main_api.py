@@ -5,22 +5,42 @@ from fastapi.templating import Jinja2Templates
 from api.routers import dashboard, inventario, pos, actores, compras
 import os
 from contextlib import asynccontextmanager
-from config.db import SessionLocal
+from config.db import SessionLocal, engine
 from config.settings import CORS_ORIGINS
+from models.base import Base
+from models.catalogo import Producto
+import models  # Asegura el registro central de todos los modelos SQLAlchemy
 from services.mineria import MineriaService
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Entrenar modelo Apriori de forma lazy cargándolo a memoria
-    print("Iniciando entrenamiento del motor de Minería Apriori...")
+    # 1. Inicializar conexión & 2. Crear tablas si no existen
+    print("Verificando estructura de base de datos...")
+    Base.metadata.create_all(bind=engine)
+
+    # 3. Cargar datos iniciales si la base de datos está vacía
     db = SessionLocal()
     try:
+        if db.query(Producto).first() is None:
+            print("Base de datos vacía detectada. Iniciando carga inicial de datos...")
+            try:
+                from scripts.cargar_datos import cargar_datos
+                cargar_datos()
+                print("Carga inicial de datos completada exitosamente.")
+            except Exception as e:
+                print(f"Advertencia: Ocurrió un error en la carga inicial de datos: {e}")
+        else:
+            print("Base de datos existente con registros.")
+
+        # 4. Entrenar el modelo de minería Apriori
+        print("Iniciando entrenamiento del motor de Minería Apriori...")
         MineriaService.entrenar_modelo(db)
         print(f"Modelo Apriori entrenado. {len(MineriaService._reglas)} antecedentes en base de conocimiento.")
     finally:
         db.close()
+
     yield
-    # Shutdown logic if any
+    # Shutdown logic
     print("Apagando el sistema...")
 
 app = FastAPI(

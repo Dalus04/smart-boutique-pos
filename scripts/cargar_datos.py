@@ -9,17 +9,19 @@ from dotenv import load_dotenv
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
+from config.settings import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT
+
 # =========================================================
 # CONFIGURACIÓN
 # =========================================================
 RUTA_EXCEL = os.path.join(BASE_DIR, "data", "TIENDA_ROPA_FINAL.xlsx")
 
 CONFIG_BD = {
-    "host": os.getenv("DB_HOST", "localhost"),
-    "user": os.getenv("DB_USER", "daniel"),
-    "password": os.getenv("DB_PASSWORD", ""),
-    "database": os.getenv("DB_NAME", "para_ti_boutique"),
-    "port": int(os.getenv("DB_PORT", "3306"))
+    "host": DB_HOST,
+    "user": DB_USER,
+    "password": DB_PASSWORD,
+    "database": DB_NAME,
+    "port": int(DB_PORT)
 }
 
 # =========================================================
