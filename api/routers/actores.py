@@ -55,7 +55,7 @@ def get_clientes(
      .filter(Cliente.estado == 'ACTIVO')\
      .group_by(Cliente.idCliente)
 
-    if q:
+    if q and isinstance(q, str):
         search_term = f"%{q}%"
         base_query = base_query.filter(or_(
             Cliente.numeroDocumento.like(search_term),
@@ -63,11 +63,14 @@ def get_clientes(
             Cliente.apellidos.like(search_term)
         ))
 
-    total_records = base_query.count()
-    total_pages = math.ceil(total_records / limit) if total_records > 0 else 1
+    page_val = page if isinstance(page, int) else 1
+    limit_val = limit if isinstance(limit, int) else 20
 
-    offset_val = (page - 1) * limit
-    resultados = base_query.offset(offset_val).limit(limit).all()
+    total_records = base_query.count()
+    total_pages = math.ceil(total_records / limit_val) if total_records > 0 else 1
+
+    offset_val = (page_val - 1) * limit_val
+    resultados = base_query.offset(offset_val).limit(limit_val).all()
 
     data = [{
         "idCliente": row.Cliente.idCliente,
@@ -161,18 +164,21 @@ def get_proveedores(
      .filter(Proveedor.estado == 'ACTIVO')\
      .group_by(Proveedor.idProveedor)
 
-    if q:
+    if q and isinstance(q, str):
         search_term = f"%{q}%"
         base_query = base_query.filter(or_(
             Proveedor.numeroDocumento.like(search_term),
             Proveedor.nombreRazonSocial.like(search_term)
         ))
 
-    total_records = base_query.count()
-    total_pages = math.ceil(total_records / limit) if total_records > 0 else 1
+    page_val = page if isinstance(page, int) else 1
+    limit_val = limit if isinstance(limit, int) else 20
 
-    offset_val = (page - 1) * limit
-    resultados = base_query.offset(offset_val).limit(limit).all()
+    total_records = base_query.count()
+    total_pages = math.ceil(total_records / limit_val) if total_records > 0 else 1
+
+    offset_val = (page_val - 1) * limit_val
+    resultados = base_query.offset(offset_val).limit(limit_val).all()
 
     data = [{
         "idProveedor": row.Proveedor.idProveedor,

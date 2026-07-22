@@ -153,29 +153,35 @@ class InventarioService:
     @staticmethod
     def get_inventario_data(
         db: Session,
-        q: Optional[str],
-        id_categoria: Optional[int],
-        estado_stock: Optional[str],
-        page: int,
-        size: int,
+        q: Optional[str] = None,
+        id_categoria: Optional[int] = None,
+        estado_stock: Optional[str] = None,
+        page: int = 1,
+        size: int = 20,
     ) -> dict:
         """
         Retorna la página de productos enriquecida con métricas de inventario,
         riesgo, clasificación ABC y contexto semántico.
         """
+        q_str = q if isinstance(q, str) else None
+        cat_id = id_categoria if isinstance(id_categoria, int) else None
+        stock_st = estado_stock if isinstance(estado_stock, str) else None
+        p_num = page if isinstance(page, int) else 1
+        s_num = size if isinstance(size, int) else 20
+
         # 1. Construir query base con filtros
         query = (
             db.query(Producto)
             .outerjoin(Inventario, Producto.idProducto == Inventario.idProducto)
-            .filter(Producto.estado == "ACTIVO")
+            .filter(or_(Producto.estado == "ACTIVO", Producto.estado.is_(None)))
         )
 
-        if q:
-            search_term = f"%{q}%"
-            id_filter = [Producto.idProducto == int(q)] if q.isdigit() else []
+        if q_str:
+            search_term = f"%{q_str}%"
+            id_filter = [Producto.idProducto == int(q_str)] if q_str.isdigit() else []
             query = query.filter(
                 or_(
-                    Producto.codigoBarras == q,
+                    Producto.codigoBarras == q_str,
                     Producto.codigoBarras.ilike(search_term),
                     Producto.nombre.ilike(search_term),
                     Producto.marca.ilike(search_term),
@@ -183,27 +189,27 @@ class InventarioService:
                 )
             )
 
-        if id_categoria:
-            query = query.filter(Producto.idCategoria == id_categoria)
+        if cat_id:
+            query = query.filter(Producto.idCategoria == cat_id)
 
-        if estado_stock and estado_stock != "Todos":
-            if estado_stock == "Crítico":
+        if stock_st and stock_st != "Todos":
+            if stock_st == "Crítico":
                 query = query.filter(func.coalesce(Inventario.cantidadDisponible, 0) <= STOCK_CRITICO)
-            elif estado_stock == "Bajo":
+            elif stock_st == "Bajo":
                 query = query.filter(func.coalesce(Inventario.cantidadDisponible, 0).between(STOCK_CRITICO + 1, STOCK_BAJO))
-            elif estado_stock == "Óptimo":
+            elif stock_st == "Óptimo":
                 query = query.filter(func.coalesce(Inventario.cantidadDisponible, 0) > STOCK_BAJO)
 
         # 2. Paginación
         total_records = query.count()
-        pages         = math.ceil(total_records / size) if total_records > 0 else 1
-        productos     = query.offset((page - 1) * size).limit(size).all()
+        pages         = math.ceil(total_records / s_num) if total_records > 0 else 1
+        productos     = query.offset((p_num - 1) * s_num).limit(s_num).all()
 
         if not productos:
             return {
                 "items": [], "productos": [],
                 "total_records": total_records, "pages": pages,
-                "current_page": page, "page_size": size,
+                "current_page": p_num, "page_size": s_num,
             }
 
         # 3. Fix N+1: una sola query de ingresos para todos los productos de la página

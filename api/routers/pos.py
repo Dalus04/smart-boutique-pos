@@ -33,10 +33,11 @@ def buscar_productos(
 ):
     query = db.query(Producto).filter(Producto.estado == 'ACTIVO')
     
-    if categoria:
-        query = query.filter(Producto.idCategoria == categoria)
+    cat_id = categoria if isinstance(categoria, int) else None
+    if cat_id:
+        query = query.filter(Producto.idCategoria == cat_id)
     
-    if q:
+    if q and isinstance(q, str):
         search_term = f"%{q}%"
         id_filter = []
         if q.isdigit():
@@ -68,7 +69,7 @@ def buscar_clientes(
 ):
     query = db.query(Cliente).filter(Cliente.estado == 'ACTIVO')
     
-    if q:
+    if q and isinstance(q, str):
         search_term = f"%{q.strip()}%"
         query = query.filter(
             or_(

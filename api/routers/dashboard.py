@@ -21,13 +21,17 @@ def get_dashboard_metrics(
     fecha_fin: datetime.date = Query(None, description="Fecha de fin para filtro personalizado (YYYY-MM-DD)"),
     db: Session = Depends(get_db_session)
 ):
+    periodo_val = periodo if isinstance(periodo, str) else "7_dias"
+    f_inicio = fecha_inicio if isinstance(fecha_inicio, datetime.date) else None
+    f_fin = fecha_fin if isinstance(fecha_fin, datetime.date) else None
+
     try:
         # Métricas base + health score + regresión (todo calculado en servidor)
         metricas = AnaliticaService.obtener_metricas_completas(
             db,
-            periodo=periodo,
-            fecha_inicio_custom=fecha_inicio,
-            fecha_fin_custom=fecha_fin
+            periodo=periodo_val,
+            fecha_inicio_custom=f_inicio,
+            fecha_fin_custom=f_fin
         )
 
         # Reglas de asociación Apriori
