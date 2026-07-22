@@ -2,7 +2,7 @@
 Configuración centralizada del sistema basada en variables de entorno.
 
 Permite alternar de forma segura entre entornos (development, production, testing)
-sin hardcodear opciones sensibles ni exponer registros en producción.
+y desplegar en servicios como Railway o servidores locales sin modificar código.
 """
 import os
 from dotenv import load_dotenv
@@ -14,13 +14,24 @@ load_dotenv()
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 
 # ── Configuración de Base de Datos ───────────────────────────────────────────
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "3306")
-DB_NAME = os.getenv("DB_NAME", "para_ti_boutique")
+# Prioridad de resolución:
+# 1. Variables locales (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT)
+# 2. Variables de Railway (MYSQLHOST, MYSQLUSER, MYSQLPASSWORD, MYSQLDATABASE, MYSQLPORT)
+# 3. Valores por defecto (localhost, 3306, para_ti_boutique)
+DB_HOST = os.getenv("DB_HOST") or os.getenv("MYSQLHOST") or "localhost"
+DB_PORT = os.getenv("DB_PORT") or os.getenv("MYSQLPORT") or "3306"
+DB_USER = os.getenv("DB_USER") or os.getenv("MYSQLUSER") or ""
+DB_PASSWORD = os.getenv("DB_PASSWORD") or os.getenv("MYSQLPASSWORD") or ""
+DB_NAME = os.getenv("DB_NAME") or os.getenv("MYSQLDATABASE") or "para_ti_boutique"
 
-DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+_env_database_url = os.getenv("DATABASE_URL")
+if _env_database_url:
+    if _env_database_url.startswith("mysql://"):
+        DATABASE_URL = _env_database_url.replace("mysql://", "mysql+pymysql://", 1)
+    else:
+        DATABASE_URL = _env_database_url
+else:
+    DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # Control de logs SQL (echo).
 # Por defecto False en producción para evitar filtración de datos sensibles.
