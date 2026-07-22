@@ -3,17 +3,24 @@ import pandas as pd
 import mysql.connector
 from mysql.connector import Error
 
+import os
+from dotenv import load_dotenv
+
+# Cargar variables de entorno del proyecto
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+
 # =========================================================
 # CONFIGURACIÓN
 # =========================================================
-RUTA_EXCEL = "TIENDA_ROPA_FINAL.xlsx"
+RUTA_EXCEL = os.path.join(BASE_DIR, "data", "TIENDA_ROPA_FINAL.xlsx")
 
 CONFIG_BD = {
-    "host": "localhost",
-    "user": "daniel",
-    "password": "Hola123456??",
-    "database": "para_ti_boutique",
-    "port": 3306
+    "host": os.getenv("DB_HOST", "localhost"),
+    "user": os.getenv("DB_USER", "daniel"),
+    "password": os.getenv("DB_PASSWORD", ""),
+    "database": os.getenv("DB_NAME", "para_ti_boutique"),
+    "port": int(os.getenv("DB_PORT", "3306"))
 }
 
 # =========================================================

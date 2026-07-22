@@ -5,7 +5,7 @@ import os
 import sys
 
 # Asegurar que los módulos del proyecto estén en el path
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from config.db import engine, SessionLocal
 from models.base import Base
@@ -15,13 +15,12 @@ from models.pos import Venta, DetalleVenta, MedioPago, Pago
 from models.suministro import Inventario, Compra, DetalleCompra, SolicitudReposicion
 from models.usuarios import Usuario
 
-# 1. Recrear BD
-print("Eliminando tablas antiguas...")
-Base.metadata.drop_all(engine)
-print("Creando estructura de base de datos...")
-Base.metadata.create_all(engine)
-
 def seed_db():
+    print("Eliminando tablas antiguas...")
+    Base.metadata.drop_all(engine)
+    print("Creando estructura de base de datos...")
+    Base.metadata.create_all(engine)
+
     db = SessionLocal()
     try:
         print("Poblando Usuarios...")
