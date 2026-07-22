@@ -74,7 +74,6 @@ class PrediccionService:
         """
         from dateutil.relativedelta import relativedelta
         import statistics
-        import random
 
         # 1. Extraer historial mensual (Multianual 2022-2026)
         historial_raw = db.query(
@@ -184,12 +183,10 @@ class PrediccionService:
             mes_num = next_date.month
             
             if cluster == "Demanda Constante":
-                ruido = random.uniform(0.95, 1.05)
-                valor_final = sma_reciente * ruido
+                valor_final = sma_reciente
             else:
                 multiplicador = indices_estacionales[mes_num]
-                ruido = random.uniform(0.92, 1.08)
-                valor_final = (sma_reciente * multiplicador) * ruido
+                valor_final = sma_reciente * multiplicador
                 valor_final = max(min(valor_final, limite_superior), limite_inferior)
 
             data_prediccion.append(round(valor_final, 2))
