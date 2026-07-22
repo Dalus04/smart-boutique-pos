@@ -1,4 +1,7 @@
 import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from config.db import get_db
 from models.actores import Cliente, Proveedor
 

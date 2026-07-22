@@ -73,8 +73,9 @@ def test_sugerencia_venta_cruzada():
         print(f"Carrito actual: {carrito}")
         print(f"Sugerencias recibidas: {sugerencias}")
         
-        assert 2 in sugerencias, "La sugerencia falló: el Producto 2 debería estar recomendado para el Producto 1."
-        assert sugerencias[0] == 2, "El Producto 2 debería ser la recomendación número 1."
+        consecuentes = [s[1] for s in sugerencias]
+        assert 2 in consecuentes, "La sugerencia falló: el Producto 2 debería estar recomendado para el Producto 1."
+        assert sugerencias[0][1] == 2, "El Producto 2 debería ser la recomendación número 1."
         
         # Simulamos un carrito con el producto 3
         carrito_2 = [3]

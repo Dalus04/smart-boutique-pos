@@ -1,4 +1,6 @@
 import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import datetime
 from decimal import Decimal
 from sqlalchemy import select
@@ -11,7 +13,7 @@ from models.pos import Venta, DetalleVenta, MedioPago, Pago
 import models.suministro 
 from services.analitica import AnaliticaService
 
-def run_analytics_tests():
+def test_analitica_kpis():
     print("Iniciando prueba de KPIs del Servicio de Analítica...")
     
     with get_db() as db:
@@ -195,5 +197,7 @@ def run_analytics_tests():
             db.rollback()
             sys.exit(1)
 
+run_analytics_tests = test_analitica_kpis
+
 if __name__ == "__main__":
-    run_analytics_tests()
+    test_analitica_kpis()

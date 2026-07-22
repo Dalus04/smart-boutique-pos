@@ -52,10 +52,8 @@ def test_prediccion_riesgo():
             
         # Simular stock de inventario
         # Inicialmente insertamos 30 de stock repartido en dos registros para validar el func.sum()
-        inv1 = Inventario(idProducto=id_prod, fechaActualizacion=hoy, cantidadDisponible=20)
-        inv2 = Inventario(idProducto=id_prod, fechaActualizacion=hoy, cantidadDisponible=10)
-        session.add(inv1)
-        session.add(inv2)
+        inv = Inventario(idProducto=id_prod, fechaActualizacion=hoy, cantidadDisponible=30)
+        session.add(inv)
         session.commit()
         
         # 2. Extracción de velocidad (Act - Feature)
