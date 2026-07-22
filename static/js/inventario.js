@@ -54,17 +54,7 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Función Debounce para proteger a la API de sobrecarga
-function debounce(func, delay = 300) {
-    let timer;
-    return (...args) => {
-        clearTimeout(timer);
-        timer = setTimeout(() => { func.apply(this, args); }, delay);
-    };
-}
-
-// Formateador de moneda
-const fmtCurrency = (val) => `S/ ${(val || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`;
+// debounce y fmtCurrency disponibles desde utils.js (cargado en base.html)
 
 // Cargar Categorías para el dropdown
 async function loadCategorias() {

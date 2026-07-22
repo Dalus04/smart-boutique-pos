@@ -62,9 +62,7 @@ const themeColors = {
     secondary: '#27ae60',
 };
 
-// ─── Currency formatter ────────────────────────────────────────────────────
-const fmtCurrency = (v, min = 2) =>
-    `S/ ${Number(v).toLocaleString('en-US', { minimumFractionDigits: min, maximumFractionDigits: min })}`;
+// fmtCurrency disponible desde utils.js (cargado en base.html)
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EMPTY-STATE CHART PLUGIN

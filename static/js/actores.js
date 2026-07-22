@@ -48,8 +48,8 @@ const fCorreo = document.getElementById('form-correo');
 const camposDireccion = document.getElementById('campos-direccion');
 const fDireccion = document.getElementById('form-direccion');
 
-// Helpers
-const fmt = (val) => `S/ ${Number(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`;
+// fmt y debounce disponibles desde utils.js (cargado en base.html)
+
 
 function tiempoRelativo(isoString) {
     if (!isoString) return '<span class="text-gray-400 font-normal">Sin operaciones</span>';
@@ -90,13 +90,7 @@ function tiempoRelativo(isoString) {
     return `<span class="cursor-help font-medium text-gray-700 dark:text-gray-300" title="Fecha exacta: ${fechaAbsoluta}">${textoRelativo}</span>`;
 }
 
-function debounce(func, delay = 350) {
-    let timer;
-    return (...args) => {
-        clearTimeout(timer);
-        timer = setTimeout(() => { func.apply(this, args); }, delay);
-    };
-}
+
 
 // -------------------------------------------------------------
 // NAVEGACIÓN Y RENDERIZADO

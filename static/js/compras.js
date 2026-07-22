@@ -20,7 +20,8 @@ const btnProcesar = document.getElementById('btn-procesar');
 const toast = document.getElementById('toast');
 const toastMsg = document.getElementById('toast-msg');
 
-const fmt = (val) => `S/ ${Number(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits:2})}`;
+// fmt y debounce disponibles desde utils.js (cargado en base.html)
+
 
 const parseLocalDate = (isoString) => {
     if (!isoString) return new Date();
@@ -31,13 +32,6 @@ const parseLocalDate = (isoString) => {
     return new Date(s);
 };
 
-function debounce(func, delay = 300) {
-    let timer;
-    return (...args) => {
-        clearTimeout(timer);
-        timer = setTimeout(() => { func.apply(this, args); }, delay);
-    };
-}
 
 function showToast(msg, isError = false) {
     toastMsg.textContent = msg;
