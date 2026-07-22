@@ -4,7 +4,7 @@ import uvicorn
 def main():
     print("Iniciando Smart Boutique POS - Web API (FastAPI)...")
     try:
-        uvicorn.run("api.main_api:app", host="0.0.0.0", port=8000, reload=True)
+        uvicorn.run("api.main_api:app", host="0.0.0.0", port=8000, reload=False)
     except KeyboardInterrupt:
         print("Servidor detenido manualmente.")
     except Exception as e:
