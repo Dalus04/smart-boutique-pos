@@ -6,6 +6,7 @@ from api.routers import dashboard, inventario, pos, actores, compras
 import os
 from contextlib import asynccontextmanager
 from config.db import SessionLocal
+from config.settings import CORS_ORIGINS
 from services.mineria import MineriaService
 
 @asynccontextmanager
@@ -32,7 +33,7 @@ app = FastAPI(
 # Configuración de CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

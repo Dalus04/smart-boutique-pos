@@ -6,22 +6,12 @@ from sqlalchemy.orm import sessionmaker
 from models.base import Base
 import models  # Asegura que todos los modelos se importen y se registren en SQLAlchemy
 
-# Cargar variables de entorno desde el archivo .env
-load_dotenv()
-
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "3306")
-DB_NAME = os.getenv("DB_NAME", "para_ti_boutique")
-
-# Construir la URL de conexión para MySQL usando PyMySQL
-DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+from config.settings import DATABASE_URL, DB_ECHO
 
 # Crear el motor de la base de datos
 engine = create_engine(
     DATABASE_URL,
-    echo=True,  # Imprime las consultas SQL generadas en la consola (útil para desarrollo)
+    echo=DB_ECHO,  # Configurable mediante entorno (DB_ECHO/ENVIRONMENT)
     pool_pre_ping=True  # Verifica la validez de las conexiones antes de usarlas
 )
 
