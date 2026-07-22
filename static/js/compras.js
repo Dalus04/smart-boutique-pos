@@ -113,7 +113,8 @@ async function init() {
     parseURLParams();
 
     try {
-        proveedores = await ApiClient.get('/actores/proveedores');
+        const provRes = await ApiClient.get('/actores/proveedores');
+        proveedores = provRes.data || [];
         if(selProveedor) {
             selProveedor.innerHTML = '<option value="">Seleccione un proveedor...</option>';
             proveedores.forEach(p => {
@@ -246,7 +247,9 @@ async function cargarSolicitudesPendientes() {
 
 function renderSolicitudesCard(s) {
     const itemEnOrden = orderItems.find(i => i.idProducto === s.idProducto);
-    const isManual = (s.origen || '').toLowerCase() === 'manual';
+    const isManual = (s.origen || '').toString().trim().toLowerCase() === 'manual';
+    const nombreEscaped = (s.productoNombre || '').replace(/['"]/g, '');
+    const codigoEscaped = (s.codigoBarras || '-').replace(/['"]/g, '');
     
     let actionBtn = "";
     if (itemEnOrden) {
@@ -255,7 +258,7 @@ function renderSolicitudesCard(s) {
         const bgBtnClass = isManual 
             ? "bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white dark:bg-blue-900/30 dark:hover:bg-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-800"
             : "bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white dark:bg-indigo-900/30 dark:hover:bg-indigo-600 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800";
-        actionBtn = `<button onclick='addToOrder({idProducto: ${s.idProducto}, nombre: "${s.productoNombre}", codigoBarras: "${s.codigoBarras}", stock: 0}, ${s.cantidadSugerida});' class="w-full py-2 mt-2 ${bgBtnClass} border transition-colors font-bold text-xs rounded-lg flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-plus"></i> Añadir ${s.cantidadSugerida} u. al Manifiesto</button>`;
+        actionBtn = `<button onclick='addToOrder({idProducto: ${s.idProducto}, nombre: "${nombreEscaped}", codigoBarras: "${codigoEscaped}", stock: 0}, ${s.cantidadSugerida});' class="w-full py-2 mt-2 ${bgBtnClass} border transition-colors font-bold text-xs rounded-lg flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-plus"></i> Añadir ${s.cantidadSugerida} u. al Manifiesto</button>`;
     }
 
     return `
@@ -270,12 +273,14 @@ function renderSolicitudesCard(s) {
 
 function renderSugerenciaIACard(s) {
     const itemEnOrden = orderItems.find(i => i.idProducto === s.idProducto);
+    const nombreEscaped = (s.nombre || '').replace(/['"]/g, '');
+    const codigoEscaped = (s.codigoBarras || '-').replace(/['"]/g, '');
     let actionBtn = "";
     
     if (itemEnOrden) {
         actionBtn = `<button class="w-full py-2 mt-2 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-bold text-xs rounded-lg flex items-center justify-center gap-2 cursor-not-allowed border border-green-200 dark:border-green-800" disabled><i class="fa-solid fa-circle-check"></i> En Borrador</button>`;
     } else {
-        actionBtn = `<button onclick='addToOrder({idProducto: ${s.idProducto}, nombre: "${s.nombre}", codigoBarras: "${s.codigoBarras}", stock: ${s.stockActual}, costoUnitario: ${s.costo}, precioLista: ${s.precioLista}}, ${s.sugerencia});' class="w-full py-2 mt-2 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white dark:bg-indigo-900/30 dark:hover:bg-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors font-bold text-xs rounded-lg flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-robot"></i> Añadir ${s.sugerencia} u. (IA)</button>`;
+        actionBtn = `<button onclick='addToOrder({idProducto: ${s.idProducto}, nombre: "${nombreEscaped}", codigoBarras: "${codigoEscaped}", stock: ${s.stockActual}, costoUnitario: ${s.costo}, precioLista: ${s.precioLista}}, ${s.sugerencia});' class="w-full py-2 mt-2 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white dark:bg-indigo-900/30 dark:hover:bg-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors font-bold text-xs rounded-lg flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-robot"></i> Añadir ${s.sugerencia} u. (IA)</button>`;
     }
 
     return `
@@ -296,8 +301,8 @@ function renderSolicitudes() {
     const containerIa = document.getElementById('sugerencias-ia-chips');
     if (!containerManual || !containerIa) return;
 
-    const manuales = solicitudesOriginales.filter(s => (s.origen || '').toLowerCase() === 'manual');
-    const iasPendientes = solicitudesOriginales.filter(s => (s.origen || '').toLowerCase() !== 'manual');
+    const manuales = solicitudesOriginales.filter(s => (s.origen || '').toString().trim().toLowerCase() === 'manual');
+    const iasPendientes = solicitudesOriginales.filter(s => (s.origen || '').toString().trim().toLowerCase() !== 'manual');
 
     if (manuales.length === 0) {
         containerManual.innerHTML = `

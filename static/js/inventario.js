@@ -1050,3 +1050,321 @@ async function saveSolicitudManual(e) {
         showToast(`❌ ${err.message || 'No se pudo guardar la solicitud'}`, 'info');
     }
 }
+
+// ==========================================
+// MÓDULO DE PRONÓSTICOS DE DEMANDA
+// ==========================================
+
+let demandChartInstance = null;
+
+function switchTab(tabId) {
+    const tabGeneral = document.getElementById('tab-general');
+    const tabPronosticos = document.getElementById('tab-pronosticos');
+    const btnGeneral = document.getElementById('btn-tab-general');
+    const btnPronosticos = document.getElementById('btn-tab-pronosticos');
+
+    if (tabId === 'general') {
+        tabGeneral.classList.remove('hidden');
+        tabGeneral.classList.add('flex');
+        tabPronosticos.classList.remove('flex');
+        tabPronosticos.classList.add('hidden');
+        
+        btnGeneral.className = "pb-2 px-1 text-sm font-bold border-b-2 border-primary text-primary transition-colors";
+        btnPronosticos.className = "pb-2 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors";
+    } else {
+        tabGeneral.classList.remove('flex');
+        tabGeneral.classList.add('hidden');
+        tabPronosticos.classList.remove('hidden');
+        tabPronosticos.classList.add('flex');
+        
+        btnPronosticos.className = "pb-2 px-1 text-sm font-bold border-b-2 border-primary text-primary transition-colors";
+        btnGeneral.className = "pb-2 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors";
+        
+        loadForecastProducts();
+    }
+}
+
+let forecastProductsLoaded = false;
+let globalForecastProducts = [];
+
+async function loadForecastProducts() {
+    if (forecastProductsLoaded) return;
+    try {
+        const res = await ApiClient.get('/inventario/data', { size: 100 });
+        const dataList = document.getElementById('forecast-producto-list');
+        const productos = res.items || res.productos || [];
+        globalForecastProducts = productos;
+        
+        dataList.innerHTML = '';
+        productos.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = `${p.idProducto} - ${p.nombre} [${p.codigoBarras || 'S/C'}]`;
+            dataList.appendChild(opt);
+        });
+        forecastProductsLoaded = true;
+    } catch (error) {
+        console.error("Error al cargar productos para pronóstico:", error);
+    }
+}
+
+function handleForecastProductSelection(inputElem) {
+    const hiddenInput = document.getElementById('forecast-producto');
+    const stockInfo = document.getElementById('forecast-stock-info');
+    const stockBadge = document.getElementById('forecast-stock-badge');
+    const val = inputElem.value;
+    const match = val.match(/^(\d+)\s-/);
+    if (match) {
+        const prodId = parseInt(match[1]);
+        hiddenInput.value = prodId;
+        
+        // Buscar producto para mostrar su stock aparte (fuera del buscador)
+        const prod = globalForecastProducts.find(p => p.idProducto === prodId);
+        if (prod && stockInfo && stockBadge) {
+            const stockVal = prod.stock !== undefined ? prod.stock : (prod.cantidadDisponible || 0);
+            stockBadge.textContent = `${stockVal} uds`;
+            if (stockVal <= 5) {
+                stockBadge.className = "px-2.5 py-0.5 rounded-full font-bold text-xs bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300";
+            } else if (stockVal <= 15) {
+                stockBadge.className = "px-2.5 py-0.5 rounded-full font-bold text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300";
+            } else {
+                stockBadge.className = "px-2.5 py-0.5 rounded-full font-bold text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300";
+            }
+            stockInfo.classList.remove('hidden');
+            stockInfo.classList.add('flex');
+        }
+    } else {
+        hiddenInput.value = '';
+        if (stockInfo) {
+            stockInfo.classList.add('hidden');
+            stockInfo.classList.remove('flex');
+        }
+    }
+}
+
+function clearForecastProduct() {
+    document.getElementById('forecast-producto-input').value = '';
+    document.getElementById('forecast-producto').value = '';
+    const stockInfo = document.getElementById('forecast-stock-info');
+    if (stockInfo) {
+        stockInfo.classList.add('hidden');
+        stockInfo.classList.remove('flex');
+    }
+}
+
+async function generarPronostico() {
+    const idProducto = document.getElementById('forecast-producto').value;
+    const meses = document.getElementById('forecast-meses').value;
+    
+    if (!idProducto) {
+        showToast('Seleccione un producto primero', 'error');
+        return;
+    }
+
+    try {
+        const btn = document.querySelector('button[onclick="generarPronostico()"]');
+        const oldContent = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Calculando...';
+        btn.disabled = true;
+
+        const data = await ApiClient.get(`/inventario/pronostico/${idProducto}`, { meses: meses });
+        
+        // Actualizar KPIs (unidades)
+        document.getElementById('forecast-kpi-cluster').textContent = data.kpis.cluster;
+        document.getElementById('forecast-kpi-pico').textContent = data.kpis.pico_esperado;
+        document.getElementById('forecast-kpi-sugerencia').textContent = data.kpis.sugerencia_compra;
+
+        // Renderizar gráfico
+        renderDemandChart(data.labels_historico, data.data_historico, data.labels_prediccion, data.data_prediccion);
+
+        btn.innerHTML = oldContent;
+        btn.disabled = false;
+    } catch (error) {
+        console.error("Error al generar pronóstico:", error);
+        showToast('Error al calcular el pronóstico', 'error');
+        document.querySelector('button[onclick="generarPronostico()"]').disabled = false;
+        document.querySelector('button[onclick="generarPronostico()"]').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Proyectar';
+    }
+}
+
+function renderDemandChart(labelsHist, dataHist, labelsPred, dataPred) {
+    const ctx = document.getElementById('demandForecastChart').getContext('2d');
+    
+    if (demandChartInstance) {
+        demandChartInstance.destroy();
+    }
+
+    // Combinar labels únicos para el eje X
+    const allLabels = [...new Set([...labelsHist, ...labelsPred])];
+
+    // Mapear datos a los labels globales para alinear los datasets
+    const histDataMapped = allLabels.map(label => {
+        const idx = labelsHist.indexOf(label);
+        return idx !== -1 ? dataHist[idx] : null;
+    });
+
+    const predDataMapped = allLabels.map(label => {
+        const idx = labelsPred.indexOf(label);
+        return idx !== -1 ? dataPred[idx] : null;
+    });
+
+    const rootStyles = getComputedStyle(document.documentElement);
+    const primaryColor = rootStyles.getPropertyValue('--color-primary').trim() || '#3b82f6';
+    const warningColor = '#f59e0b'; // Naranja/Ambar
+
+    demandChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: allLabels,
+            datasets: [
+                {
+                    label: 'Ventas Históricas',
+                    data: histDataMapped,
+                    borderColor: primaryColor,
+                    backgroundColor: primaryColor + '20',
+                    borderWidth: 3,
+                    pointBackgroundColor: primaryColor,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    fill: true,
+                    tension: 0.3
+                },
+                {
+                    label: 'Proyección Esperada',
+                    data: predDataMapped,
+                    borderColor: warningColor,
+                    borderWidth: 3,
+                    borderDash: [5, 5],
+                    pointBackgroundColor: warningColor,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    fill: false,
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                tooltip: {
+                    backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                    titleColor: '#fff',
+                    bodyColor: '#e5e7eb',
+                    padding: 12,
+                    cornerRadius: 8,
+                    titleFont: { size: 14, weight: 'bold' },
+                    bodyFont: { size: 13 }
+                },
+                legend: {
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        usePointStyle: true,
+                        boxWidth: 8,
+                        font: { family: "'Inter', sans-serif", weight: '600' }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { family: "'Inter', sans-serif" }, color: '#6b7280' }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(156, 163, 175, 0.1)', drawBorder: false },
+                    ticks: { font: { family: "'Inter', sans-serif" }, color: '#6b7280' }
+                }
+            }
+        },
+        plugins: [seasonalBandsPlugin]
+    });
+}
+
+const seasonalBandsPlugin = {
+    id: 'seasonalBands',
+    beforeDraw(chart) {
+        const { ctx, chartArea: { top, bottom, left, right }, scales: { x } } = chart;
+        
+        ctx.save();
+        
+        let prevStation = '';
+
+        const styles = {
+            verano: { color: 'rgba(234, 179, 8, 0.05)', label: '☀️ Verano' },
+            otono: { color: 'rgba(197, 90, 17, 0.05)', label: '🍂 Otoño' },
+            invierno: { color: 'rgba(59, 130, 246, 0.06)', label: '❄️ Invierno' },
+            primavera: { color: 'rgba(34, 197, 94, 0.05)', label: '🌱 Primavera' }
+        };
+
+        x.ticks.forEach((tick, index) => {
+            const label = tick.label || x.getLabelForValue(tick.value);
+            const lowerLabel = String(label).toLowerCase();
+            
+            let parts = []; 
+            
+            if (lowerLabel.includes('enero') || lowerLabel.includes('-01') || lowerLabel.includes('febrero') || lowerLabel.includes('-02')) {
+                parts.push({ station: styles.verano, fraction: 1 });
+            } else if (lowerLabel.includes('marzo') || lowerLabel.includes('-03')) {
+                parts.push({ station: styles.verano, fraction: 21/31 });
+                parts.push({ station: styles.otono, fraction: 10/31 });
+            } else if (lowerLabel.includes('abril') || lowerLabel.includes('-04') || lowerLabel.includes('mayo') || lowerLabel.includes('-05')) {
+                parts.push({ station: styles.otono, fraction: 1 });
+            } else if (lowerLabel.includes('junio') || lowerLabel.includes('-06')) {
+                parts.push({ station: styles.otono, fraction: 21/30 });
+                parts.push({ station: styles.invierno, fraction: 9/30 });
+            } else if (lowerLabel.includes('julio') || lowerLabel.includes('-07') || lowerLabel.includes('agosto') || lowerLabel.includes('-08')) {
+                parts.push({ station: styles.invierno, fraction: 1 });
+            } else if (lowerLabel.includes('septiembre') || lowerLabel.includes('-09')) {
+                parts.push({ station: styles.invierno, fraction: 22/30 });
+                parts.push({ station: styles.primavera, fraction: 8/30 });
+            } else if (lowerLabel.includes('octubre') || lowerLabel.includes('-10') || lowerLabel.includes('noviembre') || lowerLabel.includes('-11')) {
+                parts.push({ station: styles.primavera, fraction: 1 });
+            } else if (lowerLabel.includes('diciembre') || lowerLabel.includes('-12')) {
+                parts.push({ station: styles.primavera, fraction: 20/31 });
+                parts.push({ station: styles.verano, fraction: 11/31 });
+            }
+            
+            if (parts.length > 0) {
+                const prevX = index === 0 ? left : x.getPixelForTick(index - 1);
+                const currX = x.getPixelForTick(index);
+                const nextX = index === x.ticks.length - 1 ? right : x.getPixelForTick(index + 1);
+                
+                const xStart = index === 0 ? left : currX - (currX - prevX) / 2;
+                const xEnd = index === x.ticks.length - 1 ? right : currX + (nextX - currX) / 2;
+                const cellWidth = xEnd - xStart;
+                
+                let currentStartX = xStart;
+                
+                parts.forEach(part => {
+                    const rectWidth = cellWidth * part.fraction;
+                    
+                    ctx.fillStyle = part.station.color;
+                    ctx.fillRect(currentStartX, top, rectWidth, bottom - top);
+                    
+                    if (part.fraction > 0.5) {
+                        if (part.station.label !== prevStation || cellWidth > 50 || x.ticks.length <= 6) {
+                            ctx.fillStyle = part.station.color.replace('0.05', '0.6').replace('0.06', '0.6');
+                            ctx.font = 'bold 10px Inter, sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(part.station.label, currX, top + 15);
+                        }
+                        prevStation = part.station.label;
+                    }
+                    
+                    currentStartX += rectWidth;
+                });
+            }
+        });
+        
+        ctx.restore();
+    }
+};

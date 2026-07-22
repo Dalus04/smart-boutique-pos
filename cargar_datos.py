@@ -1,3 +1,4 @@
+import datetime
 import pandas as pd
 import mysql.connector
 from mysql.connector import Error
@@ -18,6 +19,24 @@ CONFIG_BD = {
 # =========================================================
 # FUNCIONES AUXILIARES
 # =========================================================
+def adelantar_un_ano_si_posible(fecha):
+    if pd.isnull(fecha) or fecha is None:
+        return fecha
+    
+    fecha_dt = pd.to_datetime(fecha)
+    hoy = pd.to_datetime(datetime.date.today())
+    
+    try:
+        fecha_proyectada = fecha_dt.replace(year=fecha_dt.year + 1)
+    except ValueError:
+        # Manejo para años bisiestos (ej. 29 de febrero)
+        fecha_proyectada = fecha_dt + pd.DateOffset(years=1)
+        
+    if fecha_proyectada <= hoy:
+        return fecha_proyectada.date()
+    return fecha_dt.date()
+
+
 def obtener_o_insertar_categoria(cursor, nombre_categoria):
     cursor.execute(
         "SELECT idCategoria FROM categoria WHERE nombreCategoria = %s",
@@ -45,12 +64,18 @@ def obtener_o_insertar_cliente(cursor, id_cliente, nombre_cliente):
     if resultado:
         return resultado[0]
 
+    # Separar nombre completo en nombres y apellidos si es posible
+    partes = str(nombre_cliente).strip().split(" ", 1)
+    nombres = partes[0]
+    apellidos = partes[1] if len(partes) > 1 else "-"
+    doc_cliente = f"CLI-{int(id_cliente):05d}"
+
     cursor.execute(
         """
-        INSERT INTO cliente (idCliente, nombresCompletos, telefono, correoElectronico)
-        VALUES (%s, %s, NULL, NULL)
+        INSERT INTO cliente (idCliente, tipoDocumento, numeroDocumento, nombres, apellidos, telefono, correoElectronico)
+        VALUES (%s, 'DNI', %s, %s, %s, NULL, NULL)
         """,
-        (int(id_cliente), nombre_cliente)
+        (int(id_cliente), doc_cliente, nombres, apellidos)
     )
     return int(id_cliente)
 
@@ -65,13 +90,15 @@ def obtener_o_insertar_proveedor(cursor, id_proveedor, nombre_proveedor):
     if resultado:
         return resultado[0]
 
+    doc_prov = f"PROV-{int(id_proveedor):05d}"
+
     cursor.execute(
         """
         INSERT INTO proveedor
-        (idProveedor, nombreRazonSocial, telefono, direccion, correoElectronico)
-        VALUES (%s, %s, NULL, NULL, NULL)
+        (idProveedor, tipoDocumento, numeroDocumento, nombreRazonSocial, telefono, direccion, correoElectronico)
+        VALUES (%s, 'RUC', %s, %s, NULL, NULL, NULL)
         """,
-        (int(id_proveedor), nombre_proveedor)
+        (int(id_proveedor), doc_prov, nombre_proveedor)
     )
     return int(id_proveedor)
 
@@ -80,13 +107,11 @@ def determinar_rol(nombre_usuario):
     usuario = nombre_usuario.strip().lower()
 
     if "admin" in usuario:
-        return "Administrador"
-    elif "supervisor" in usuario:
-        return "Supervisor"
-    elif "vendedor" in usuario:
-        return "Vendedor"
+        return "ADMINISTRADOR"
+    elif "auditor" in usuario:
+        return "AUDITOR"
     else:
-        return "Usuario"
+        return "CAJERO"
 
 
 def obtener_o_insertar_usuario(cursor, nombre_usuario):
@@ -102,13 +127,17 @@ def obtener_o_insertar_usuario(cursor, nombre_usuario):
     if resultado:
         return resultado[0]
 
+    partes = nombre_usuario.split(" ", 1)
+    nombres = partes[0]
+    apellidos = partes[1] if len(partes) > 1 else "-"
+
     cursor.execute(
         """
         INSERT INTO usuario
-        (idAdministrador, nombres, apellidos, nombreUsuario, contrasena, rol, estado)
-        VALUES (NULL, %s, NULL, %s, NULL, %s, 'Activo')
+        (nombres, apellidos, nombreUsuario, contrasena, rol, estado)
+        VALUES (%s, %s, %s, '123456', %s, 'ACTIVO')
         """,
-        (nombre_usuario, nombre_usuario, rol)
+        (nombres, apellidos, nombre_usuario, rol)
     )
     return cursor.lastrowid
 
@@ -308,6 +337,63 @@ def insertar_pago_si_no_existe(cursor, id_venta, id_medio_pago, fecha_pago, mont
         )
 
 
+def insertar_compra_y_detalle_si_no_existe(
+    cursor,
+    id_proveedor,
+    id_usuario,
+    fecha_compra,
+    id_producto,
+    cantidad,
+    costo_unitario
+):
+    subtotal = float(cantidad) * float(costo_unitario)
+
+    # 1. Buscar si ya existe una compra creada para este proveedor, usuario y fecha exacta
+    cursor.execute(
+        """
+        SELECT idCompra FROM compra
+        WHERE idProveedor = %s AND idUsuario = %s AND fechaCompra = %s
+        """,
+        (int(id_proveedor), id_usuario, fecha_compra)
+    )
+    resultado_compra = cursor.fetchone()
+
+    if resultado_compra:
+        id_compra = resultado_compra[0]
+        # Sumar el subtotal al montoTotal de la compra
+        cursor.execute(
+            "UPDATE compra SET montoTotal = montoTotal + %s WHERE idCompra = %s",
+            (subtotal, id_compra)
+        )
+    else:
+        # Crear nueva compra
+        cursor.execute(
+            """
+            INSERT INTO compra (idProveedor, idUsuario, fechaCompra, montoTotal, estado)
+            VALUES (%s, %s, %s, %s, 'Completada')
+            """,
+            (int(id_proveedor), id_usuario, fecha_compra, subtotal)
+        )
+        id_compra = cursor.lastrowid
+
+    # 2. Insertar el detalle de la compra si no existe
+    cursor.execute(
+        """
+        SELECT idDetalleCompra FROM detalle_compra
+        WHERE idCompra = %s AND idProducto = %s
+        """,
+        (id_compra, id_producto)
+    )
+    if not cursor.fetchone():
+        cursor.execute(
+            """
+            INSERT INTO detalle_compra (idCompra, idProducto, cantidad, costoUnitario, subtotal)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (id_compra, id_producto, int(cantidad), float(costo_unitario), subtotal)
+        )
+
+
 # =========================================================
 # PROCESO PRINCIPAL DE CARGA
 # =========================================================
@@ -318,9 +404,9 @@ def cargar_datos():
         # Leer Excel
         datos = pd.read_excel(RUTA_EXCEL)
 
-        # Convertir fechas al formato DATE de MySQL
-        datos["Fecha"] = pd.to_datetime(datos["Fecha"]).dt.date
-        datos["Fecha_Registro"] = pd.to_datetime(datos["Fecha_Registro"]).dt.date
+        # Convertir y adelantar fechas 1 año si no supera el día de hoy
+        datos["Fecha"] = datos["Fecha"].apply(adelantar_un_ano_si_posible)
+        datos["Fecha_Registro"] = datos["Fecha_Registro"].apply(adelantar_un_ano_si_posible)
 
         # Conectar a MySQL
         conexion = mysql.connector.connect(**CONFIG_BD)
@@ -421,6 +507,17 @@ def cargar_datos():
                 id_medio_pago,
                 fila["Fecha"],
                 fila["Total"]
+            )
+
+            # Insertar compra y detalle de compra alineados con la fecha de venta y el proveedor
+            insertar_compra_y_detalle_si_no_existe(
+                cursor,
+                fila["ID_Proveedor"],
+                id_usuario,
+                fila["Fecha"],
+                id_producto,
+                fila["Cantidad"],
+                fila["Costo_Unitario"]
             )
 
         conexion.commit()

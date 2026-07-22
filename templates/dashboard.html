@@ -33,19 +33,56 @@
             </div>
 
             <!-- Filtros de Tiempo -->
-            <div class="card p-1 flex h-fit md:self-end shrink-0">
+            <div class="card p-1.5 flex flex-wrap items-center gap-1 h-fit md:self-end shrink-0">
                 <button
-                    class="filter-btn active px-5 py-2 rounded-lg font-bold text-sm transition-colors text-white bg-primary"
+                    class="filter-btn active px-4 py-2 rounded-lg font-bold text-sm transition-colors text-white bg-primary"
                     data-period="hoy">Hoy</button>
                 <button
-                    class="filter-btn px-5 py-2 rounded-lg font-bold text-sm transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    class="filter-btn px-4 py-2 rounded-lg font-bold text-sm transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     data-period="7_dias">Semana</button>
                 <button
-                    class="filter-btn px-5 py-2 rounded-lg font-bold text-sm transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    class="filter-btn px-4 py-2 rounded-lg font-bold text-sm transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     data-period="mes">Mes</button>
                 <button
-                    class="filter-btn px-5 py-2 rounded-lg font-bold text-sm transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    class="filter-btn px-4 py-2 rounded-lg font-bold text-sm transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     data-period="anio">Año</button>
+                <button
+                    class="filter-btn px-4 py-2 rounded-lg font-bold text-sm transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    data-period="todo">Todo</button>
+                
+                <div class="relative">
+                    <button id="custom-date-toggle"
+                        class="filter-btn px-4 py-2 rounded-lg font-bold text-sm transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1.5"
+                        data-period="custom">
+                        <i class="fa-regular fa-calendar-days text-xs"></i>
+                        <span>Rango</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barra de Rango de Fechas Personalizadas (Oculta por defecto) -->
+        <div id="custom-date-bar" class="hidden card p-3 flex flex-wrap items-center justify-between gap-4 bg-slate-50 dark:bg-darkCard border border-slate-200 dark:border-slate-700">
+            <div class="flex flex-wrap items-center gap-3 text-sm">
+                <span class="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                    <i class="fa-solid fa-filter text-primary"></i> Filtrar por fecha:
+                </span>
+                <div class="flex items-center gap-2">
+                    <label class="text-xs text-slate-500 font-semibold">Desde:</label>
+                    <input type="date" id="date-start" class="px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white font-medium focus:ring-2 focus:ring-primary focus:outline-none">
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-xs text-slate-500 font-semibold">Hasta:</label>
+                    <input type="date" id="date-end" class="px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white font-medium focus:ring-2 focus:ring-primary focus:outline-none">
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="applyCustomDateFilter()" class="px-4 py-1.5 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold text-xs transition-colors flex items-center gap-1">
+                    <i class="fa-solid fa-check"></i> Aplicar
+                </button>
+                <button onclick="closeCustomDateBar()" class="px-3 py-1.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-bold text-xs transition-colors">
+                    Cancelar
+                </button>
             </div>
         </div>
 

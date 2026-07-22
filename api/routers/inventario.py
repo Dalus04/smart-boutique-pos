@@ -359,3 +359,16 @@ def update_producto(id_producto: int, data: ProductoUpdate, db: Session = Depend
         "status": "success",
         "message": f"Producto '{prod.nombre}' actualizado exitosamente."
     }
+
+@router.get("/pronostico/{id_producto}")
+def get_pronostico(id_producto: int, meses: Optional[int] = Query(3, ge=1, le=12, description="Meses a proyectar"), db: Session = Depends(get_db_session)):
+    """
+    Genera un pronóstico de demanda para un producto en particular usando el PrediccionService.
+    """
+    # Validar que el producto exista
+    prod = db.query(Producto).filter(Producto.idProducto == id_producto).first()
+    if not prod:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+        
+    resultado = PrediccionService.generar_pronostico_demanda(id_producto, meses, db)
+    return resultado

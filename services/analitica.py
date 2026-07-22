@@ -252,21 +252,40 @@ class AnaliticaService:
         return ranking
 
     @staticmethod
-    def obtener_metricas_completas(db: Session, periodo: str = "7_dias") -> dict:
+    def obtener_metricas_completas(
+        db: Session,
+        periodo: str = "7_dias",
+        fecha_inicio_custom: datetime.date = None,
+        fecha_fin_custom: datetime.date = None
+    ) -> dict:
         now = datetime.datetime.now()
 
-        # Calcular rangos temporales
-        if periodo == "mes":
-            dias_t0 = 30
+        if fecha_inicio_custom and fecha_fin_custom:
+            inicio_t0 = datetime.datetime.combine(fecha_inicio_custom, datetime.time.min)
+            fin_t0    = datetime.datetime.combine(fecha_fin_custom, datetime.time.max)
+            dias_t0   = max((fin_t0 - inicio_t0).days, 1)
+        elif periodo == "todo":
+            # Obtener la fecha de la primera venta registrada en la base de datos
+            min_fecha = db.execute(select(func.min(Venta.fechaVenta))).scalar()
+            inicio_t0 = min_fecha if min_fecha else now - datetime.timedelta(days=365)
+            fin_t0    = now
+            dias_t0   = max((fin_t0 - inicio_t0).days, 1)
+        elif periodo == "mes":
+            dias_t0   = 30
+            fin_t0    = now
+            inicio_t0 = fin_t0 - datetime.timedelta(days=dias_t0)
         elif periodo == "anio":
-            dias_t0 = 365
+            dias_t0   = 365
+            fin_t0    = now
+            inicio_t0 = fin_t0 - datetime.timedelta(days=dias_t0)
         elif periodo == "hoy":
-            dias_t0 = 1
-        else:
-            dias_t0 = 7
-
-        fin_t0   = now
-        inicio_t0 = fin_t0 - datetime.timedelta(days=dias_t0)
+            dias_t0   = 1
+            fin_t0    = now
+            inicio_t0 = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        else:  # 7_dias
+            dias_t0   = 7
+            fin_t0    = now
+            inicio_t0 = fin_t0 - datetime.timedelta(days=dias_t0)
 
         fin_t1   = inicio_t0
         inicio_t1 = fin_t1 - datetime.timedelta(days=dias_t0)

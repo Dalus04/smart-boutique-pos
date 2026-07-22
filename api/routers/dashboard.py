@@ -16,12 +16,19 @@ router = APIRouter(
 
 @router.get("/metrics")
 def get_dashboard_metrics(
-    periodo: str = Query("7_dias", description="Periodo de consulta (hoy, 7_dias, mes, anio)"),
+    periodo: str = Query("7_dias", description="Periodo de consulta (hoy, 7_dias, mes, anio, todo, custom)"),
+    fecha_inicio: datetime.date = Query(None, description="Fecha de inicio para filtro personalizado (YYYY-MM-DD)"),
+    fecha_fin: datetime.date = Query(None, description="Fecha de fin para filtro personalizado (YYYY-MM-DD)"),
     db: Session = Depends(get_db_session)
 ):
     try:
         # Métricas base + health score + regresión (todo calculado en servidor)
-        metricas = AnaliticaService.obtener_metricas_completas(db, periodo)
+        metricas = AnaliticaService.obtener_metricas_completas(
+            db,
+            periodo=periodo,
+            fecha_inicio_custom=fecha_inicio,
+            fecha_fin_custom=fecha_fin
+        )
 
         # Reglas de asociación Apriori
         reglas = MineriaService.obtener_mejores_reglas(limit=3)

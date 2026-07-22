@@ -31,12 +31,26 @@ function animateValue(obj, start, end, duration, formatFn) {
 
 /** Human-readable label for a period key. */
 function periodoLabel(periodo) {
-    return { hoy: 'Hoy', '7_dias': 'Últimos 7 días', mes: 'Último mes', anio: 'Último año' }[periodo] || periodo;
+    if (periodo === 'custom') {
+        const start = document.getElementById('date-start')?.value;
+        const end = document.getElementById('date-end')?.value;
+        return start && end ? `${start} a ${end}` : 'Rango personalizado';
+    }
+    return { hoy: 'Hoy', '7_dias': 'Últimos 7 días', mes: 'Último mes', anio: 'Último año', todo: 'Todo el período' }[periodo] || periodo;
 }
 
 /** Approximate day count for a period key (used for KPI modal context). */
 function periodoDias(periodo) {
-    return { hoy: 1, '7_dias': 7, mes: 30, anio: 365 }[periodo] || 7;
+    if (periodo === 'custom') {
+        const start = document.getElementById('date-start')?.value;
+        const end = document.getElementById('date-end')?.value;
+        if (start && end) {
+            const diff = (new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24);
+            return Math.max(Math.round(diff) + 1, 1);
+        }
+        return 1;
+    }
+    return { hoy: 1, '7_dias': 7, mes: 30, anio: 365, todo: 365 }[periodo] || 7;
 }
 
 // ─── Theme colours (reactive to dark-mode toggle) ─────────────────────────
@@ -98,7 +112,7 @@ Chart.register(emptyStatePlugin);
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN LOAD FUNCTION
 // ═══════════════════════════════════════════════════════════════════════════
-async function loadDashboardData(period = '7_dias') {
+async function loadDashboardData(period = '7_dias', fechaInicio = null, fechaFin = null) {
     _dashPeriodo = period;
 
     // Show loader, hide charts
@@ -107,7 +121,13 @@ async function loadDashboardData(period = '7_dias') {
     document.getElementById('chart-fallback').classList.add('hidden');
 
     try {
-        const data = await ApiClient.get('/dashboard/metrics', { periodo: period });
+        const params = { periodo: period };
+        if (period === 'custom' && fechaInicio && fechaFin) {
+            params.fecha_inicio = fechaInicio;
+            params.fecha_fin = fechaFin;
+        }
+
+        const data = await ApiClient.get('/dashboard/metrics', params);
         _dashData = data;
 
         const { kpis, health, salud_inventario, proyeccion_mes, proyeccion_fin_mes, charts } = data;
@@ -125,7 +145,10 @@ async function loadDashboardData(period = '7_dias') {
 
         const setVar = (elId, val) => {
             const el = document.getElementById(elId);
-            if (Math.abs(val) < 0.1) {
+            if (period === 'todo') {
+                el.innerText = 'Histórico total';
+                el.className = 'text-xs text-slate-400 dark:text-slate-500 mt-1 font-semibold';
+            } else if (Math.abs(val) < 0.1) {
                 el.innerText  = '≈ 0.00%';
                 el.className  = 'text-xs text-slate-400 dark:text-slate-500 mt-1 font-semibold';
             } else {
@@ -311,25 +334,88 @@ async function loadDashboardData(period = '7_dias') {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// FILTER BUTTONS
+// FILTER BUTTONS & CUSTOM DATE RANGE
 // ═══════════════════════════════════════════════════════════════════════════
 document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', e => {
+        const target = e.currentTarget;
+        const period = target.dataset.period;
+
+        if (period === 'custom') {
+            const customBar = document.getElementById('custom-date-bar');
+            const isHidden = customBar.classList.contains('hidden');
+            if (isHidden) {
+                customBar.classList.remove('hidden');
+                // Establecer valores por defecto (ej. mes actual)
+                const today = new Date().toISOString().split('T')[0];
+                if (!document.getElementById('date-end').value) document.getElementById('date-end').value = today;
+                if (!document.getElementById('date-start').value) {
+                    const d = new Date();
+                    d.setDate(d.getDate() - 30);
+                    document.getElementById('date-start').value = d.toISOString().split('T')[0];
+                }
+            } else {
+                customBar.classList.add('hidden');
+            }
+            return;
+        } else {
+            document.getElementById('custom-date-bar')?.classList.add('hidden');
+        }
+
         document.querySelectorAll('.filter-btn').forEach(b => {
             b.classList.remove('active', 'text-white', 'bg-primary');
             b.classList.add('text-slate-600', 'dark:text-slate-300');
         });
-        const target = e.currentTarget;
+
         target.classList.add('active', 'text-white', 'bg-primary');
         target.classList.remove('text-slate-600', 'dark:text-slate-300');
-        loadDashboardData(target.dataset.period);
+        loadDashboardData(period);
     });
 });
+
+function applyCustomDateFilter() {
+    const start = document.getElementById('date-start').value;
+    const end = document.getElementById('date-end').value;
+
+    if (!start || !end) {
+        alert('Por favor selecciona una fecha de inicio y una fecha de fin.');
+        return;
+    }
+
+    if (start > end) {
+        alert('La fecha de inicio no puede ser posterior a la fecha de fin.');
+        return;
+    }
+
+    document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.remove('active', 'text-white', 'bg-primary');
+        b.classList.add('text-slate-600', 'dark:text-slate-300');
+    });
+
+    const customBtn = document.getElementById('custom-date-toggle');
+    if (customBtn) {
+        customBtn.classList.add('active', 'text-white', 'bg-primary');
+        customBtn.classList.remove('text-slate-600', 'dark:text-slate-300');
+    }
+
+    loadDashboardData('custom', start, end);
+}
+
+function closeCustomDateBar() {
+    document.getElementById('custom-date-bar')?.classList.add('hidden');
+}
 
 // Theme change → reload charts with correct colours
 window.addEventListener('themeChanged', () => {
     const activeBtn = document.querySelector('.filter-btn.active');
-    if (activeBtn) loadDashboardData(activeBtn.dataset.period);
+    if (activeBtn) {
+        const period = activeBtn.dataset.period;
+        if (period === 'custom') {
+            applyCustomDateFilter();
+        } else {
+            loadDashboardData(period);
+        }
+    }
 });
 
 // Init on DOM ready
@@ -409,11 +495,13 @@ const KPI_CONFIG = {
             const dias    = periodoDias(periodo);
             const promDia = dias > 0 ? d.kpis.ventas.valor / dias : 0;
             const varVal  = d.kpis.ventas.var;
-            return [
-                { label: 'Variación vs período anterior', value: `${varVal >= 0 ? '↑' : '↓'} ${Math.abs(varVal).toFixed(2)}%`, warn: varVal < 0 },
-                { label: 'Promedio diario estimado',      value: fmtCurrency(promDia) },
-                { label: 'Período analizado',             value: periodoLabel(periodo) },
-            ];
+            const list = [];
+            if (periodo !== 'todo') {
+                list.push({ label: 'Variación vs período anterior', value: `${varVal >= 0 ? '↑' : '↓'} ${Math.abs(varVal).toFixed(2)}%`, warn: varVal < 0 });
+            }
+            list.push({ label: 'Promedio diario estimado',      value: fmtCurrency(promDia) });
+            list.push({ label: 'Período analizado',             value: periodoLabel(periodo) });
+            return list;
         },
         mainValue(d) { return fmtCurrency(d.kpis.ventas.valor); }
     },
@@ -423,15 +511,18 @@ const KPI_CONFIG = {
         color: 'from-green-50 to-emerald-50 dark:from-gray-800 dark:to-gray-800/80',
         iconColor: 'text-green-500',
         mainLabel: 'Utilidad Total',
-        rows(d) {
+        rows(d, periodo) {
             const participacion = d.kpis.ventas.valor > 0
                 ? (d.kpis.utilidad.valor / d.kpis.ventas.valor * 100) : 0;
             const varVal = d.kpis.utilidad.var;
-            return [
-                { label: 'Margen obtenido',              value: `${d.kpis.margen.valor.toFixed(1)}%` },
-                { label: 'Participación sobre ventas',   value: `${participacion.toFixed(1)}%` },
-                { label: 'Variación vs período anterior',value: `${varVal >= 0 ? '↑' : '↓'} ${Math.abs(varVal).toFixed(2)}%`, warn: varVal < 0 },
+            const list = [
+                { label: 'Margen obtenido',            value: `${d.kpis.margen.valor.toFixed(1)}%` },
+                { label: 'Participación sobre ventas', value: `${participacion.toFixed(1)}%` }
             ];
+            if (periodo !== 'todo') {
+                list.push({ label: 'Variación vs período anterior', value: `${varVal >= 0 ? '↑' : '↓'} ${Math.abs(varVal).toFixed(2)}%`, warn: varVal < 0 });
+            }
+            return list;
         },
         mainValue(d) { return fmtCurrency(d.kpis.utilidad.valor); }
     },
@@ -441,13 +532,15 @@ const KPI_CONFIG = {
         color: 'from-orange-50 to-amber-50 dark:from-gray-800 dark:to-gray-800/80',
         iconColor: 'text-orange-500',
         mainLabel: 'Margen del Período',
-        rows(d) {
+        rows(d, periodo) {
             const varVal = d.kpis.margen.var;
-            return [
-                { label: 'Variación en pp vs anterior', value: `${varVal >= 0 ? '+' : ''}${varVal.toFixed(2)} pp`, warn: varVal < 0 },
-                { label: 'Umbral de alerta',            value: '< 30%' },
-                { label: 'Estado',                      value: d.kpis.margen.valor >= 30 ? '✔ Saludable' : '⚠ Por debajo del umbral', warn: d.kpis.margen.valor < 30 },
-            ];
+            const list = [];
+            if (periodo !== 'todo') {
+                list.push({ label: 'Variación en pp vs anterior', value: `${varVal >= 0 ? '+' : ''}${varVal.toFixed(2)} pp`, warn: varVal < 0 });
+            }
+            list.push({ label: 'Umbral de alerta', value: '< 30%' });
+            list.push({ label: 'Estado',           value: d.kpis.margen.valor >= 30 ? '✔ Saludable' : '⚠ Por debajo del umbral', warn: d.kpis.margen.valor < 30 });
+            return list;
         },
         mainValue(d) { return `${d.kpis.margen.valor.toFixed(1)}%`; }
     },
@@ -459,10 +552,11 @@ const KPI_CONFIG = {
         mainLabel: 'Clientes únicos atendidos',
         rows(d, periodo) {
             const varVal = d.kpis.clientes.var;
-            return [
-                { label: 'Período evaluado',              value: periodoLabel(periodo) },
-                { label: 'Variación vs período anterior', value: `${varVal >= 0 ? '↑' : '↓'} ${Math.abs(varVal).toFixed(2)}%`, warn: varVal < 0 },
-            ];
+            const list = [{ label: 'Período evaluado', value: periodoLabel(periodo) }];
+            if (periodo !== 'todo') {
+                list.push({ label: 'Variación vs período anterior', value: `${varVal >= 0 ? '↑' : '↓'} ${Math.abs(varVal).toFixed(2)}%`, warn: varVal < 0 });
+            }
+            return list;
         },
         mainValue(d) { return String(d.kpis.clientes.valor); }
     },
