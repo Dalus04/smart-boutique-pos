@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from api.dependencies import get_db_session, obtener_id_usuario_defecto
@@ -47,16 +47,24 @@ def sincronizar_borrador(payload: SyncBorradorPayload, db: Session = Depends(get
     return ComprasService.sincronizar_borrador(db=db, payload=payload, id_usuario=id_usuario)
 
 @router.get("/ordenes_activas")
-def obtener_ordenes_activas(db: Session = Depends(get_db_session)):
-    return ComprasService.obtener_ordenes_activas(db=db)
+def obtener_ordenes_activas(
+    page: int = Query(1, ge=1, description="Número de página"),
+    limit: int = Query(10, ge=1, le=100, description="Registros por página"),
+    db: Session = Depends(get_db_session)
+):
+    return ComprasService.obtener_ordenes_activas(db=db, page=page, limit=limit)
 
 @router.post("/planificacion/borrador/{id_compra}/consolidar")
 def consolidar_orden(id_compra: int, db: Session = Depends(get_db_session)):
     return ComprasService.consolidar_orden(db=db, id_compra=id_compra)
 
 @router.get("/historial")
-def obtener_historial_global(db: Session = Depends(get_db_session)):
-    return ComprasService.obtener_historial_global(db=db)
+def obtener_historial_global(
+    page: int = Query(1, ge=1, description="Número de página"),
+    limit: int = Query(10, ge=1, le=100, description="Registros por página"),
+    db: Session = Depends(get_db_session)
+):
+    return ComprasService.obtener_historial_global(db=db, page=page, limit=limit)
 
 @router.get("/historial/{id_compra}/detalles")
 def obtener_detalles_compra(id_compra: int, db: Session = Depends(get_db_session)):

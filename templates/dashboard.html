@@ -62,25 +62,25 @@
         </div>
 
         <!-- Barra de Rango de Fechas Personalizadas (Oculta por defecto) -->
-        <div id="custom-date-bar" class="hidden card p-3 flex flex-wrap items-center justify-between gap-4 bg-slate-50 dark:bg-darkCard border border-slate-200 dark:border-slate-700">
+        <div id="custom-date-bar" class="hidden card p-3 flex flex-wrap items-center justify-between gap-4 bg-gray-50 dark:bg-darkCard border border-gray-200 dark:border-gray-700">
             <div class="flex flex-wrap items-center gap-3 text-sm">
-                <span class="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                <span class="font-bold text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
                     <i class="fa-solid fa-filter text-primary"></i> Filtrar por fecha:
                 </span>
                 <div class="flex items-center gap-2">
-                    <label class="text-xs text-slate-500 font-semibold">Desde:</label>
-                    <input type="date" id="date-start" class="px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white font-medium focus:ring-2 focus:ring-primary focus:outline-none">
+                    <label class="text-xs text-gray-500 font-semibold">Desde:</label>
+                    <input type="date" id="date-start" class="px-2.5 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-white font-medium focus:ring-2 focus:ring-primary focus:outline-none">
                 </div>
                 <div class="flex items-center gap-2">
-                    <label class="text-xs text-slate-500 font-semibold">Hasta:</label>
-                    <input type="date" id="date-end" class="px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white font-medium focus:ring-2 focus:ring-primary focus:outline-none">
+                    <label class="text-xs text-gray-500 font-semibold">Hasta:</label>
+                    <input type="date" id="date-end" class="px-2.5 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-white font-medium focus:ring-2 focus:ring-primary focus:outline-none">
                 </div>
             </div>
             <div class="flex items-center gap-2">
                 <button onclick="applyCustomDateFilter()" class="px-4 py-1.5 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold text-xs transition-colors flex items-center gap-1">
                     <i class="fa-solid fa-check"></i> Aplicar
                 </button>
-                <button onclick="closeCustomDateBar()" class="px-3 py-1.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-bold text-xs transition-colors">
+                <button onclick="closeCustomDateBar()" class="px-3 py-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-bold text-xs transition-colors">
                     Cancelar
                 </button>
             </div>
@@ -96,8 +96,8 @@
                     <i class="fa-solid fa-up-right-from-square"></i>
                 </div>
                 <h4 class="text-blue-500 font-bold text-sm mb-1">Ventas</h4>
-                <div class="text-2xl font-black text-slate-800 dark:text-white" id="kpi-ventas-val">S/ 0.00</div>
-                <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold" id="kpi-ventas-var">Calculando...</div>
+                <div class="kpi-value" id="kpi-ventas-val">S/ 0.00</div>
+                <div class="kpi-variation" id="kpi-ventas-var">Calculando...</div>
             </div>
 
             <!-- Utilidad -->
@@ -108,8 +108,8 @@
                     <i class="fa-solid fa-up-right-from-square"></i>
                 </div>
                 <h4 class="text-green-500 font-bold text-sm mb-1">Utilidad Bruta</h4>
-                <div class="text-2xl font-black text-slate-800 dark:text-white" id="kpi-utilidad-val">S/ 0.00</div>
-                <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold" id="kpi-utilidad-var">Calculando...</div>
+                <div class="kpi-value" id="kpi-utilidad-val">S/ 0.00</div>
+                <div class="kpi-variation" id="kpi-utilidad-var">Calculando...</div>
             </div>
 
             <!-- Margen -->
@@ -120,8 +120,8 @@
                     <i class="fa-solid fa-up-right-from-square"></i>
                 </div>
                 <h4 class="text-orange-500 font-bold text-sm mb-1">Margen Bruto %</h4>
-                <div class="text-2xl font-black text-slate-800 dark:text-white" id="kpi-margen-val">0.0%</div>
-                <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold" id="kpi-margen-var">Calculando...</div>
+                <div class="kpi-value" id="kpi-margen-val">0.0%</div>
+                <div class="kpi-variation" id="kpi-margen-var">Calculando...</div>
             </div>
 
             <!-- Clientes -->
@@ -132,8 +132,8 @@
                     <i class="fa-solid fa-up-right-from-square"></i>
                 </div>
                 <h4 class="text-purple-500 font-bold text-sm mb-1">Nuevos Clientes</h4>
-                <div class="text-2xl font-black text-slate-800 dark:text-white" id="kpi-clientes-val">0</div>
-                <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold" id="kpi-clientes-var">Calculando...</div>
+                <div class="kpi-value" id="kpi-clientes-val">0</div>
+                <div class="kpi-variation" id="kpi-clientes-var">Calculando...</div>
             </div>
 
             <!-- Proyección -->
@@ -144,8 +144,8 @@
                     <i class="fa-solid fa-up-right-from-square"></i>
                 </div>
                 <h4 class="text-teal-500 font-bold text-sm mb-1">Proyección Mensual</h4>
-                <div class="text-2xl font-black text-slate-800 dark:text-white" id="kpi-proyeccion-val">S/ 0.00</div>
-                <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold" id="kpi-proyeccion-var">Calculando...</div>
+                <div class="kpi-value" id="kpi-proyeccion-val">S/ 0.00</div>
+                <div class="kpi-variation" id="kpi-proyeccion-var">Calculando...</div>
                 <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1 mt-2">
                     <div id="kpi-proyeccion-bar" class="bg-teal-500 h-1 rounded-full transition-all duration-1000"
                         style="width: 0%"></div>
@@ -181,19 +181,19 @@
             <div id="chart-container" class="absolute inset-0 flex p-4 gap-4 opacity-0 transition-opacity duration-300">
                 <!-- Tendencia -->
                 <div class="flex-1 flex flex-col">
-                    <h4 class="text-sm font-bold text-slate-600 dark:text-slate-300 mb-2 text-center tracking-tight">Recaudación y
+                    <h4 class="text-sm font-bold text-gray-600 dark:text-gray-300 mb-2 text-center tracking-tight">Recaudación y
                         Tendencia</h4>
                     <div class="relative flex-1"><canvas id="chartTendencia"></canvas></div>
                 </div>
                 <!-- Categorías -->
                 <div class="flex-1 flex flex-col">
-                    <h4 class="text-sm font-bold text-slate-600 dark:text-slate-300 mb-2 text-center tracking-tight">Distribución de
+                    <h4 class="text-sm font-bold text-gray-600 dark:text-gray-300 mb-2 text-center tracking-tight">Distribución de
                         Ventas</h4>
                     <div class="relative flex-1"><canvas id="chartCategorias"></canvas></div>
                 </div>
                 <!-- Top Productos -->
                 <div class="flex-1 flex flex-col">
-                    <h4 class="text-sm font-bold text-slate-600 dark:text-slate-300 mb-2 text-center tracking-tight">Top Productos</h4>
+                    <h4 class="text-sm font-bold text-gray-600 dark:text-gray-300 mb-2 text-center tracking-tight">Top Productos</h4>
                     <div class="relative flex-1"><canvas id="chartRanking"></canvas></div>
                 </div>
             </div>
@@ -205,13 +205,13 @@
     <div class="lg:col-span-1 flex flex-col h-full">
         <!-- Centro de Operaciones -->
         <div
-            class="w-full h-full bg-slate-50 dark:bg-darkCard rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
+            class="w-full h-full bg-gray-50 dark:bg-darkCard rounded-xl border border-gray-200 dark:border-gray-800 flex flex-col shadow-sm">
             <div
-                class="p-4 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-white to-slate-50 dark:from-slate-800/60 dark:to-darkCard rounded-t-xl">
-                <h3 class="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                class="p-4 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800/60 dark:to-darkCard rounded-t-xl">
+                <h3 class="text-base font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                     <i class="fa-solid fa-bolt text-yellow-500"></i> Centro de Operaciones
                 </h3>
-                <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Accesos rápidos y alertas activas</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Accesos rápidos y alertas activas</p>
             </div>
             <div class="flex-1 overflow-y-auto p-3 space-y-3">
 
@@ -284,7 +284,7 @@
 
 <!-- Modal Salud del Negocio -->
 <div id="HealthModal"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 hidden opacity-0 transition-opacity duration-300">
+    class="modal-backdrop hidden">
     <div
         class="bg-white dark:bg-darkCard w-full max-w-md rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300 overflow-hidden">
         <div
@@ -321,7 +321,7 @@
 
 <!-- Modal KPI Genérico -->
 <div id="KpiModal"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 hidden opacity-0 transition-opacity duration-300">
+    class="modal-backdrop hidden">
     <div
         class="bg-white dark:bg-darkCard w-full max-w-md rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300 overflow-hidden">
         <div id="kpi-modal-header"
@@ -348,7 +348,7 @@
 
 <!-- Modal Top Producto -->
 <div id="TopProductoModal"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 hidden opacity-0 transition-opacity duration-300">
+    class="modal-backdrop hidden">
     <div
         class="bg-white dark:bg-darkCard w-full max-w-md rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300 overflow-hidden">
         <div
@@ -394,7 +394,7 @@
 
 <!-- Modal Categoría -->
 <div id="CategoriaModal"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 hidden opacity-0 transition-opacity duration-300">
+    class="modal-backdrop hidden">
     <div
         class="bg-white dark:bg-darkCard w-full max-w-md rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300 overflow-hidden">
         <div

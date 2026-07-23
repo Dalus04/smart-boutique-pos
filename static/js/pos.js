@@ -11,6 +11,7 @@ let selectedCliente = null;
 let activeCategoryId = null;
 
 let historialPage = 1;
+let historialLimit = 10;
 let historialPages = 1;
 
 // DOM Elements - Left Column
@@ -77,7 +78,6 @@ async function init() {
         
         loadCategorias();
         setupTabs();
-        setupHistorialPagination();
         loadHistorial(1);
         setupShortcuts();
 
@@ -203,13 +203,14 @@ function selectCategory(id, el) {
 
 async function loadHistorial(page = 1) {
     try {
-        const res = await ApiClient.get('/pos/historial', { page, size: 10 });
+        const res = await ApiClient.get('/pos/historial', { page, limit: historialLimit });
         if (!historialBody) return;
         historialBody.innerHTML = '';
         
-        const ventas = res.items || [];
+        const ventas = res.data || res.items || [];
         historialPage = res.page || 1;
         historialPages = res.pages || 1;
+        const total = res.total || res.total_records || 0;
         
         ventas.forEach(v => {
             const tr = document.createElement('tr');
@@ -218,7 +219,7 @@ async function loadHistorial(page = 1) {
                 <td class="py-2.5 px-3 font-mono font-bold text-primary text-sm">#${v.idVenta}</td>
                 <td class="py-2.5 px-3 text-sm text-gray-600 dark:text-gray-400">${parseLocalDate(v.fecha).toLocaleString('es-PE')}</td>
                 <td class="py-2.5 px-3 text-sm font-medium text-gray-800 dark:text-gray-200">${v.cliente}</td>
-                <td class="py-2.5 px-3 text-sm text-center font-bold text-gray-600 dark:text-gray-300">${v.articulos}</td>
+                <td class="py-2.5 px-3 text-sm text-center font-bold text-gray-600 dark:text-gray-300">${v.articulos || 0}</td>
                 <td class="py-2.5 px-3 text-sm font-bold text-right text-gray-900 dark:text-gray-100 font-mono">${fmt(v.montoTotal)}</td>
                 <td class="py-2.5 px-3 text-center">
                     <button onclick="openDetalleVenta(${v.idVenta})" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded text-xs font-bold transition-colors inline-flex items-center gap-1 shadow-sm">
@@ -229,34 +230,17 @@ async function loadHistorial(page = 1) {
             historialBody.appendChild(tr);
         });
 
-        if (historialPaginationInfo) {
-            historialPaginationInfo.textContent = `Página ${historialPage} de ${historialPages || 1}`;
-        }
-        if (btnHistorialPrev) {
-            btnHistorialPrev.disabled = (historialPage <= 1);
-        }
-        if (btnHistorialNext) {
-            btnHistorialNext.disabled = (historialPage >= historialPages);
-        }
+        renderPagination('pagination-container', {
+            total: total,
+            page: historialPage,
+            pages: historialPages,
+            limit: historialLimit
+        }, (newPage, newLimit) => {
+            historialLimit = newLimit;
+            loadHistorial(newPage);
+        });
     } catch(e) {
         // Manejo silencioso de error en historial
-    }
-}
-
-function setupHistorialPagination() {
-    if (btnHistorialPrev) {
-        btnHistorialPrev.addEventListener('click', () => {
-            if (historialPage > 1) {
-                loadHistorial(historialPage - 1);
-            }
-        });
-    }
-    if (btnHistorialNext) {
-        btnHistorialNext.addEventListener('click', () => {
-            if (historialPage < historialPages) {
-                loadHistorial(historialPage + 1);
-            }
-        });
     }
 }
 

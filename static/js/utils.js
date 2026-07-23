@@ -169,4 +169,117 @@ function setLoadingHtml(elementOrId, text = '', pyClass = 'p-8') {
     el.innerHTML = `<div class="flex justify-center items-center gap-2 ${pyClass}">${getSpinnerHtml(text, 'text-2xl')}</div>`;
 }
 
+// ── Paginación Unificada ─────────────────────────────────────────────────────────
+/**
+ * Renderiza el componente de paginación unificado en el contenedor indicado.
+ * @param {HTMLElement|string} container - Elemento DOM o ID del footer (.table-footer).
+ * @param {Object} paginationData - Datos de paginación { total, page, pages, limit }.
+ * @param {Function} onChange - Callback invocado con (newPage, newLimit) cuando cambia.
+ */
+function renderPagination(container, paginationData, onChange) {
+    const el = typeof container === 'string' ? document.getElementById(container) : container;
+    if (!el) return;
 
+    const { total, page, pages, limit } = paginationData;
+    const currentLimit = Number(limit) || 10;
+    const currentPage = Number(page) || 1;
+    const totalPages = Number(pages) || 1;
+    const totalRecords = Number(total) || 0;
+
+    // Calcular el rango mostrado
+    const startRecord = totalRecords === 0 ? 0 : ((currentPage - 1) * currentLimit) + 1;
+    const endRecord = Math.min(currentPage * currentLimit, totalRecords);
+
+    // Determinar qué páginas mostrar (con elipsis)
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+        for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+    } else {
+        if (currentPage <= 3) {
+            pageNumbers.push(1, 2, 3, 4, '...', totalPages);
+        } else if (currentPage >= totalPages - 2) {
+            pageNumbers.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+        } else {
+            pageNumbers.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+        }
+    }
+
+    // Botones html
+    let buttonsHtml = '';
+    
+    // Primera y Anterior
+    buttonsHtml += `
+        <button data-page="1" class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" ${currentPage === 1 ? 'disabled' : ''}>
+            &laquo; Primera
+        </button>
+        <button data-page="${currentPage - 1}" class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" ${currentPage === 1 ? 'disabled' : ''}>
+            &lsaquo;
+        </button>
+    `;
+
+    // Números de página
+    pageNumbers.forEach(p => {
+        if (p === '...') {
+            buttonsHtml += `<span class="px-2 py-1 text-gray-500 font-bold border border-transparent">...</span>`;
+        } else {
+            const activeClass = p === currentPage 
+                ? 'bg-primary text-white border-primary' 
+                : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600';
+            buttonsHtml += `
+                <button data-page="${p}" class="px-3 py-1 rounded border font-bold transition-colors ${activeClass}">
+                    ${p}
+                </button>
+            `;
+        }
+    });
+
+    // Siguiente y Última
+    buttonsHtml += `
+        <button data-page="${currentPage + 1}" class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" ${currentPage === totalPages ? 'disabled' : ''}>
+            &rsaquo;
+        </button>
+        <button data-page="${totalPages}" class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" ${currentPage === totalPages ? 'disabled' : ''}>
+            Última &raquo;
+        </button>
+    `;
+
+    el.innerHTML = `
+        <div class="flex items-center gap-4 text-xs">
+            <span class="table-footer-info font-medium text-gray-500">Mostrando ${startRecord}–${endRecord} de ${totalRecords} registros</span>
+            <div class="flex items-center gap-1 text-gray-500 font-medium">
+                <span>Mostrar:</span>
+                <select class="pagination-limit-select bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer text-gray-700 dark:text-gray-200">
+                    <option value="10" ${currentLimit === 10 ? 'selected' : ''}>10</option>
+                    <option value="20" ${currentLimit === 20 ? 'selected' : ''}>20</option>
+                    <option value="50" ${currentLimit === 50 ? 'selected' : ''}>50</option>
+                    <option value="100" ${currentLimit === 100 ? 'selected' : ''}>100</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex items-center gap-1 mt-3 sm:mt-0 pagination-buttons-container text-xs font-bold text-gray-700 dark:text-gray-200">
+            ${buttonsHtml}
+        </div>
+    `;
+
+    // Asignar eventos a los botones
+    const btnContainer = el.querySelector('.pagination-buttons-container');
+    btnContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn || btn.disabled) return;
+        const newPage = parseInt(btn.dataset.page);
+        if (newPage && newPage !== currentPage && newPage >= 1 && newPage <= totalPages) {
+            onChange(newPage, currentLimit);
+        }
+    });
+
+    // Asignar evento al select
+    const select = el.querySelector('.pagination-limit-select');
+    select.addEventListener('change', (e) => {
+        const newLimit = parseInt(e.target.value);
+        if (newLimit !== currentLimit) {
+            onChange(1, newLimit); // Resetear a página 1 al cambiar tamaño
+        }
+    });
+}

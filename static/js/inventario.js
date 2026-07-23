@@ -23,6 +23,7 @@ window.inventoryDataMap = {};
 // Dropdown Contextual global state
 let activeDropdownId = null;
 let globalKPIsData = null;
+let currentLimit = 10;
 
 // Estado Global de Paginación
 let currentPage = 1;
@@ -261,7 +262,7 @@ async function fetchAndRenderData(page = 1, shouldHighlight = false) {
     
     const params = {
         page: currentPage,
-        size: pageSize
+        size: currentLimit
     };
     
     const q = elSearchInput.value.trim();
@@ -420,7 +421,15 @@ async function fetchAndRenderData(page = 1, shouldHighlight = false) {
             });
         }
 
-        renderPaginationControls(data);
+        renderPagination('pagination-container', {
+            total: data.total_records,
+            page: data.current_page,
+            pages: data.pages,
+            limit: currentLimit
+        }, (newPage, newLimit) => {
+            currentLimit = newLimit;
+            fetchAndRenderData(newPage);
+        });
         updateActiveFilterBadge();
 
         if (shouldHighlight) {
@@ -438,71 +447,6 @@ async function fetchAndRenderData(page = 1, shouldHighlight = false) {
         elTableLoading.classList.add('hidden');
     }
 }
-
-// RENDERIZADOR DE CONTROLES DE PAGINACIÓN DE TABLA
-function renderPaginationControls(data) {
-    const infoEl = document.getElementById('pagination-info');
-    const controlsEl = document.getElementById('pagination-controls');
-    if (!infoEl || !controlsEl) return;
-
-    const page = data.current_page || 1;
-    const totalP = data.pages || 1;
-    const totalR = data.total_records || 0;
-    const size = data.page_size || 20;
-
-    if (totalR === 0) {
-        infoEl.textContent = 'Mostrando 0 productos';
-        controlsEl.innerHTML = '';
-        return;
-    }
-
-    const start = (page - 1) * size + 1;
-    const end = Math.min(page * size, totalR);
-    infoEl.textContent = `Mostrando ${start} - ${end} de ${totalR} productos`;
-
-    let html = '';
-    
-    // Botón Anterior
-    const prevDisabled = page <= 1;
-    html += `
-        <button onclick="goToPage(${page - 1})" ${prevDisabled ? 'disabled' : ''} class="px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 font-bold ${prevDisabled ? 'opacity-40 cursor-not-allowed text-gray-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'} transition-colors">
-            <i class="fa-solid fa-chevron-left text-[10px]"></i>
-        </button>
-    `;
-
-    // Botones numéricos
-    let startPage = Math.max(1, page - 2);
-    let endPage = Math.min(totalP, startPage + 4);
-    if (endPage - startPage < 4) {
-        startPage = Math.max(1, endPage - 4);
-    }
-
-    for (let p = startPage; p <= endPage; p++) {
-        const isCurrent = p === page;
-        html += `
-            <button onclick="goToPage(${p})" class="px-3 py-1 rounded text-xs font-bold ${isCurrent ? 'bg-amber-500 text-white shadow-sm' : 'border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'} transition-colors">
-                ${p}
-            </button>
-        `;
-    }
-
-    // Botón Siguiente
-    const nextDisabled = page >= totalP;
-    html += `
-        <button onclick="goToPage(${page + 1})" ${nextDisabled ? 'disabled' : ''} class="px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 font-bold ${nextDisabled ? 'opacity-40 cursor-not-allowed text-gray-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'} transition-colors">
-            <i class="fa-solid fa-chevron-right text-[10px]"></i>
-        </button>
-    `;
-
-    controlsEl.innerHTML = html;
-}
-
-function goToPage(pageNum) {
-    if (pageNum < 1 || pageNum > totalPages) return;
-    fetchAndRenderData(pageNum);
-}
-
-
 
 // NUEVAS FUNCIONES DE INTERACTIVIDAD (MODALES, TOASTS Y OFFCANVAS)
 

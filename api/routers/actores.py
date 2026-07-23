@@ -21,7 +21,7 @@ router = APIRouter(
 @router.get("/clientes")
 def get_clientes(
     page: int = Query(1, ge=1, description="Número de página"),
-    limit: int = Query(20, ge=1, le=100, description="Registros por página"),
+    limit: int = Query(10, ge=1, le=100, description="Registros por página"),
     q: Optional[str] = Query(None, description="Búsqueda por documento, nombres o apellidos"),
     db: Session = Depends(get_db_session)
 ):
@@ -44,7 +44,7 @@ def inactivar_cliente(id: int, db: Session = Depends(get_db_session)):
 @router.get("/proveedores")
 def get_proveedores(
     page: int = Query(1, ge=1, description="Número de página"),
-    limit: int = Query(20, ge=1, le=100, description="Registros por página"),
+    limit: int = Query(10, ge=1, le=100, description="Registros por página"),
     q: Optional[str] = Query(None, description="Búsqueda por RUC o Razón Social"),
     db: Session = Depends(get_db_session)
 ):

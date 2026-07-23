@@ -39,7 +39,7 @@ def get_inventario_data(
     id_categoria: Optional[int] = Query(None, description="Filtro por ID de categoría"),
     estado_stock: Optional[str] = Query(None, description="Filtro por estado de stock"),
     page: int                   = Query(1, ge=1, description="Número de página"),
-    size: int                   = Query(20, ge=1, le=100, description="Tamaño de página"),
+    size: int                   = Query(10, ge=1, le=100, description="Tamaño de página"),
     db: Session                 = Depends(get_db_session),
 ):
     return InventarioService.get_inventario_data(

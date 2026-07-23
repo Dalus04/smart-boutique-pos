@@ -9,7 +9,7 @@ let currentOffcanvasTab = 'info';
 
 // Paginación Server-Side State
 let currentPage = 1;
-let pageSize = 20;
+let currentLimit = 10;
 let totalPages = 1;
 let totalRecords = 0;
 
@@ -183,7 +183,7 @@ async function fetchData(query = '') {
     
     try {
         const endpoint = currentTab === 'clientes' ? '/actores/clientes' : '/actores/proveedores';
-        const params = { page: currentPage, limit: pageSize };
+        const params = { page: currentPage, limit: currentLimit };
         if (query) params.q = query;
         
         const response = await ApiClient.get(endpoint, params);
@@ -201,7 +201,16 @@ async function fetchData(query = '') {
         }
         
         updateMetrics(dataList, totalRecords);
-        updatePaginationUI();
+        renderPagination('pagination-container', {
+            total: totalRecords,
+            page: currentPage,
+            pages: totalPages,
+            limit: currentLimit
+        }, (newPage, newLimit) => {
+            currentLimit = newLimit;
+            currentPage = newPage;
+            fetchData(searchInput.value.trim());
+        });
         
         if (dataList.length === 0) {
             tableEmpty.classList.remove('hidden');
@@ -267,40 +276,6 @@ async function fetchData(query = '') {
         console.error("Error fetching data:", e);
     } finally {
         tableLoading.classList.add('hidden');
-    }
-}
-
-// -------------------------------------------------------------
-// CONTROL DE PAGINACIÓN SERVER-SIDE
-// -------------------------------------------------------------
-function updatePaginationUI() {
-    const start = totalRecords === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-    const end = Math.min(currentPage * pageSize, totalRecords);
-    
-    const elStart = document.getElementById('pag-start');
-    const elEnd = document.getElementById('pag-end');
-    const elTotal = document.getElementById('pag-total');
-    const elCurrent = document.getElementById('pag-current');
-    const elTotalPages = document.getElementById('pag-total-pages');
-    
-    if (elStart) elStart.textContent = start;
-    if (elEnd) elEnd.textContent = end;
-    if (elTotal) elTotal.textContent = totalRecords;
-    if (elCurrent) elCurrent.textContent = currentPage;
-    if (elTotalPages) elTotalPages.textContent = totalPages;
-    
-    const btnPrev = document.getElementById('btn-page-prev');
-    const btnNext = document.getElementById('btn-page-next');
-    
-    if (btnPrev) btnPrev.disabled = (currentPage <= 1);
-    if (btnNext) btnNext.disabled = (currentPage >= totalPages);
-}
-
-function changePage(delta) {
-    const newPage = currentPage + delta;
-    if (newPage >= 1 && newPage <= totalPages) {
-        currentPage = newPage;
-        fetchData(searchInput.value.trim());
     }
 }
 

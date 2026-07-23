@@ -26,16 +26,16 @@
                 <i class="fa-solid fa-heart-pulse text-7xl"></i>
             </div>
             <div class="flex-1 flex flex-col">
-                <h4 class="text-xs font-bold text-slate-500 dark:text-slate-300 uppercase tracking-wider mb-1 relative z-10">Salud de Stock</h4>
+                <h4 class="text-xs font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-1 relative z-10">Salud de Stock</h4>
                 <div class="flex items-baseline justify-between gap-2 relative z-10 mt-1">
                     <div class="flex items-baseline gap-1">
-                        <span class="text-3xl font-black text-slate-800 dark:text-white" id="kpi-health-score">--</span>
-                        <span class="text-sm font-bold text-slate-400">/100</span>
+                        <span class="text-3xl font-black text-gray-800 dark:text-white" id="kpi-health-score">--</span>
+                        <span class="text-sm font-bold text-gray-400">/100</span>
                     </div>
                     <span class="text-xs font-bold px-2 py-0.5 rounded text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300" id="kpi-health-status">Analizando...</span>
                 </div>
             </div>
-            <p class="text-xs text-slate-600 dark:text-slate-300 leading-snug relative z-10 mt-2" id="kpi-health-subtitle">Evaluando integridad del catálogo...</p>
+            <p class="text-xs text-gray-600 dark:text-gray-300 leading-snug relative z-10 mt-2" id="kpi-health-subtitle">Evaluando integridad del catálogo...</p>
         </div>
 
         <!-- Tarjetas del Resumen Operativo (Solicitudes en proceso, Reabastecimiento urgente, Inventario estable) -->
@@ -44,83 +44,83 @@
         </div>
     </div>
 
-    <!-- BARRA DE FILTROS Y BÚSQUEDA -->
-    <div class="card p-3 flex flex-col md:flex-row gap-4 justify-between items-center shrink-0">
-        <div class="relative w-full md:w-80">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
-            </div>
-            <input type="text" id="search-input" placeholder="Buscar producto..." class="input-base pl-10 pr-4 py-2 text-sm">
-        </div>
-        
-        <div class="flex gap-3 w-full md:w-auto flex-wrap items-center">
-            <select id="filter-categoria" class="input-base w-40 py-2 px-3 text-sm">
-                <option value="">Categorías</option>
-            </select>
-            <select id="filter-estado" class="input-base w-36 py-2 px-3 text-sm">
-                <option value="">Estados</option>
-                <option value="Óptimo">Óptimo</option>
-                <option value="Bajo">Bajo</option>
-                <option value="Crítico">Crítico</option>
-            </select>
-            <button id="btn-clean-filters" onclick="clearFilters()" class="btn-secondary px-3 py-2 text-sm" title="Limpiar todos los filtros">
-                <i class="fa-solid fa-filter-circle-xmark text-gray-400"></i> Limpiar
-            </button>
-            <button onclick="openNewProductModal()" class="btn-primary px-4 py-2 text-sm shadow flex items-center gap-1.5">
-                <i class="fa-solid fa-plus"></i> Nuevo
-            </button>
-        </div>
-    </div>
-
-    <!-- INDICADOR DE FILTRO ACTIVO RÁPIDO -->
-    <div id="active-filter-badge-container" class="hidden shrink-0 flex items-center gap-2 px-1 transition-all duration-300">
-        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Filtro activo:</span>
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 shadow-sm" id="active-filter-badge-content">
-            <span id="active-filter-badge-text">Estado crítico</span>
-            <button onclick="clearFilters()" class="hover:text-red-500 transition-colors flex items-center justify-center w-4 h-4 rounded-full hover:bg-amber-500/20 text-gray-400" title="Eliminar filtro">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-    </div>
-
     <!-- TABLA DE PRODUCTOS (7 COLUMNAS) -->
-    <div class="card flex-1 flex flex-col overflow-hidden relative min-h-[400px]">
+    <div class="table-container min-h-[400px]">
+        <!-- BARRA DE FILTROS Y BÚSQUEDA -->
+        <div class="table-toolbar">
+            <div class="flex-1 flex flex-col md:flex-row gap-4 items-start md:items-center">
+                <div class="relative w-full md:w-80">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+                    </div>
+                    <input type="text" id="search-input" placeholder="Buscar producto..." class="input-base pl-10 pr-4 py-2 text-sm w-full">
+                </div>
+                
+                <div class="flex gap-3 w-full md:w-auto flex-wrap items-center">
+                    <select id="filter-categoria" class="input-base w-40 py-2 px-3 text-sm">
+                        <option value="">Categorías</option>
+                    </select>
+                    <select id="filter-estado" class="input-base w-36 py-2 px-3 text-sm">
+                        <option value="">Estados</option>
+                        <option value="Óptimo">Óptimo</option>
+                        <option value="Bajo">Bajo</option>
+                        <option value="Crítico">Crítico</option>
+                    </select>
+                    <button id="btn-clean-filters" onclick="clearFilters()" class="btn-secondary px-3 py-2 text-sm" title="Limpiar todos los filtros">
+                        <i class="fa-solid fa-filter-circle-xmark text-gray-400"></i> Limpiar
+                    </button>
+                </div>
+            </div>
+            
+            <div class="shrink-0 flex gap-2 w-full md:w-auto justify-end">
+                <button onclick="openNewProductModal()" class="btn-primary px-4 py-2 text-sm shadow flex items-center gap-1.5">
+                    <i class="fa-solid fa-plus"></i> Nuevo
+                </button>
+            </div>
+        </div>
+
+        <!-- INDICADOR DE FILTRO ACTIVO RÁPIDO -->
+        <div id="active-filter-badge-container" class="hidden shrink-0 flex items-center gap-2 px-4 py-2 bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-700/50 transition-all duration-300">
+            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Filtro activo:</span>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 shadow-sm" id="active-filter-badge-content">
+                <span id="active-filter-badge-text">Estado crítico</span>
+                <button onclick="clearFilters()" class="hover:text-red-500 transition-colors flex items-center justify-center w-4 h-4 rounded-full hover:bg-amber-500/20 text-gray-400" title="Eliminar filtro">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+
         <!-- Loading overlay -->
-        <div id="table-loading" class="absolute inset-0 bg-white/80 dark:bg-darkCard/80 z-20 flex items-center justify-center hidden">
+        <div id="table-loading" class="table-loading">
             <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary"></i>
         </div>
         
-        <div class="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
-            <table class="w-full text-left border-collapse whitespace-nowrap">
-                <thead class="bg-slate-50 dark:bg-slate-800/60 sticky top-0 z-10 shadow-sm">
+        <div class="table-wrapper">
+            <table class="table-base">
+                <thead class="table-thead">
                     <tr>
-                        <th class="py-4 px-4 text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Producto</th>
-                        <th class="py-4 px-4 text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-center">Categoría</th>
-                        <th class="py-4 px-4 text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-center">Impacto</th>
-                        <th class="py-4 px-4 text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-center">Stock</th>
-                        <th class="py-4 px-4 text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-center">Estado</th>
-                        <th class="py-4 px-4 text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-center">Acción Principal</th>
-                        <th class="py-4 px-4 text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-center w-12"></th>
+                        <th class="table-th">Producto</th>
+                        <th class="table-th text-center">Categoría</th>
+                        <th class="table-th text-center">Impacto</th>
+                        <th class="table-th text-center">Stock</th>
+                        <th class="table-th text-center">Estado</th>
+                        <th class="table-th text-center">Acción Principal</th>
+                        <th class="table-th text-center w-12"></th>
                     </tr>
                 </thead>
-                <tbody id="table-body" class="divide-y divide-slate-200 dark:divide-slate-700/60 text-sm">
+                <tbody id="table-body" class="table-tbody">
                     <!-- Fila dinámica via JS -->
                 </tbody>
             </table>
-            <div id="table-empty" class="hidden p-12 text-center text-gray-500 dark:text-gray-400 flex-col items-center">
+            <div id="table-empty" class="table-empty">
                 <i class="fa-solid fa-box-open text-4xl mb-3 opacity-50"></i>
                 <p>No se encontraron productos.</p>
             </div>
         </div>
 
         <!-- BARRA DE PAGINACIÓN -->
-        <div id="pagination-container" class="px-4 py-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shrink-0 bg-slate-50/70 dark:bg-slate-800/20">
-            <span id="pagination-info" class="text-slate-500 dark:text-slate-400 font-medium">
-                Cargando registros...
-            </span>
-            <div id="pagination-controls" class="flex items-center gap-1">
-                <!-- Botones inyectados vía JS -->
-            </div>
+        <div id="pagination-container" class="table-footer">
+            <!-- Renderizado por JS -->
         </div>
     </div>
     </div> <!-- END TAB GENERAL -->
@@ -239,9 +239,9 @@
 
 
     <!-- NODOS GLOBALES: Modal Crear Nuevo Producto -->
-    <div id="modal-nuevo-producto" class="fixed inset-0 bg-black/50 z-50 hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-darkCard rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transform scale-95 transition-transform duration-300 border border-gray-100 dark:border-gray-700">
-            <div class="p-4 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between bg-gray-50 dark:bg-gray-900/50">
+    <div id="modal-nuevo-producto" class="modal-backdrop hidden p-4">
+        <div class="modal-panel w-full max-w-lg">
+            <div class="modal-header">
                 <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-600 flex items-center justify-center font-bold">
                         <i class="fa-solid fa-box text-lg"></i>
@@ -259,17 +259,17 @@
             <form id="form-nuevo-producto" onsubmit="saveNewProduct(event)" class="p-6 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Nombre del Producto *</label>
+                        <label class="form-label">Nombre del Producto *</label>
                         <input type="text" id="new-prod-nombre" required placeholder="Ej. Polera Algodón Slim Fit" class="input-base w-full text-sm">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Código de Barras / SKU</label>
+                        <label class="form-label">Código de Barras / SKU</label>
                         <input type="text" id="new-prod-codigo" placeholder="Ej. PROD-789012" class="input-base w-full text-sm font-mono">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Categoría *</label>
+                        <label class="form-label">Categoría *</label>
                         <select id="new-prod-categoria" required onchange="handleCategorySelectChange(this, 'wrapper-nueva-categoria-new')" class="input-base w-full text-sm">
                             <option value="">Seleccionar Categoría</option>
                         </select>
@@ -279,39 +279,39 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Precio de Venta (S/) *</label>
+                        <label class="form-label">Precio de Venta (S/) *</label>
                         <input type="number" step="0.01" min="0" id="new-prod-precio" required placeholder="0.00" class="input-base w-full text-sm">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Costo Unitario (S/) *</label>
+                        <label class="form-label">Costo Unitario (S/) *</label>
                         <input type="number" step="0.01" min="0" id="new-prod-costo" required placeholder="0.00" class="input-base w-full text-sm">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Stock Inicial</label>
+                        <label class="form-label">Stock Inicial</label>
                         <input type="number" id="new-prod-stock" value="0" readonly class="input-base w-full text-sm font-bold bg-gray-100 dark:bg-gray-800 text-gray-500 cursor-not-allowed">
                         <span class="text-[10px] text-gray-400 mt-0.5 block">Se abastecerá desde el módulo de Compras</span>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Marca</label>
+                        <label class="form-label">Marca</label>
                         <input type="text" id="new-prod-marca" placeholder="Ej. Urban Style" class="input-base w-full text-sm">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4 pt-2">
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Talla</label>
+                        <label class="form-label">Talla</label>
                         <input type="text" id="new-prod-talla" placeholder="Ej. M, L, 42" class="input-base w-full text-sm">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Color</label>
+                        <label class="form-label">Color</label>
                         <input type="text" id="new-prod-color" placeholder="Ej. Azul Marino" class="input-base w-full text-sm">
                     </div>
                 </div>
 
-                <div class="pt-4 border-t border-gray-100 dark:border-gray-700/50 flex justify-end gap-3">
+                <div class="modal-footer">
                     <button type="button" onclick="closeNewProductModal()" class="btn-secondary px-4 py-2 text-sm">Cancelar</button>
                     <button type="submit" class="btn-primary px-5 py-2 text-sm font-bold shadow flex items-center gap-2">
                         <i class="fa-solid fa-floppy-disk"></i> Guardar en BD
@@ -322,9 +322,9 @@
     </div>
 
     <!-- NODOS GLOBALES: Modal Editar Producto -->
-    <div id="modal-editar-producto" class="fixed inset-0 bg-black/50 z-50 hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-darkCard rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transform scale-95 transition-transform duration-300 border border-gray-100 dark:border-gray-700">
-            <div class="p-4 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between bg-gray-50 dark:bg-gray-900/50">
+    <div id="modal-editar-producto" class="modal-backdrop hidden p-4">
+        <div class="modal-panel w-full max-w-lg">
+            <div class="modal-header">
                 <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center font-bold">
                         <i class="fa-solid fa-pen-to-square text-lg"></i>
@@ -344,17 +344,17 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Nombre del Producto *</label>
+                        <label class="form-label">Nombre del Producto *</label>
                         <input type="text" id="edit-prod-nombre" required class="input-base w-full text-sm">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Código de Barras / SKU</label>
+                        <label class="form-label">Código de Barras / SKU</label>
                         <input type="text" id="edit-prod-codigo" class="input-base w-full text-sm font-mono">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Categoría *</label>
+                        <label class="form-label">Categoría *</label>
                         <select id="edit-prod-categoria" required onchange="handleCategorySelectChange(this, 'wrapper-nueva-categoria-edit')" class="input-base w-full text-sm">
                             <option value="">Seleccionar Categoría</option>
                         </select>
@@ -364,33 +364,33 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Precio de Venta (S/) *</label>
+                        <label class="form-label">Precio de Venta (S/) *</label>
                         <input type="number" step="0.01" min="0" id="edit-prod-precio" required class="input-base w-full text-sm">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Costo Unitario (S/) *</label>
+                        <label class="form-label">Costo Unitario (S/) *</label>
                         <input type="number" step="0.01" min="0" id="edit-prod-costo" required class="input-base w-full text-sm">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Marca</label>
+                        <label class="form-label">Marca</label>
                         <input type="text" id="edit-prod-marca" class="input-base w-full text-sm">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4 pt-2">
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Talla</label>
+                        <label class="form-label">Talla</label>
                         <input type="text" id="edit-prod-talla" class="input-base w-full text-sm">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Color</label>
+                        <label class="form-label">Color</label>
                         <input type="text" id="edit-prod-color" class="input-base w-full text-sm">
                     </div>
                 </div>
 
-                <div class="pt-4 border-t border-gray-100 dark:border-gray-700/50 flex justify-end gap-3">
+                <div class="modal-footer">
                     <button type="button" onclick="closeEditProductModal()" class="px-4 py-2 rounded text-sm font-medium text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">Cancelar</button>
                     <button type="submit" class="btn-primary px-5 py-2 text-sm font-bold shadow flex items-center gap-2">
                         <i class="fa-solid fa-pen-to-square"></i> Guardar Cambios
@@ -401,9 +401,9 @@
     </div>
 
     <!-- MODAL REGISTRAR SOLICITUD MANUAL -->
-    <div id="modal-registrar-solicitud" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
-        <div class="bg-white dark:bg-darkCard rounded-2xl max-w-lg w-full mx-4 shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
-            <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
+    <div id="modal-registrar-solicitud" class="modal-backdrop hidden">
+        <div class="modal-panel w-full max-w-lg mx-4">
+            <div class="modal-header">
                 <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg">
                         <i class="fa-solid fa-clipboard-question"></i>
@@ -422,7 +422,7 @@
                 <input type="hidden" id="sol-prod-id">
 
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Producto</label>
+                    <label class="form-label">Producto</label>
                     <div id="sol-prod-nombre-display" class="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg text-sm font-bold text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700">
                         --
                     </div>
@@ -430,21 +430,21 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Cant. Sugerida</label>
+                        <label class="form-label">Cant. Sugerida</label>
                         <div id="sol-cantidad-sugerida-display" class="p-2.5 bg-gray-100 dark:bg-gray-900/60 rounded-lg text-sm font-bold text-blue-600 dark:text-blue-400 border border-gray-200 dark:border-gray-700 flex items-center gap-2">
                             <i class="fa-solid fa-calculator text-xs"></i> <span>0 uds</span>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Cant. Solicitada *</label>
+                        <label class="form-label">Cant. Solicitada *</label>
                         <input type="number" id="sol-cantidad" min="1" step="1" required class="input-base w-full text-sm font-bold">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Motivo *</label>
+                        <label class="form-label">Motivo *</label>
                         <select id="sol-motivo" required onchange="handleMotivoSelectChange(this)" class="input-base w-full text-sm font-semibold">
                             <option value="Reposición manual">Reposición manual</option>
                             <option value="Campaña comercial">Campaña comercial</option>
@@ -459,17 +459,17 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Proveedor</label>
+                        <label class="form-label">Proveedor</label>
                         <input type="text" id="sol-proveedor" placeholder="Ej. Textil Moda SAC (Opcional)" class="input-base w-full text-sm">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-1">Observaciones / Notas</label>
+                    <label class="form-label">Observaciones / Notas</label>
                     <textarea id="sol-observaciones" rows="2" placeholder="Detalles adicionales sobre la necesidad de esta solicitud..." class="input-base w-full text-sm resize-none"></textarea>
                 </div>
 
-                <div class="pt-4 border-t border-gray-100 dark:border-gray-700/50 flex justify-end gap-3">
+                <div class="modal-footer">
                     <button type="button" onclick="closeSolicitudManualModal()" class="btn-secondary px-4 py-2 text-sm">Cancelar</button>
                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-bold shadow flex items-center gap-2 transition-colors">
                         <i class="fa-solid fa-paper-plane"></i> Crear Solicitud

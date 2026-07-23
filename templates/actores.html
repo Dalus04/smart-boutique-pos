@@ -37,74 +37,67 @@
     </div>
 
     <!-- Navegación y Búsqueda -->
-    <div class="card p-3 shrink-0 flex flex-col lg:flex-row gap-4 items-center justify-between shadow-sm border border-gray-200 dark:border-gray-700">
-        <div class="flex gap-2 w-full lg:w-auto">
-            <button id="btn-tab-clientes" class="flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors bg-primary text-white shadow-sm" onclick="switchTab('clientes')">
-                <i class="fa-solid fa-users mr-2"></i> Clientes
-            </button>
-            <button id="btn-tab-proveedores" class="flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" onclick="switchTab('proveedores')">
-                <i class="fa-solid fa-truck mr-2"></i> Proveedores
-            </button>
-        </div>
-        
-        <div class="flex-1 w-full lg:max-w-md relative">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
-            </div>
-            <input type="text" id="search-actor" placeholder="Buscar por documento, nombre o empresa..." class="input-base pl-10 pr-4 py-2 w-full bg-gray-50 dark:bg-gray-900/50">
-        </div>
-        
-        <button class="btn-primary px-5 py-2.5 w-full lg:w-auto flex items-center justify-center gap-2 shadow-sm" onclick="openActorModal()">
-            <i class="fa-solid fa-plus"></i> <span id="btn-nuevo-texto">Nuevo Cliente</span>
-        </button>
-    </div>
-
     <!-- Tabla Principal -->
-    <div class="card flex-1 flex flex-col overflow-hidden relative">
-        <div id="table-loading" class="absolute inset-0 bg-white/80 dark:bg-darkCard/80 z-10 flex items-center justify-center">
+    <div class="table-container min-h-[400px]">
+        <!-- Toolbar Integrado -->
+        <div class="table-toolbar">
+            <div class="flex-1 flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+                <div class="flex gap-2 w-full lg:w-auto">
+                    <button id="btn-tab-clientes" class="flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors bg-primary text-white shadow-sm" onclick="switchTab('clientes')">
+                        <i class="fa-solid fa-users mr-2"></i> Clientes
+                    </button>
+                    <button id="btn-tab-proveedores" class="flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" onclick="switchTab('proveedores')">
+                        <i class="fa-solid fa-truck mr-2"></i> Proveedores
+                    </button>
+                </div>
+                
+                <div class="relative w-full lg:w-80">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+                    </div>
+                    <input type="text" id="search-actor" placeholder="Buscar por documento, nombre o empresa..." class="input-base pl-10 pr-4 py-2 w-full text-sm">
+                </div>
+            </div>
+            
+            <div class="shrink-0 flex gap-2 w-full lg:w-auto justify-end">
+                <button class="btn-primary px-5 py-2.5 flex items-center justify-center gap-2 shadow-sm text-sm" onclick="openActorModal()">
+                    <i class="fa-solid fa-plus"></i> <span id="btn-nuevo-texto">Nuevo Cliente</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="table-loading" class="table-loading">
             <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary"></i>
         </div>
         
-        <div class="overflow-x-auto flex-1">
-            <table class="w-full text-left border-collapse">
-                <thead class="bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-0">
+        <div class="table-wrapper">
+            <table class="table-base">
+                <thead class="table-thead">
                     <tr id="table-head">
                         <!-- Headers dinámicos JS -->
                     </tr>
                 </thead>
-                <tbody id="table-body" class="divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody id="table-body" class="table-tbody">
                     <!-- Filas dinámicas JS -->
                 </tbody>
             </table>
-            <div id="table-empty" class="hidden p-8 text-center text-gray-500 dark:text-gray-400">
-                No hay registros disponibles.
+            <div id="table-empty" class="table-empty">
+                <i class="fa-solid fa-box-open text-4xl mb-3 opacity-50"></i>
+                <p>No hay registros disponibles.</p>
             </div>
         </div>
 
         <!-- Controles de Paginación Server-Side -->
-        <div id="pagination-controls" class="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shrink-0">
-            <div id="pagination-info" class="text-gray-500 font-medium">
-                Mostrando <span id="pag-start" class="font-bold text-gray-800 dark:text-gray-200">0</span> - <span id="pag-end" class="font-bold text-gray-800 dark:text-gray-200">0</span> de <span id="pag-total" class="font-bold text-gray-800 dark:text-gray-200">0</span> registros
-            </div>
-            <div class="flex items-center gap-2">
-                <button id="btn-page-prev" onclick="changePage(-1)" disabled class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1">
-                    <i class="fa-solid fa-chevron-left text-[10px]"></i> Anterior
-                </button>
-                <span class="font-bold text-gray-600 dark:text-gray-300 px-2">
-                    Página <span id="pag-current">1</span> de <span id="pag-total-pages">1</span>
-                </span>
-                <button id="btn-page-next" onclick="changePage(1)" disabled class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1">
-                    Siguiente <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                </button>
-            </div>
+        <div id="pagination-container" class="table-footer">
+            <!-- Renderizado por JS -->
         </div>
     </div>
 </div>
 
 <!-- Modal Creación/Edición -->
-<div id="actor-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 hidden opacity-0 transition-opacity duration-300">
-    <div class="bg-white dark:bg-darkCard w-full max-w-2xl rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300 overflow-hidden flex flex-col max-h-[90vh]">
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center shrink-0 bg-gray-50 dark:bg-gray-900/50">
+<div id="actor-modal" class="modal-backdrop hidden">
+    <div class="modal-panel w-full max-w-2xl flex flex-col max-h-[90vh]">
+        <div class="modal-header shrink-0">
             <h3 class="text-xl font-bold text-gray-800 dark:text-white" id="modal-title">Nuevo Cliente</h3>
             <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" onclick="closeActorModal()">
                 <i class="fa-solid fa-xmark text-xl"></i>
@@ -117,14 +110,14 @@
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo Documento</label>
+                        <label class="form-label-sm">Tipo Documento</label>
                         <select id="form-tipo-doc" class="input-base p-2.5">
                             <option value="DNI">DNI (8 dígitos)</option>
                             <option value="RUC">RUC (11 dígitos)</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">N° Documento <span class="text-red-500">*</span></label>
+                        <label class="form-label-sm">N° Documento <span class="text-red-500">*</span></label>
                         <input type="text" id="form-num-doc" required class="input-base p-2.5 font-mono" placeholder="Ej: 12345678">
                         <p class="text-xs text-red-500 mt-1 hidden" id="doc-error">Longitud inválida.</p>
                     </div>
@@ -133,43 +126,43 @@
                 <!-- Campos de Cliente -->
                 <div id="campos-cliente" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombres <span class="text-red-500">*</span></label>
+                        <label class="form-label-sm">Nombres <span class="text-red-500">*</span></label>
                         <input type="text" id="form-nombres" class="input-base p-2.5">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Apellidos <span class="text-red-500">*</span></label>
+                        <label class="form-label-sm">Apellidos <span class="text-red-500">*</span></label>
                         <input type="text" id="form-apellidos" class="input-base p-2.5">
                     </div>
                 </div>
 
                 <!-- Campos de Proveedor -->
                 <div id="campos-proveedor" class="hidden">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Razón Social / Empresa <span class="text-red-500">*</span></label>
+                    <label class="form-label-sm">Razón Social / Empresa <span class="text-red-500">*</span></label>
                     <input type="text" id="form-razon-social" class="input-base p-2.5">
                 </div>
 
                 <!-- Campos Comunes -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Teléfono</label>
+                        <label class="form-label-sm">Teléfono</label>
                         <input type="text" id="form-telefono" class="input-base p-2.5">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Correo Electrónico</label>
+                        <label class="form-label-sm">Correo Electrónico</label>
                         <input type="email" id="form-correo" class="input-base p-2.5">
                     </div>
                 </div>
 
                 <!-- Dirección (Sólo Proveedor) -->
                 <div id="campos-direccion" class="hidden">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Dirección</label>
+                    <label class="form-label-sm">Dirección</label>
                     <input type="text" id="form-direccion" class="input-base p-2.5">
                 </div>
 
             </form>
         </div>
         
-        <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 shrink-0 bg-gray-50 dark:bg-gray-900/50">
+        <div class="modal-footer shrink-0">
             <button class="btn-secondary px-4 py-2 text-sm" onclick="closeActorModal()">Cancelar</button>
             <button class="px-6 py-2.5 bg-primary hover:bg-blue-600 text-white rounded-lg transition-colors font-bold shadow-md" onclick="saveActor()" id="btn-save">Guardar</button>
         </div>
@@ -211,7 +204,7 @@
         <!-- TAB 1: INFORMACIÓN -->
         <div id="offcanvas-sec-info" class="space-y-6">
             <div>
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Datos de Identificación</h3>
+                <h3 class="section-label">Datos de Identificación</h3>
                 <div class="bg-gray-50 dark:bg-gray-900/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700 space-y-2.5 text-sm">
                     <div class="flex justify-between">
                         <span class="text-gray-500">Tipo de Documento:</span>
@@ -229,7 +222,7 @@
             </div>
 
             <div>
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Información de Contacto</h3>
+                <h3 class="section-label">Información de Contacto</h3>
                 <div class="space-y-3 text-sm">
                     <div class="flex items-center gap-3 bg-gray-50 dark:bg-gray-900/40 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
                         <div class="w-9 h-9 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-500 shrink-0"><i class="fa-solid fa-phone"></i></div>
@@ -259,7 +252,7 @@
         <!-- TAB 2: ACTIVIDAD -->
         <div id="offcanvas-sec-actividad" class="space-y-6 hidden">
             <div>
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Métricas Comerciales</h3>
+                <h3 class="section-label">Métricas Comerciales</h3>
                 <div class="grid grid-cols-2 gap-3">
                     <div class="bg-gray-50 dark:bg-gray-900/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center">
                         <span id="offcanvas-metric-1-label" class="text-[10px] uppercase font-bold text-gray-500 mb-1">Transacciones</span>
@@ -273,7 +266,7 @@
             </div>
 
             <div>
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Total Acumulado Registrado</h3>
+                <h3 class="section-label">Total Acumulado Registrado</h3>
                 <div class="bg-gray-50 dark:bg-gray-900/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-amber-500"><i class="fa-solid fa-coins text-lg"></i></div>
@@ -286,7 +279,7 @@
             </div>
 
             <div>
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Línea Principal / Categoría Top</h3>
+                <h3 class="section-label">Línea Principal / Categoría Top</h3>
                 <div class="flex items-center gap-3 bg-gray-50 dark:bg-gray-900/40 p-3.5 rounded-xl border border-gray-100 dark:border-gray-700">
                     <i class="fa-solid fa-tag text-purple-500 text-lg"></i>
                     <div>
@@ -297,7 +290,7 @@
             </div>
 
             <div>
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Última Actividad</h3>
+                <h3 class="section-label">Última Actividad</h3>
                 <div class="bg-gray-50 dark:bg-gray-900/40 p-3.5 rounded-xl border border-gray-100 dark:border-gray-700 flex items-center justify-between">
                     <span class="text-xs text-gray-500">Fecha de Registro / Operación:</span>
                     <span id="offcanvas-ultima-fecha" class="text-xs font-bold text-gray-700 dark:text-gray-300">--</span>
@@ -307,7 +300,7 @@
 
         <!-- TAB 3: ACCIONES -->
         <div id="offcanvas-sec-acciones" class="space-y-4 hidden">
-            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">Acciones Disponibles</h3>
+            <h3 class="section-label">Acciones Disponibles</h3>
             <button id="offcanvas-btn-operacion" class="w-full btn-primary py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2">
                 <i class="fa-solid fa-cart-shopping"></i> <span id="offcanvas-action-text">Registrar Operación</span>
             </button>

@@ -1,3 +1,4 @@
+import math
 from decimal import Decimal
 from typing import List, Optional
 from sqlalchemy.orm import Session
@@ -246,8 +247,15 @@ class ComprasService:
             raise HTTPException(status_code=500, detail=str(e))
 
     @staticmethod
-    def obtener_ordenes_activas(db: Session):
-        ordenes = db.query(Compra).filter(Compra.estado.in_(["Emitida", "Enviada", "Confirmada", "Recepción parcial"])).order_by(Compra.fechaCompra.desc()).all()
+    def obtener_ordenes_activas(db: Session, page: int = 1, limit: int = 10):
+        query = db.query(Compra).filter(Compra.estado.in_(["Emitida", "Enviada", "Confirmada", "Recepción parcial"]))
+        
+        total = query.count()
+        pages = math.ceil(total / limit) if limit > 0 else 1
+        offset = (page - 1) * limit
+        
+        ordenes = query.order_by(Compra.fechaCompra.desc()).offset(offset).limit(limit).all()
+        
         resultado = []
         for o in ordenes:
             prov = o.proveedor
@@ -258,7 +266,14 @@ class ComprasService:
                 "fecha": o.fechaCompra.isoformat(),
                 "montoTotal": float(o.montoTotal)
             })
-        return {"ordenes": resultado}
+            
+        return {
+            "ordenes": resultado,
+            "total": total,
+            "page": page,
+            "pages": pages,
+            "limit": limit
+        }
 
     @staticmethod
     def consolidar_orden(db: Session, id_compra: int):
@@ -278,8 +293,15 @@ class ComprasService:
             raise HTTPException(status_code=500, detail=str(e))
 
     @staticmethod
-    def obtener_historial_global(db: Session):
-        compras = db.query(Compra).filter(Compra.estado == "Completada").order_by(Compra.fechaCompra.desc()).limit(20).all()
+    def obtener_historial_global(db: Session, page: int = 1, limit: int = 10):
+        query = db.query(Compra).filter(Compra.estado == "Completada")
+        
+        total = query.count()
+        pages = math.ceil(total / limit) if limit > 0 else 1
+        offset = (page - 1) * limit
+        
+        compras = query.order_by(Compra.fechaCompra.desc()).offset(offset).limit(limit).all()
+        
         resultado = []
         for compra in compras:
             prov = compra.proveedor
@@ -290,7 +312,14 @@ class ComprasService:
                 "fecha": compra.fechaCompra.isoformat(),
                 "montoTotal": float(compra.montoTotal)
             })
-        return {"historial": resultado}
+            
+        return {
+            "historial": resultado,
+            "total": total,
+            "page": page,
+            "pages": pages,
+            "limit": limit
+        }
 
     @staticmethod
     def obtener_detalles_compra(db: Session, id_compra: int):

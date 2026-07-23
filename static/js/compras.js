@@ -8,6 +8,12 @@ let solicitudesOriginales = [];
 let borradorIdCompra = null;
 let saveTimeout = null;
 
+// Paginación
+let ordenesPage = 1;
+let ordenesLimit = 10;
+let historialPage = 1;
+let historialLimit = 10;
+
 // DOM Elements
 const selProveedor = document.getElementById('select-proveedor');
 const searchInput = document.getElementById('search-input');
@@ -499,8 +505,19 @@ let ordenRecepcionActivaId = null;
 // -------------------------------------------------------------
 async function cargarOrdenesActivas() {
     try {
-        const data = await ApiClient.get('/compras/ordenes_activas');
+        const data = await ApiClient.get('/compras/ordenes_activas', { page: ordenesPage, limit: ordenesLimit });
         renderOrdenesActivas(data.ordenes || []);
+        
+        renderPagination('ordenes-pagination-container', {
+            total: data.total || 0,
+            page: data.page || 1,
+            pages: data.pages || 1,
+            limit: data.limit || ordenesLimit
+        }, (newPage, newLimit) => {
+            ordenesLimit = newLimit;
+            ordenesPage = newPage;
+            cargarOrdenesActivas();
+        });
     } catch(e) {
         console.error("Error cargando órdenes activas", e);
         renderOrdenesActivas([]);
@@ -551,8 +568,19 @@ function renderOrdenesActivas(ordenes) {
 // -------------------------------------------------------------
 async function cargarHistorialGlobal() {
     try {
-        const data = await ApiClient.get('/compras/historial');
+        const data = await ApiClient.get('/compras/historial', { page: historialPage, limit: historialLimit });
         renderHistorialGlobal(data.historial || []);
+        
+        renderPagination('historial-pagination-container', {
+            total: data.total || 0,
+            page: data.page || 1,
+            pages: data.pages || 1,
+            limit: data.limit || historialLimit
+        }, (newPage, newLimit) => {
+            historialLimit = newLimit;
+            historialPage = newPage;
+            cargarHistorialGlobal();
+        });
     } catch (e) {
         console.error("Error cargando historial", e);
     }
