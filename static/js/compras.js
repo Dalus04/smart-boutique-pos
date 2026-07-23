@@ -34,8 +34,8 @@ function switchTab(tabId) {
         
         const btn = document.getElementById(`btn-tab-${t}`);
         if(btn) {
-            btn.classList.remove('border-blue-600', 'text-blue-600', 'dark:border-blue-400', 'dark:text-blue-400');
-            btn.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+            btn.classList.remove('border-primary', 'text-primary', 'font-bold');
+            btn.classList.add('border-transparent', 'text-gray-500', 'font-medium', 'dark:text-gray-400');
         }
     });
     
@@ -47,8 +47,8 @@ function switchTab(tabId) {
     
     const targetBtn = document.getElementById(`btn-tab-${tabId}`);
     if(targetBtn) {
-        targetBtn.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
-        targetBtn.classList.add('border-blue-600', 'text-blue-600', 'dark:border-blue-400', 'dark:text-blue-400');
+        targetBtn.classList.remove('border-transparent', 'text-gray-500', 'font-medium', 'dark:text-gray-400');
+        targetBtn.classList.add('border-primary', 'text-primary', 'font-bold');
     }
 
     if(tabId === 'historial') cargarHistorialGlobal();

@@ -6,15 +6,15 @@
 <div class="h-full flex flex-col overflow-hidden">
     
     <!-- Navegación de Pestañas -->
-    <div class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shrink-0 mb-4 px-6 pt-4 flex gap-8">
-        <button id="btn-tab-planificacion" class="pb-3 border-b-2 font-bold text-sm transition-colors border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400" onclick="switchTab('planificacion')">
-            <i class="fa-solid fa-clipboard-list mr-2"></i>Planificación
+    <div class="shrink-0 mb-4 border-b border-gray-200 dark:border-gray-700 flex gap-4">
+        <button id="btn-tab-planificacion" class="pb-2 px-1 text-sm font-bold border-b-2 border-primary text-primary transition-colors" onclick="switchTab('planificacion')">
+            <i class="fa-solid fa-clipboard-list mr-1"></i>Planificación
         </button>
-        <button id="btn-tab-ordenes" class="pb-3 border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 font-bold text-sm transition-colors" onclick="switchTab('ordenes')">
-            <i class="fa-solid fa-cart-shopping mr-2"></i>Órdenes Activas
+        <button id="btn-tab-ordenes" class="pb-2 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors" onclick="switchTab('ordenes')">
+            <i class="fa-solid fa-cart-shopping mr-1"></i>Órdenes Activas
         </button>
-        <button id="btn-tab-historial" class="pb-3 border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 font-bold text-sm transition-colors" onclick="switchTab('historial')">
-            <i class="fa-solid fa-clock-rotate-left mr-2"></i>Historial
+        <button id="btn-tab-historial" class="pb-2 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors" onclick="switchTab('historial')">
+            <i class="fa-solid fa-clock-rotate-left mr-1"></i>Historial
         </button>
     </div>
 
@@ -28,14 +28,14 @@
             <div class="lg:col-span-7 flex flex-col gap-4 h-full overflow-hidden">
                 
                 <!-- Tarjeta Buscador Catálogo -->
-                <div class="card flex flex-col shrink-0 max-w-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                <div class="card flex flex-col shrink-0 max-w-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-darkCard shadow-sm">
                     <div class="p-3 shrink-0">
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <i class="fa-solid fa-magnifying-glass text-gray-400 dark:text-gray-400"></i>
                             </div>
                             <input type="text" id="search-input" placeholder="Buscar producto del catálogo..." 
-                                class="input-base w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-800">
+                                class="input-base w-full pl-10 pr-4 py-2 text-sm bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-800">
                         </div>
                     </div>
                     
@@ -46,7 +46,7 @@
                 <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto custom-scrollbar pr-1">
                     
                     <!-- COLUMNA IZQUIERDA: Solicitudes Manuales -->
-                    <div class="card flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm h-auto">
+                    <div class="card flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-darkCard shadow-sm h-auto">
                         <div class="p-3 border-b border-gray-200 dark:border-gray-700 bg-blue-50/60 dark:bg-blue-950/30 shrink-0 flex items-center gap-2">
                             <div class="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs shrink-0 font-bold">
                                 <i class="fa-solid fa-user-pen"></i>
@@ -61,7 +61,7 @@
                     </div>
 
                     <!-- COLUMNA DERECHA: Sugerencias IA -->
-                    <div class="card flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm h-auto">
+                    <div class="card flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-darkCard shadow-sm h-auto">
                         <div class="p-3 border-b border-gray-200 dark:border-gray-700 bg-indigo-50/60 dark:bg-indigo-950/30 shrink-0 flex items-center gap-2">
                             <div class="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs shrink-0 font-bold">
                                 <i class="fa-solid fa-robot"></i>
@@ -79,15 +79,15 @@
             </div>
 
             <!-- Panel Derecho: Manifiesto Activo / Borrador (5 Col) -->
-            <div class="lg:col-span-5 flex flex-col h-full overflow-hidden card bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-md">
-                <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/90 shrink-0">
+            <div class="lg:col-span-5 flex flex-col h-full overflow-hidden card bg-white dark:bg-darkCard border border-gray-200 dark:border-gray-700 shadow-md">
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-darkCard/90 shrink-0">
                     <div>
                         <h2 class="font-bold text-gray-800 dark:text-gray-100 text-base">Manifiesto Activo</h2>
                     </div>
                 </div>
 
                 <!-- Selector de Proveedor -->
-                <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shrink-0">
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-darkCard shrink-0">
                     <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Proveedor Principal</h3>
                     <div class="relative">
                         <select id="select-proveedor" onchange="syncBorrador()" class="input-base w-full p-2.5 appearance-none font-semibold text-sm bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border-gray-300 dark:border-gray-600">
@@ -99,7 +99,7 @@
                     </div>
                 </div>
 
-                <div class="flex-1 overflow-y-auto bg-white dark:bg-gray-800 relative">
+                <div class="flex-1 overflow-y-auto bg-white dark:bg-darkCard relative">
                     <table class="w-full text-left border-collapse">
                         <thead class="bg-gray-100 dark:bg-gray-900/80 sticky top-0 z-10 text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
                             <tr>
@@ -115,7 +115,7 @@
                         </tbody>
                     </table>
                     
-                    <div id="cart-empty" class="p-8 text-center bg-white dark:bg-gray-800">
+                    <div id="cart-empty" class="p-8 text-center bg-white dark:bg-darkCard">
                         <p class="text-xs text-gray-400 dark:text-gray-500 italic">Borrador vacío. Busca un producto o agrega una solicitud.</p>
                     </div>
                 </div>
@@ -144,7 +144,7 @@
                 </div>
             </div>
             
-            <div class="card overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div class="card overflow-hidden bg-white dark:bg-darkCard border border-gray-200 dark:border-gray-700 shadow-sm">
                 <table class="w-full text-left border-collapse">
                     <thead class="bg-gray-50 dark:bg-gray-900 text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
                         <tr>
@@ -179,7 +179,7 @@
                 </div>
             </div>
             
-            <div class="card overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div class="card overflow-hidden bg-white dark:bg-darkCard border border-gray-200 dark:border-gray-700 shadow-sm">
                 <table class="w-full text-left border-collapse">
                     <thead class="bg-gray-50 dark:bg-gray-900 text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
                         <tr>
@@ -210,7 +210,7 @@
 
 <!-- MODAL 1: DETALLES DE ORDEN / HISTORIAL -->
 <div id="modal-detalle-orden" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200 p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden transform scale-95 transition-transform duration-200 border border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]">
+    <div class="bg-white dark:bg-darkCard rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden transform scale-95 transition-transform duration-200 border border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]">
         <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center shrink-0">
             <h3 id="modal-detalle-title" class="font-bold text-gray-800 dark:text-white text-base">Orden #---</h3>
             <button onclick="cerrarModalDetalleOrden()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors w-8 h-8 rounded-full flex items-center justify-center">
@@ -221,7 +221,7 @@
             <!-- JS renderiza detalles aquí -->
         </div>
         <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-end shrink-0">
-            <button onclick="cerrarModalDetalleOrden()" class="px-5 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold text-xs rounded-xl transition-colors">
+            <button onclick="cerrarModalDetalleOrden()" class="btn-secondary px-4 py-2 text-sm">
                 Cerrar
             </button>
         </div>
@@ -230,7 +230,7 @@
 
 <!-- MODAL 2: RECEPCIÓN FÍSICA DE MERCADERÍA -->
 <div id="modal-recepcion-fisica" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200 p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden transform scale-95 transition-transform duration-200 border border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]">
+    <div class="bg-white dark:bg-darkCard rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden transform scale-95 transition-transform duration-200 border border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]">
         <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-green-50/60 dark:bg-green-950/30 flex justify-between items-center shrink-0">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 flex items-center justify-center text-sm font-bold">
@@ -249,7 +249,7 @@
             <!-- JS renderiza el formulario de recepción aquí -->
         </div>
         <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3 shrink-0">
-            <button onclick="cerrarModalRecepcionFisica()" class="px-5 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold text-xs rounded-xl transition-colors">
+            <button onclick="cerrarModalRecepcionFisica()" class="btn-secondary px-4 py-2 text-sm">
                 Cancelar
             </button>
             <button id="btn-confirmar-recepcion" onclick="confirmarRecepcionFisica()" class="px-5 py-2 bg-green-600 hover:bg-green-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2">

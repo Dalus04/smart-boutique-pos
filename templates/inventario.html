@@ -63,7 +63,7 @@
                 <option value="Bajo">Bajo</option>
                 <option value="Crítico">Crítico</option>
             </select>
-            <button id="btn-clean-filters" onclick="clearFilters()" class="px-3 py-2 text-sm rounded-lg bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-1.5 font-medium" title="Limpiar todos los filtros">
+            <button id="btn-clean-filters" onclick="clearFilters()" class="btn-secondary px-3 py-2 text-sm" title="Limpiar todos los filtros">
                 <i class="fa-solid fa-filter-circle-xmark text-gray-400"></i> Limpiar
             </button>
             <button onclick="openNewProductModal()" class="btn-primary px-4 py-2 text-sm shadow flex items-center gap-1.5">
@@ -240,8 +240,8 @@
 
     <!-- NODOS GLOBALES: Modal Crear Nuevo Producto -->
     <div id="modal-nuevo-producto" class="fixed inset-0 bg-black/50 z-50 hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-darkCard rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform scale-95 transition-transform duration-300 border border-gray-100 dark:border-gray-700">
-            <div class="p-4 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/30">
+        <div class="bg-white dark:bg-darkCard rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transform scale-95 transition-transform duration-300 border border-gray-100 dark:border-gray-700">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between bg-gray-50 dark:bg-gray-900/50">
                 <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-600 flex items-center justify-center font-bold">
                         <i class="fa-solid fa-box text-lg"></i>
@@ -312,7 +312,7 @@
                 </div>
 
                 <div class="pt-4 border-t border-gray-100 dark:border-gray-700/50 flex justify-end gap-3">
-                    <button type="button" onclick="closeNewProductModal()" class="px-4 py-2 rounded text-sm font-medium text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">Cancelar</button>
+                    <button type="button" onclick="closeNewProductModal()" class="btn-secondary px-4 py-2 text-sm">Cancelar</button>
                     <button type="submit" class="btn-primary px-5 py-2 text-sm font-bold shadow flex items-center gap-2">
                         <i class="fa-solid fa-floppy-disk"></i> Guardar en BD
                     </button>
@@ -323,8 +323,8 @@
 
     <!-- NODOS GLOBALES: Modal Editar Producto -->
     <div id="modal-editar-producto" class="fixed inset-0 bg-black/50 z-50 hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-darkCard rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform scale-95 transition-transform duration-300 border border-gray-100 dark:border-gray-700">
-            <div class="p-4 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/30">
+        <div class="bg-white dark:bg-darkCard rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transform scale-95 transition-transform duration-300 border border-gray-100 dark:border-gray-700">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between bg-gray-50 dark:bg-gray-900/50">
                 <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center font-bold">
                         <i class="fa-solid fa-pen-to-square text-lg"></i>
@@ -402,8 +402,8 @@
 
     <!-- MODAL REGISTRAR SOLICITUD MANUAL -->
     <div id="modal-registrar-solicitud" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full mx-4 shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
-            <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
+        <div class="bg-white dark:bg-darkCard rounded-2xl max-w-lg w-full mx-4 shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
+            <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
                 <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg">
                         <i class="fa-solid fa-clipboard-question"></i>
@@ -470,7 +470,7 @@
                 </div>
 
                 <div class="pt-4 border-t border-gray-100 dark:border-gray-700/50 flex justify-end gap-3">
-                    <button type="button" onclick="closeSolicitudManualModal()" class="px-4 py-2 rounded text-sm font-medium text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">Cancelar</button>
+                    <button type="button" onclick="closeSolicitudManualModal()" class="btn-secondary px-4 py-2 text-sm">Cancelar</button>
                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-bold shadow flex items-center gap-2 transition-colors">
                         <i class="fa-solid fa-paper-plane"></i> Crear Solicitud
                     </button>

@@ -24,7 +24,7 @@
             <!-- Zona 1: Productos (Buscador & Categorías) -->
             <div class="lg:col-span-5 flex flex-col h-full gap-4 overflow-hidden pr-1">
                 <!-- Buscador -->
-                <div class="card p-5 shrink-0 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm">
+                <div class="card p-5 shrink-0 bg-white dark:bg-darkCard border-gray-200 dark:border-gray-700 shadow-sm">
                     <div class="relative w-full">
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <i class="fa-solid fa-barcode text-gray-400"></i>
@@ -40,7 +40,7 @@
                 </div>
 
                 <!-- Resultados de Búsqueda -->
-                <div class="card flex-1 overflow-y-auto hidden bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 custom-scrollbar" id="search-results-container">
+                <div class="card flex-1 overflow-y-auto hidden bg-white dark:bg-darkCard border-gray-200 dark:border-gray-700 custom-scrollbar" id="search-results-container">
                     <div class="p-4 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-gray-50 dark:bg-gray-900/80 z-10">
                         <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Resultados de Búsqueda</h3>
                     </div>
@@ -69,7 +69,7 @@
                 <!-- Líneas del Carrito -->
                 <div class="flex-1 overflow-auto p-4 bg-gray-50/50 dark:bg-gray-900/30 custom-scrollbar" id="cart-container">
                     <div id="cart-empty" class="h-full flex flex-col items-center justify-center text-gray-400">
-                        <div class="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+                        <div class="w-16 h-16 bg-gray-100 dark:bg-darkCard rounded-full flex items-center justify-center mb-4">
                             <i class="fa-solid fa-cart-shopping text-2xl text-gray-300 dark:text-gray-600"></i>
                         </div>
                         <p class="font-medium text-gray-500">El ticket está vacío</p>
@@ -130,7 +130,7 @@
             <div class="lg:col-span-3 flex flex-col h-full gap-4 overflow-y-auto custom-scrollbar pr-1">
 
                 <!-- Contexto de Cliente -->
-                <div class="card p-5 shrink-0 relative bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm">
+                <div class="card p-5 shrink-0 relative bg-white dark:bg-darkCard border-gray-200 dark:border-gray-700 shadow-sm">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
                             <i class="fa-solid fa-user-tag text-indigo-500"></i> Cliente
@@ -150,7 +150,7 @@
 
                     <!-- Resultados Clientes -->
                     <div id="cliente-results"
-                        class="absolute left-5 right-5 top-[5.5rem] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-20 hidden max-h-48 overflow-y-auto">
+                        class="absolute left-5 right-5 top-[5.5rem] bg-white dark:bg-darkCard border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-20 hidden max-h-48 overflow-y-auto">
                     </div>
 
                     <!-- Contexto Inteligente del Cliente -->
@@ -171,8 +171,8 @@
                 </div>
 
                 <!-- Panel de Sugerencias Inteligentes -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex-1 flex flex-col overflow-hidden relative">
-                    <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-indigo-50/70 dark:bg-gray-800/80 shrink-0">
+                <div class="bg-white dark:bg-darkCard rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex-1 flex flex-col overflow-hidden relative">
+                    <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-indigo-50/70 dark:bg-darkCard/80 shrink-0">
                         <h3 class="text-xs font-bold text-indigo-800 dark:text-indigo-300 tracking-wider uppercase flex items-center gap-2">
                             <i class="fa-solid fa-lightbulb text-amber-500"></i> Asistente de Ventas
                         </h3>
@@ -181,7 +181,7 @@
                     <div class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-gray-50/30 dark:bg-transparent" id="assistant-content">
                         <!-- Estado Vacío -->
                         <div id="assistant-empty" class="h-full flex flex-col items-center justify-center text-center opacity-70">
-                            <div class="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+                            <div class="w-16 h-16 bg-gray-100 dark:bg-darkCard rounded-full flex items-center justify-center mb-4">
                                 <i class="fa-solid fa-wand-magic-sparkles text-2xl text-gray-400"></i>
                             </div>
                             <p class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Esperando ticket</p>
@@ -190,7 +190,7 @@
 
                         <!-- Estado Sin Recomendaciones -->
                         <div id="assistant-no-rules" class="h-full flex flex-col items-center justify-center text-center opacity-70 hidden">
-                            <div class="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+                            <div class="w-16 h-16 bg-gray-100 dark:bg-darkCard rounded-full flex items-center justify-center mb-4">
                                 <i class="fa-solid fa-box-open text-2xl text-gray-400"></i>
                             </div>
                             <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Sin sugerencias extra</p>
@@ -209,14 +209,14 @@
 
         <!-- Pestaña 2: Historial -->
         <div id="tab-historial" class="h-full hidden flex flex-col gap-4 overflow-hidden">
-            <div class="card p-5 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm flex-1 flex flex-col overflow-hidden">
+            <div class="card p-5 bg-white dark:bg-darkCard border-gray-200 dark:border-gray-700 shadow-sm flex-1 flex flex-col overflow-hidden">
                 <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 uppercase tracking-wider shrink-0">
                     <i class="fa-solid fa-receipt mr-2 text-primary"></i> Historial de Ventas Recientes
                 </h3>
                 <div class="overflow-auto flex-1 custom-scrollbar">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 text-xs uppercase tracking-wider sticky top-0 bg-white dark:bg-gray-800 z-10">
+                            <tr class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 text-xs uppercase tracking-wider sticky top-0 bg-white dark:bg-darkCard z-10">
                                 <th class="py-2.5 px-3 font-bold border-b border-gray-200 dark:border-gray-700">Ticket #</th>
                                 <th class="py-2.5 px-3 font-bold border-b border-gray-200 dark:border-gray-700">Fecha</th>
                                 <th class="py-2.5 px-3 font-bold border-b border-gray-200 dark:border-gray-700">Cliente</th>
@@ -234,10 +234,10 @@
                 <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between shrink-0 text-xs">
                     <span id="historial-pagination-info" class="text-gray-500 font-medium">Página 1 de 1</span>
                     <div class="flex gap-2">
-                        <button id="btn-historial-prev" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1" disabled>
+                        <button id="btn-historial-prev" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-darkCard text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1" disabled>
                             <i class="fa-solid fa-chevron-left text-[10px]"></i> Anterior
                         </button>
-                        <button id="btn-historial-next" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1" disabled>
+                        <button id="btn-historial-next" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-darkCard text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1" disabled>
                             Siguiente <i class="fa-solid fa-chevron-right text-[10px]"></i>
                         </button>
                     </div>
@@ -251,7 +251,7 @@
 
 <!-- Modal Detalle de Venta -->
 <div id="detalleVentaModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 hidden opacity-0 transition-opacity duration-300 backdrop-blur-sm">
-    <div class="bg-white dark:bg-gray-800 w-full max-w-lg rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 transform scale-95 transition-transform duration-300 overflow-hidden">
+    <div class="bg-white dark:bg-darkCard w-full max-w-lg rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 transform scale-95 transition-transform duration-300 overflow-hidden">
         <!-- Header -->
         <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-between items-center">
             <h3 class="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 text-sm uppercase tracking-wider">
@@ -310,7 +310,7 @@
 
         <!-- Footer -->
         <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
-            <button onclick="closeDetalleModal()" class="px-5 py-2 rounded-lg font-bold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
+            <button onclick="closeDetalleModal()" class="btn-secondary px-4 py-2 text-sm">
                 Cerrar
             </button>
         </div>
@@ -318,7 +318,7 @@
 </div>
 <!-- Modal Registrar Cliente Rápido -->
 <div id="quickClienteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 hidden opacity-0 transition-opacity duration-300 backdrop-blur-sm">
-    <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 transform scale-95 transition-transform duration-300 overflow-hidden">
+    <div class="bg-white dark:bg-darkCard w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 transform scale-95 transition-transform duration-300 overflow-hidden">
         <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-between items-center">
             <h3 class="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 text-sm uppercase tracking-wider">
                 <i class="fa-solid fa-user-plus text-primary"></i> Registrar Cliente Rápido
@@ -344,7 +344,7 @@
                     class="input-base px-3 py-2 text-sm">
             </div>
             <div class="pt-2 flex justify-end gap-3">
-                <button type="button" onclick="closeQuickClienteModal()" class="px-4 py-2 rounded-lg font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm">
+                <button type="button" onclick="closeQuickClienteModal()" class="btn-secondary px-4 py-2 text-sm">
                     Cancelar
                 </button>
                 <button type="submit" class="px-5 py-2 rounded-lg font-bold text-white bg-primary hover:bg-blue-600 transition-colors shadow-md text-sm flex items-center gap-1.5">
@@ -357,7 +357,7 @@
 
 <!-- Modal Detalle de Cliente (Bajo Demanda) -->
 <div id="clienteDetailModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 hidden opacity-0 transition-opacity duration-300 backdrop-blur-sm">
-    <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 transform scale-95 transition-transform duration-300 overflow-hidden">
+    <div class="bg-white dark:bg-darkCard w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 transform scale-95 transition-transform duration-300 overflow-hidden">
         <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-indigo-50/50 dark:bg-gray-900/50 flex justify-between items-center">
             <h3 class="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 text-sm uppercase tracking-wider">
                 <i class="fa-solid fa-id-card text-indigo-500"></i> Ficha Comercial del Cliente
@@ -396,7 +396,7 @@
             </div>
         </div>
         <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
-            <button onclick="closeClienteDetailModal()" class="px-5 py-2 rounded-lg font-bold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
+            <button onclick="closeClienteDetailModal()" class="btn-secondary px-4 py-2 text-sm">
                 Cerrar
             </button>
         </div>
@@ -405,7 +405,7 @@
 
 <!-- Modal Detalle de Producto (Bajo Demanda) -->
 <div id="productoDetailModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 hidden opacity-0 transition-opacity duration-300 backdrop-blur-sm">
-    <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 transform scale-95 transition-transform duration-300 overflow-hidden">
+    <div class="bg-white dark:bg-darkCard w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 transform scale-95 transition-transform duration-300 overflow-hidden">
         <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-blue-50/50 dark:bg-gray-900/50 flex justify-between items-center">
             <h3 class="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 text-sm uppercase tracking-wider">
                 <i class="fa-solid fa-box text-primary"></i> Ficha Técnica de Producto
@@ -452,7 +452,7 @@
             </div>
         </div>
         <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
-            <button onclick="closeProductoDetailModal()" class="px-5 py-2 rounded-lg font-bold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
+            <button onclick="closeProductoDetailModal()" class="btn-secondary px-4 py-2 text-sm">
                 Cerrar
             </button>
         </div>

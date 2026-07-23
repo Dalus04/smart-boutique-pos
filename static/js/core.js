@@ -4,7 +4,6 @@
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Set active nav link
-    const ACTIVE_NAV_CLASS = "flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg font-medium";
     const currentPath = window.location.pathname;
     
     const navMap = [
@@ -22,8 +21,14 @@ document.addEventListener('DOMContentLoaded', () => {
             break;
         }
     }
+    
+    navMap.forEach(item => {
+        const nav = document.getElementById(item.id);
+        if (nav) nav.classList.remove('nav-active');
+    });
+
     const activeNav = document.getElementById(activeNavId);
-    if (activeNav) activeNav.className = ACTIVE_NAV_CLASS;
+    if (activeNav) activeNav.classList.add('nav-active');
 
     // Configuración de Tema
     const themeToggleBtn = document.getElementById('theme-toggle');
