@@ -4,23 +4,26 @@
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Set active nav link
+    const ACTIVE_NAV_CLASS = "flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg font-medium";
     const currentPath = window.location.pathname;
-    if (currentPath.includes('/inventario')) {
-        const nav = document.getElementById('nav-inventario');
-        if (nav) nav.className = "flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg font-medium";
-    } else if (currentPath.includes('/pos')) {
-        const nav = document.getElementById('nav-pos');
-        if (nav) nav.className = "flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg font-medium";
-    } else if (currentPath.includes('/actores')) {
-        const nav = document.getElementById('nav-actores');
-        if (nav) nav.className = "flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg font-medium";
-    } else if (currentPath.includes('/compras')) {
-        const nav = document.getElementById('nav-compras');
-        if (nav) nav.className = "flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg font-medium";
-    } else {
-        const nav = document.getElementById('nav-dashboard');
-        if (nav) nav.className = "flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg font-medium";
+    
+    const navMap = [
+        { path: '/inventario', id: 'nav-inventario' },
+        { path: '/pos', id: 'nav-pos' },
+        { path: '/actores', id: 'nav-actores' },
+        { path: '/compras', id: 'nav-compras' },
+        { path: '/dashboard', id: 'nav-dashboard' },
+    ];
+
+    let activeNavId = 'nav-dashboard';
+    for (const item of navMap) {
+        if (currentPath.includes(item.path)) {
+            activeNavId = item.id;
+            break;
+        }
     }
+    const activeNav = document.getElementById(activeNavId);
+    if (activeNav) activeNav.className = ACTIVE_NAV_CLASS;
 
     // Configuración de Tema
     const themeToggleBtn = document.getElementById('theme-toggle');

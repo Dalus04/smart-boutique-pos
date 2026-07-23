@@ -20,12 +20,11 @@ const searchResultsContainer = document.getElementById('search-results-container
 const categoryChips = document.getElementById('category-chips'); // New
 
 // Tabs & History
+const btnTabVenta = document.getElementById('btn-tab-venta');
+const btnTabHistorial = document.getElementById('btn-tab-historial');
 const tabVenta = document.getElementById('tab-venta');
 const tabHistorial = document.getElementById('tab-historial');
-const contentVenta = document.getElementById('content-venta');
-const contentHistorial = document.getElementById('content-historial');
 const historialBody = document.getElementById('historial-body');
-const toastContainer = document.getElementById('toast-container');
 const historialPaginationInfo = document.getElementById('historial-pagination-info');
 const btnHistorialPrev = document.getElementById('btn-historial-prev');
 const btnHistorialNext = document.getElementById('btn-historial-next');
@@ -59,18 +58,8 @@ const inputClienteId = document.getElementById('selected-cliente-id');
 
 
 
-// Formatter
-// fmt y debounce disponibles desde utils.js (cargado en base.html)
-
-
-const parseLocalDate = (isoString) => {
-    if (!isoString) return new Date();
-    let s = isoString;
-    if (!s.includes('Z') && !/[+-]\d{2}:\d{2}$/.test(s)) {
-        s = s + 'Z';
-    }
-    return new Date(s);
-};
+/// Formatter
+// fmt, parseLocalDate, debounce y showToast disponibles desde utils.js (cargado en base.html)
 
 
 // -------------------------------------------------------------
@@ -96,10 +85,10 @@ async function init() {
         // DEEP LINKING: Interceptar parámetros URL
         // -------------------------------------------------------------
         const params = new URLSearchParams(window.location.search);
-        if (params.get('tab') === 'historial' && tabHistorial) {
-            tabHistorial.click();
-        } else if (tabVenta) {
-            tabVenta.click();
+        if (params.get('tab') === 'historial' && btnTabHistorial) {
+            btnTabHistorial.click();
+        } else if (btnTabVenta) {
+            btnTabVenta.click();
         }
 
         const selectClientId = params.get('select_client_id');
@@ -154,51 +143,31 @@ function setupShortcuts() {
 // UI & TABS & TOAST & CATEGORÍAS & HISTORIAL
 // -------------------------------------------------------------
 function setupTabs() {
-    if (!tabVenta || !tabHistorial) return;
-    tabVenta.addEventListener('click', () => {
-        tabVenta.classList.add('text-primary', 'border-primary');
-        tabVenta.classList.remove('text-gray-500', 'border-transparent');
-        tabHistorial.classList.add('text-gray-500', 'border-transparent');
-        tabHistorial.classList.remove('text-primary', 'border-primary');
-        contentVenta.classList.remove('hidden');
-        contentHistorial.classList.add('hidden');
+    if (!btnTabVenta || !btnTabHistorial) return;
+    btnTabVenta.addEventListener('click', () => {
+        btnTabVenta.classList.add('text-primary', 'border-primary');
+        btnTabVenta.classList.remove('text-gray-500', 'border-transparent');
+        btnTabHistorial.classList.add('text-gray-500', 'border-transparent');
+        btnTabHistorial.classList.remove('text-primary', 'border-primary');
+        if (tabVenta) tabVenta.classList.remove('hidden');
+        if (tabHistorial) tabHistorial.classList.add('hidden');
         if (searchInput) searchInput.focus();
     });
 
-    tabHistorial.addEventListener('click', () => {
-        tabHistorial.classList.add('text-primary', 'border-primary');
-        tabHistorial.classList.remove('text-gray-500', 'border-transparent');
-        tabVenta.classList.add('text-gray-500', 'border-transparent');
-        tabVenta.classList.remove('text-primary', 'border-primary');
-        contentHistorial.classList.remove('hidden');
-        contentVenta.classList.add('hidden');
+    btnTabHistorial.addEventListener('click', () => {
+        btnTabHistorial.classList.add('text-primary', 'border-primary');
+        btnTabHistorial.classList.remove('text-gray-500', 'border-transparent');
+        btnTabVenta.classList.add('text-gray-500', 'border-transparent');
+        btnTabVenta.classList.remove('text-primary', 'border-primary');
+        if (tabHistorial) tabHistorial.classList.remove('hidden');
+        if (tabVenta) tabVenta.classList.add('hidden');
         loadHistorial();
     });
 }
 
-function showToast(message, type = 'success') {
-    if (!toastContainer) return;
-    const toast = document.createElement('div');
-    toast.className = `px-4 py-3 rounded-lg shadow-lg font-bold text-sm transform transition-all duration-300 translate-y-4 opacity-0 flex items-center gap-2 ${
-        type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-    }`;
-    toast.innerHTML = type === 'success' ? `<i class="fa-solid fa-check-circle"></i> ${message}` : `<i class="fa-solid fa-exclamation-circle"></i> ${message}`;
-    
-    toastContainer.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.classList.remove('translate-y-4', 'opacity-0');
-    }, 10);
-    
-    setTimeout(() => {
-        toast.classList.add('opacity-0', 'translate-x-4');
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
-
 async function loadCategorias() {
     try {
-        const categorias = await ApiClient.get('/pos/categorias');
+        const categorias = await fetchCategorias('/pos/categorias');
         if (!categoryChips) return;
         categoryChips.innerHTML = '';
         
@@ -320,23 +289,14 @@ async function openDetalleVenta(idVenta) {
             itemsBody.appendChild(tr);
         });
         
-        modal.classList.remove('hidden');
-        setTimeout(() => {
-            modal.classList.remove('opacity-0');
-            modal.querySelector('div').classList.remove('scale-95');
-        }, 10);
-        
+        openModal('detalleVentaModal');
     } catch (e) {
         showToast(e.message || "Error al cargar detalle de venta", "error");
     }
 }
 
 function closeDetalleModal() {
-    const modal = document.getElementById('detalleVentaModal');
-    if (!modal) return;
-    modal.classList.add('opacity-0');
-    modal.querySelector('div').classList.add('scale-95');
-    setTimeout(() => modal.classList.add('hidden'), 300);
+    closeModal('detalleVentaModal');
 }
 
 
@@ -478,24 +438,16 @@ function openQuickClienteModal(prefillValue = '') {
         }
     }
     
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        modal.classList.remove('opacity-0');
-        modal.querySelector('div').classList.remove('scale-95');
-        if (!dniInput.value) {
-            dniInput.focus();
-        } else {
-            nombresInput.focus();
-        }
-    }, 10);
+    openModal('quickClienteModal');
+    if (!dniInput.value) {
+        dniInput.focus();
+    } else {
+        nombresInput.focus();
+    }
 }
 
 function closeQuickClienteModal() {
-    const modal = document.getElementById('quickClienteModal');
-    if (!modal) return;
-    modal.classList.add('opacity-0');
-    modal.querySelector('div').classList.add('scale-95');
-    setTimeout(() => modal.classList.add('hidden'), 300);
+    closeModal('quickClienteModal');
 }
 
 async function handleQuickClienteSubmit(e) {
@@ -852,19 +804,11 @@ function openClienteDetailModal() {
     document.getElementById('cli-modal-total-comprado').textContent = fmt(totalComprado);
     document.getElementById('cli-modal-favoritos').textContent = "General";
 
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        modal.classList.remove('opacity-0');
-        modal.querySelector('div').classList.remove('scale-95');
-    }, 10);
+    openModal('clienteDetailModal');
 }
 
 function closeClienteDetailModal() {
-    const modal = document.getElementById('clienteDetailModal');
-    if (!modal) return;
-    modal.classList.add('opacity-0');
-    modal.querySelector('div').classList.add('scale-95');
-    setTimeout(() => modal.classList.add('hidden'), 300);
+    closeModal('clienteDetailModal');
 }
 
 function openProductoDetailModalByObj(idProducto) {
@@ -887,17 +831,9 @@ function openProductoDetailModal(prod) {
     else if (prod.margen < 40) abcClass = "Clase B";
     document.getElementById('prod-modal-abc').textContent = abcClass;
     
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        modal.classList.remove('opacity-0');
-        modal.querySelector('div').classList.remove('scale-95');
-    }, 10);
+    openModal('productoDetailModal');
 }
 
 function closeProductoDetailModal() {
-    const modal = document.getElementById('productoDetailModal');
-    if (!modal) return;
-    modal.classList.add('opacity-0');
-    modal.querySelector('div').classList.add('scale-95');
-    setTimeout(() => modal.classList.add('hidden'), 300);
+    closeModal('productoDetailModal');
 }

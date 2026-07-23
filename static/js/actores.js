@@ -100,8 +100,8 @@ async function switchTab(tab) {
     currentPage = 1;
     searchInput.value = '';
     
-    const btnC = document.getElementById('tab-clientes');
-    const btnP = document.getElementById('tab-proveedores');
+    const btnC = document.getElementById('btn-tab-clientes');
+    const btnP = document.getElementById('btn-tab-proveedores');
     
     if (tab === 'clientes') {
         btnC.className = "flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors bg-primary text-white shadow-sm";
@@ -496,7 +496,7 @@ function closeOffCanvas() {
 // -------------------------------------------------------------
 // GESTIÓN DEL MODAL CREACIÓN / EDICIÓN
 // -------------------------------------------------------------
-function openModal(item = null) {
+function openActorModal(item = null) {
     docError.classList.add('hidden');
     fNumDoc.classList.remove('border-red-500');
     
@@ -547,25 +547,17 @@ function openModal(item = null) {
         if (currentTab === 'clientes') fTipoDoc.value = "DNI";
     }
     
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        modal.classList.remove('opacity-0');
-        modal.firstElementChild.classList.remove('scale-95');
-    }, 10);
+    openModal('actor-modal');
 }
 
-function closeModal() {
-    modal.classList.add('opacity-0');
-    modal.firstElementChild.classList.add('scale-95');
-    setTimeout(() => {
-        modal.classList.add('hidden');
-        editId = null;
-    }, 300);
+function closeActorModal() {
+    closeModal('actor-modal');
+    editId = null;
 }
 
 function editActor(id) {
     const item = dataList.find(i => (currentTab === 'clientes' ? i.idCliente : i.idProveedor) === id);
-    if (item) openModal(item);
+    if (item) openActorModal(item);
 }
 
 // -------------------------------------------------------------
@@ -595,7 +587,7 @@ async function saveActor() {
     
     const btnSave = document.getElementById('btn-save');
     btnSave.disabled = true;
-    btnSave.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Guardando...`;
+    btnSave.innerHTML = getSpinnerHtml("Guardando...");
     
     const endpoint = currentTab === 'clientes' 
         ? (editId ? `/actores/clientes/${editId}` : `/actores/clientes`)
@@ -620,7 +612,7 @@ async function saveActor() {
     
     try {
         await ApiClient[method](endpoint, payload);
-        closeModal();
+        closeActorModal();
         await fetchData();
     } catch (e) {
         alert(e.message || "Error al guardar");

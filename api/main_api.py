@@ -32,6 +32,10 @@ async def lifespan(app: FastAPI):
         else:
             print("Base de datos existente con registros.")
 
+        # Asegurar existencia de usuario por defecto para transacciones POS y Compras
+        from api.dependencies import obtener_id_usuario_defecto
+        obtener_id_usuario_defecto(db)
+
         # 4. Entrenar el modelo de minería Apriori
         print("Iniciando entrenamiento del motor de Minería Apriori...")
         MineriaService.entrenar_modelo(db)

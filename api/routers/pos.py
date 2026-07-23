@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from decimal import Decimal
 
-from api.dependencies import get_db_session
+from api.dependencies import get_db_session, obtener_id_usuario_defecto
 from api.schemas.pos import (
     CartItem,
     CheckoutPayload,
@@ -148,7 +148,7 @@ def procesar_checkout(
     if not payload.items:
         raise HTTPException(status_code=400, detail="El carrito está vacío")
         
-    id_usuario = 1 # Hardcodeado temporalmente por requerimiento de Fase 3
+    id_usuario = obtener_id_usuario_defecto(db)
     
     try:
         # 1. Validar Stock y descontar (Transaccional)

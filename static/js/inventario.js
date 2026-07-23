@@ -59,7 +59,7 @@ document.addEventListener('click', (e) => {
 // Cargar Categorías para el dropdown
 async function loadCategorias() {
     try {
-        const categorias = await ApiClient.get('/inventario/categorias');
+        const categorias = await fetchCategorias('/inventario/categorias');
         window.categoriasList = categorias;
         categorias.forEach(cat => {
             const option = document.createElement('option');
@@ -519,23 +519,7 @@ function scrollToProduct(id) {
 
 
 
-function showToast(message, type='info') {
-    const container = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.className = `px-4 py-3 rounded shadow-lg text-sm font-medium text-white flex items-center gap-2 transform transition-all duration-300 translate-y-full opacity-0 pointer-events-auto ${type === 'info' ? 'bg-blue-600' : 'bg-green-600'}`;
-    toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> ${message}`;
-    
-    container.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.classList.remove('translate-y-full', 'opacity-0');
-    }, 10);
-    
-    setTimeout(() => {
-        toast.classList.add('translate-y-full', 'opacity-0');
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
+// showToast, parseLocalDate, fmt y debounce disponibles desde utils.js (cargado en base.html)
 
 // PANEL LATERAL OFFCANVAS ENRIQUECIDO
 function openOffCanvas(id) {
@@ -812,15 +796,11 @@ function openNewProductModal() {
     if (form) form.reset();
     document.getElementById('new-prod-stock').value = 0;
 
-    modal.classList.remove('hidden');
-    setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    openModal('modal-nuevo-producto');
 }
 
 function closeNewProductModal() {
-    const modal = document.getElementById('modal-nuevo-producto');
-    if (!modal) return;
-    modal.classList.add('opacity-0');
-    setTimeout(() => modal.classList.add('hidden'), 300);
+    closeModal('modal-nuevo-producto');
 }
 
 async function saveNewProduct(e) {
@@ -834,7 +814,7 @@ async function saveNewProduct(e) {
     const color = document.getElementById('new-prod-color').value.trim();
 
     if (!nombre || isNaN(precioLista) || isNaN(costoProducto)) {
-        showToast('Por favor completa los campos requeridos (*)', 'info');
+        showToast('Por favor completa los campos requeridos (*)', 'error');
         return;
     }
 
@@ -859,7 +839,7 @@ async function saveNewProduct(e) {
         await refreshAllData();
     } catch (err) {
         console.error("Error registrando producto", err);
-        showToast(`❌ ${err.message || 'Error guardando producto en la BD'}`, 'info');
+        showToast(`❌ ${err.message || 'Error guardando producto en la BD'}`, 'error');
     }
 }
 
@@ -886,15 +866,11 @@ function openEditProductModal(idProduct) {
     document.getElementById('edit-prod-talla').value = prod.talla || '';
     document.getElementById('edit-prod-color').value = prod.color || '';
 
-    modal.classList.remove('hidden');
-    setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    openModal('modal-editar-producto');
 }
 
 function closeEditProductModal() {
-    const modal = document.getElementById('modal-editar-producto');
-    if (!modal) return;
-    modal.classList.add('opacity-0');
-    setTimeout(() => modal.classList.add('hidden'), 300);
+    closeModal('modal-editar-producto');
 }
 
 async function saveEditProduct(e) {
@@ -909,7 +885,7 @@ async function saveEditProduct(e) {
     const color = document.getElementById('edit-prod-color').value.trim();
 
     if (!idProduct || !nombre || isNaN(precioLista) || isNaN(costoProducto)) {
-        showToast('Por favor completa todos los campos requeridos (*)', 'info');
+        showToast('Por favor completa todos los campos requeridos (*)', 'error');
         return;
     }
 
@@ -933,7 +909,7 @@ async function saveEditProduct(e) {
         await refreshAllData();
     } catch (err) {
         console.error("Error editando producto", err);
-        showToast(`❌ ${err.message || 'No se pudo actualizar el producto'}`, 'info');
+        showToast(`❌ ${err.message || 'No se pudo actualizar el producto'}`, 'error');
     }
 }
 
@@ -982,15 +958,11 @@ function openSolicitudManualModal(idProduct) {
     const elObs = document.getElementById('sol-observaciones');
     if (elObs) elObs.value = "";
 
-    modal.classList.remove('hidden');
-    setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    openModal('modal-registrar-solicitud');
 }
 
 function closeSolicitudManualModal() {
-    const modal = document.getElementById('modal-registrar-solicitud');
-    if (!modal) return;
-    modal.classList.add('opacity-0');
-    setTimeout(() => modal.classList.add('hidden'), 300);
+    closeModal('modal-registrar-solicitud');
 }
 
 async function saveSolicitudManual(e) {
@@ -1006,7 +978,7 @@ async function saveSolicitudManual(e) {
         const inputOtro = document.getElementById('sol-motivo-otro');
         motivoFinal = inputOtro ? inputOtro.value.trim() : '';
         if (!motivoFinal) {
-            showToast('Por favor especifica el motivo de la solicitud', 'info');
+            showToast('Por favor especifica el motivo de la solicitud', 'error');
             return;
         }
     }
@@ -1019,7 +991,7 @@ async function saveSolicitudManual(e) {
     }
 
     if (isNaN(idProducto) || isNaN(cantidad) || cantidad <= 0) {
-        showToast('Por favor ingresa una cantidad válida', 'info');
+        showToast('Por favor ingresa una cantidad válida', 'error');
         return;
     }
 
@@ -1037,7 +1009,7 @@ async function saveSolicitudManual(e) {
         await refreshAllData();
     } catch (err) {
         console.error("Error registrando solicitud manual", err);
-        showToast(`❌ ${err.message || 'No se pudo guardar la solicitud'}`, 'info');
+        showToast(`❌ ${err.message || 'No se pudo guardar la solicitud'}`, 'error');
     }
 }
 
@@ -1153,7 +1125,7 @@ async function generarPronostico() {
     try {
         const btn = document.querySelector('button[onclick="generarPronostico()"]');
         const oldContent = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Calculando...';
+        btn.innerHTML = getSpinnerHtml("Calculando...");
         btn.disabled = true;
 
         const data = await ApiClient.get(`/inventario/pronostico/${idProducto}`, { meses: meses });

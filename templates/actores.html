@@ -39,10 +39,10 @@
     <!-- Navegación y Búsqueda -->
     <div class="card p-3 shrink-0 flex flex-col lg:flex-row gap-4 items-center justify-between shadow-sm border border-gray-200 dark:border-gray-700">
         <div class="flex gap-2 w-full lg:w-auto">
-            <button id="tab-clientes" class="flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors bg-primary text-white shadow-sm" onclick="switchTab('clientes')">
+            <button id="btn-tab-clientes" class="flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors bg-primary text-white shadow-sm" onclick="switchTab('clientes')">
                 <i class="fa-solid fa-users mr-2"></i> Clientes
             </button>
-            <button id="tab-proveedores" class="flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" onclick="switchTab('proveedores')">
+            <button id="btn-tab-proveedores" class="flex-1 lg:flex-none px-6 py-2.5 rounded-lg font-bold transition-colors text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" onclick="switchTab('proveedores')">
                 <i class="fa-solid fa-truck mr-2"></i> Proveedores
             </button>
         </div>
@@ -54,7 +54,7 @@
             <input type="text" id="search-actor" placeholder="Buscar por documento, nombre o empresa..." class="input-base pl-10 pr-4 py-2.5 w-full bg-gray-50 dark:bg-gray-900/50">
         </div>
         
-        <button class="btn-primary px-5 py-2.5 w-full lg:w-auto flex items-center justify-center gap-2 shadow-sm" onclick="openModal()">
+        <button class="btn-primary px-5 py-2.5 w-full lg:w-auto flex items-center justify-center gap-2 shadow-sm" onclick="openActorModal()">
             <i class="fa-solid fa-plus"></i> <span id="btn-nuevo-texto">Nuevo Cliente</span>
         </button>
     </div>
@@ -106,7 +106,7 @@
     <div class="bg-white dark:bg-darkCard w-full max-w-2xl rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300 overflow-hidden flex flex-col max-h-[90vh]">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center shrink-0 bg-gray-50 dark:bg-gray-800/50">
             <h3 class="text-xl font-bold text-gray-800 dark:text-white" id="modal-title">Nuevo Cliente</h3>
-            <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" onclick="closeModal()">
+            <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" onclick="closeActorModal()">
                 <i class="fa-solid fa-xmark text-xl"></i>
             </button>
         </div>
@@ -170,7 +170,7 @@
         </div>
         
         <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 shrink-0 bg-gray-50 dark:bg-gray-800/50">
-            <button class="px-6 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium" onclick="closeModal()">Cancelar</button>
+            <button class="px-6 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium" onclick="closeActorModal()">Cancelar</button>
             <button class="px-6 py-2.5 bg-primary hover:bg-blue-600 text-white rounded-lg transition-colors font-bold shadow-md" onclick="saveActor()" id="btn-save">Guardar</button>
         </div>
     </div>

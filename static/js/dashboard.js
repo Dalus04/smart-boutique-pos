@@ -425,19 +425,11 @@ document.addEventListener('DOMContentLoaded', () => {
 // MODAL HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
 function _openModal(id) {
-    const modal = document.getElementById(id);
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        modal.classList.remove('opacity-0');
-        modal.firstElementChild.classList.remove('scale-95');
-    }, 10);
+    openModal(id);
 }
 
 function _closeModal(id) {
-    const modal = document.getElementById(id);
-    modal.classList.add('opacity-0');
-    modal.firstElementChild.classList.add('scale-95');
-    setTimeout(() => modal.classList.add('hidden'), 300);
+    closeModal(id);
 }
 
 // ─── Health Modal — datos ya vienen del servidor ──────────────────────────

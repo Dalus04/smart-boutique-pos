@@ -7,10 +7,10 @@
 
     <!-- Tabs Header -->
     <div class="shrink-0 mb-4 border-b border-gray-200 dark:border-gray-700 flex gap-4">
-        <button id="tab-venta" class="px-4 py-2 font-bold text-primary border-b-2 border-primary uppercase tracking-wider text-sm transition-colors">
+        <button id="btn-tab-venta" class="px-4 py-2 font-bold text-primary border-b-2 border-primary uppercase tracking-wider text-sm transition-colors">
             <i class="fa-solid fa-cash-register mr-1"></i> Venta
         </button>
-        <button id="tab-historial" class="px-4 py-2 font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border-b-2 border-transparent uppercase tracking-wider text-sm transition-colors">
+        <button id="btn-tab-historial" class="px-4 py-2 font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border-b-2 border-transparent uppercase tracking-wider text-sm transition-colors">
             <i class="fa-solid fa-clock-rotate-left mr-1"></i> Historial
         </button>
     </div>
@@ -19,7 +19,7 @@
     <div class="flex-1 overflow-hidden relative">
 
         <!-- Pestaña 1: Venta -->
-        <div id="content-venta" class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-hidden">
+        <div id="tab-venta" class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-hidden">
 
             <!-- Zona 1: Productos (Buscador & Categorías) -->
             <div class="lg:col-span-5 flex flex-col h-full gap-4 overflow-hidden pr-1">
@@ -208,7 +208,7 @@
         </div>
 
         <!-- Pestaña 2: Historial -->
-        <div id="content-historial" class="h-full hidden flex flex-col gap-4 overflow-hidden">
+        <div id="tab-historial" class="h-full hidden flex flex-col gap-4 overflow-hidden">
             <div class="card p-5 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm flex-1 flex flex-col overflow-hidden">
                 <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 uppercase tracking-wider shrink-0">
                     <i class="fa-solid fa-receipt mr-2 text-primary"></i> Historial de Ventas Recientes
@@ -458,9 +458,6 @@
         </div>
     </div>
 </div>
-
-<!-- Toast Container -->
-<div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
 {% endblock %}
 

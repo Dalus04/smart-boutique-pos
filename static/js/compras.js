@@ -17,31 +17,9 @@ const cartEmpty = document.getElementById('cart-empty');
 const sumItems = document.getElementById('summary-items');
 const sumTotal = document.getElementById('summary-total');
 const btnProcesar = document.getElementById('btn-procesar');
-const toast = document.getElementById('toast');
-const toastMsg = document.getElementById('toast-msg');
 
-// fmt y debounce disponibles desde utils.js (cargado en base.html)
+// fmt, parseLocalDate, debounce y showToast disponibles desde utils.js (cargado en base.html)
 
-
-const parseLocalDate = (isoString) => {
-    if (!isoString) return new Date();
-    let s = isoString;
-    if (!s.includes('Z') && !/[+-]\d{2}:\d{2}$/.test(s)) {
-        s = s + 'Z';
-    }
-    return new Date(s);
-};
-
-
-function showToast(msg, isError = false) {
-    toastMsg.textContent = msg;
-    toast.className = `fixed bottom-4 right-4 text-white px-6 py-3 rounded-lg shadow-lg font-bold transform transition-all duration-300 z-50 flex items-center gap-3 ${isError ? 'bg-red-500' : 'bg-green-500'}`;
-    toast.classList.remove('translate-y-20', 'opacity-0');
-    
-    setTimeout(() => {
-        toast.classList.add('translate-y-20', 'opacity-0');
-    }, 3000);
-}
 
 // -------------------------------------------------------------
 // CONTROL DE PESTAÑAS Y DEEP LINKING
@@ -471,7 +449,7 @@ if(btnProcesar) {
         }
         
         btnProcesar.disabled = true;
-        btnProcesar.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Consolidando...`;
+        btnProcesar.innerHTML = getSpinnerHtml("Consolidando...");
         
         try {
             // Asegurar sincronización síncrona inmediata antes de consolidar
@@ -626,14 +604,8 @@ async function abrirModalDetalleOrden(idCompra) {
     if(!modal || !title || !content) return;
     
     title.textContent = `Orden #${idCompra}`;
-    content.innerHTML = `<div class="flex justify-center p-8"><i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-600"></i></div>`;
-    
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        modal.classList.remove('opacity-0');
-        const card = modal.querySelector('div');
-        if(card) card.classList.remove('scale-95');
-    }, 10);
+    setLoadingHtml(content);
+    openModal('modal-detalle-orden');
 
     try {
         const data = await ApiClient.get(`/compras/historial/${idCompra}/detalles`);
@@ -677,12 +649,7 @@ async function abrirModalDetalleOrden(idCompra) {
 }
 
 function cerrarModalDetalleOrden() {
-    const modal = document.getElementById('modal-detalle-orden');
-    if(!modal) return;
-    const card = modal.querySelector('div');
-    if(card) card.classList.add('scale-95');
-    modal.classList.add('opacity-0');
-    setTimeout(() => { modal.classList.add('hidden'); }, 200);
+    closeModal('modal-detalle-orden', 200);
 }
 
 // -------------------------------------------------------------
@@ -700,18 +667,13 @@ async function abrirModalRecepcionFisica(idCompra) {
     
     title.textContent = `Recibir Orden #${idCompra}`;
     if(subtitle) subtitle.textContent = "Cargando datos...";
-    body.innerHTML = `<div class="flex justify-center p-8"><i class="fa-solid fa-circle-notch fa-spin text-2xl text-green-600"></i></div>`;
+    setLoadingHtml(body);
     if(btn) {
         btn.disabled = true;
         btn.innerHTML = `<i class="fa-solid fa-circle-check"></i> Confirmar Recepción`;
     }
 
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        modal.classList.remove('opacity-0');
-        const card = modal.querySelector('div');
-        if(card) card.classList.remove('scale-95');
-    }, 10);
+    openModal('modal-recepcion-fisica');
 
     try {
         const data = await ApiClient.get(`/compras/historial/${idCompra}/detalles`);
@@ -751,12 +713,7 @@ async function abrirModalRecepcionFisica(idCompra) {
 }
 
 function cerrarModalRecepcionFisica() {
-    const modal = document.getElementById('modal-recepcion-fisica');
-    if(!modal) return;
-    const card = modal.querySelector('div');
-    if(card) card.classList.add('scale-95');
-    modal.classList.add('opacity-0');
-    setTimeout(() => { modal.classList.add('hidden'); }, 200);
+    closeModal('modal-recepcion-fisica', 200);
 }
 
 async function confirmarRecepcionFisica() {
@@ -765,7 +722,7 @@ async function confirmarRecepcionFisica() {
     const btn = document.getElementById('btn-confirmar-recepcion');
     if(btn) {
         btn.disabled = true;
-        btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando...`;
+        btn.innerHTML = getSpinnerHtml("Procesando...");
     }
 
     try {
