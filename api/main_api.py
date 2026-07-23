@@ -67,9 +67,13 @@ app.add_middleware(
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+import time
+STATIC_VERSION = str(int(time.time()))
+
 # Configurar motor de plantillas Jinja2
 os.makedirs("templates", exist_ok=True)
 templates = Jinja2Templates(directory="templates")
+templates.env.globals["STATIC_VERSION"] = STATIC_VERSION
 templates.env.cache = None
 
 # Incluir routers

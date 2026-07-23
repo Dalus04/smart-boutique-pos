@@ -138,9 +138,9 @@
     <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <!-- Base Scripts -->
-    <script src="/static/js/core.js"></script>
-    <script src="/static/js/utils.js?v=1"></script>
-    <script src="/static/js/api_client.js?v=5.3"></script>
+    <script src="/static/js/core.js?v={{ STATIC_VERSION }}"></script>
+    <script src="/static/js/utils.js?v={{ STATIC_VERSION }}"></script>
+    <script src="/static/js/api_client.js?v={{ STATIC_VERSION }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
